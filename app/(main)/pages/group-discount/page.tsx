@@ -430,7 +430,7 @@ const ResellerGroupPage = () => {
                                         itemTemplate={(option) => (
                                             <div style={{ display: 'flex', gap: '5px' }}>
                                                 <div>{option?.bundle_title}</div>
-                                                <div>{option.service.company?.company_name}</div>
+                                                <div>{option.service?.company?.company_name}</div>
                                             </div>
                                         )}
                                     />
