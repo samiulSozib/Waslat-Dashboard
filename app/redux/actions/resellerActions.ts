@@ -388,13 +388,27 @@ const getAuthToken = () => {
 export const _fetchResellers = (
     page: number = 1,
     search: string = '',
+    filters: any = {},
+    items_per_page=15
 ) => async (dispatch: Dispatch) => {
     dispatch({ type: FETCH_RESELLERS_REQUEST });
 
     try {
         const token = getAuthToken();
+        const queryParams = new URLSearchParams();
+
+        queryParams.append('search', search);
+
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== '') {
+                queryParams.append(key, String(value));
+            }
+        });
+
+
+        const queryString = queryParams.toString();
         const response = await axios.get(
-            `${process.env.NEXT_PUBLIC_BASE_URL}/resellers?page=${page}&search=${search}`,
+            `${process.env.NEXT_PUBLIC_BASE_URL}/resellers?items_per_page=${items_per_page}&page=${page}&${queryString}`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -455,6 +469,25 @@ export const _addReseller = (
         if (resellerData.profile_image_url && typeof resellerData.profile_image_url !== 'string') {
             formData.append('profile_image_url', resellerData.profile_image_url);
         }
+        if (resellerData.reseller_identity_attachment && typeof resellerData.reseller_identity_attachment !== 'string') {
+            formData.append('reseller_identity_attachment', resellerData.reseller_identity_attachment);
+        }
+        if (resellerData.extra_optional_proof && typeof resellerData.extra_optional_proof !== 'string') {
+            formData.append('extra_optional_proof', resellerData.extra_optional_proof);
+        }
+
+        // For boolean fields, convert to 1/0 or 'true'/'false' based on backend expectation
+        formData.append('can_set_commission_group', resellerData.can_set_commission_group ? '1' : '0');
+        formData.append('can_set_selling_price_group', resellerData.can_set_selling_price_group ? '1' : '0');
+        formData.append('can_send_payment_request', resellerData.can_send_payment_request ? '1' : '0');
+        formData.append('can_ask_loan_balance', resellerData.can_ask_loan_balance ? '1' : '0');
+        formData.append('can_see_our_contact', resellerData.can_see_our_contact ? '1' : '0');
+        formData.append('can_see_parent_contact', resellerData.can_see_parent_contact ? '1' : '0');
+        formData.append('can_send_hawala', resellerData.can_send_hawala ? '1' : '0');
+
+        // For numeric fields, ensure they're strings if backend expects strings
+        formData.append('max_loan_balance_request_amount', String(resellerData.max_loan_balance_request_amount || 0));
+        formData.append('min_loan_balance_request_amount', String(resellerData.min_loan_balance_request_amount || 0));
         //return
 
         const response = await axios.post(
@@ -470,7 +503,7 @@ export const _addReseller = (
 
         const newData = {
             ...resellerData,
-            profile_image_url:response.data.data.reseller.profile_image_url,
+            profile_image_url: response.data.data.reseller.profile_image_url,
             id: response.data.data.reseller.id
         };
 

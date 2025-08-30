@@ -87,6 +87,8 @@ export const _addCompany = (newCompany: Company,toast: React.RefObject<Toast>,t:
         formData.append('company_logo', newCompany.company_logo);
     }
 
+    formData.append("input_form_schema", JSON.stringify(newCompany.input_form_schema || []))
+
     formData.append('country_id', newCompany.country?.id?.toString()||'');
 
     formData.append('telegram_chat_id', newCompany.telegram_chat_id?.id?.toString()||'');
@@ -144,6 +146,8 @@ export const _editCompany = (updatedCompany: Company,toast: React.RefObject<Toas
     if (updatedCompany.company_logo && typeof updatedCompany.company_logo !== 'string') {
         formData.append('company_logo', updatedCompany.company_logo);
     }
+        formData.append("input_form_schema", JSON.stringify(updatedCompany.input_form_schema || []))
+
 
     formData.append('country_id', updatedCompany.country?.id?.toString() || '');
     formData.append('telegram_chat_id', updatedCompany.telegram_chat_id?.id?.toString() || '');
@@ -185,4 +189,38 @@ export const _editCompany = (updatedCompany: Company,toast: React.RefObject<Toas
             life: 3000
         });
     }
+};
+
+
+
+export const _deleteSelectedCompanies = async (
+  provinceIds: number[],
+  toast: React.RefObject<Toast>,
+  t: (key: string) => string
+) => {
+  const token = getAuthToken();
+
+  try {
+    for (const id of provinceIds) {
+      await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/companies/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    }
+
+    toast.current?.show({
+      severity: 'success',
+      summary: t('SUCCESS'),
+      detail: t('COMPANIES_DELETED'),
+      life: 3000,
+    });
+  } catch (error: any) {
+    toast.current?.show({
+      severity: 'error',
+      summary: t('ERROR'),
+      detail: t('COMPANIES_DELETE_FAILED'),
+      life: 3000,
+    });
+  }
 };

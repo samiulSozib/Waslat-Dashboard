@@ -17,7 +17,7 @@ import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Payment, Currency } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
-import { _addPayment, _deletePayment, _editPayment, _fetchPayments } from '@/app/redux/actions/paymentActions';
+import { _addPayment, _deletePayment, _editPayment, _fetchPayments, _invalidatePayment, _rollbackedPayment, _verifyAndSendPayment, _verifyPayment } from '@/app/redux/actions/paymentActions';
 import { paymentReducer } from '../../../redux/reducers/paymentReducer';
 import { resellerReducer } from '../../../redux/reducers/resellerReducer';
 import { _fetchResellers } from '@/app/redux/actions/resellerActions';
@@ -33,6 +33,10 @@ import { Reseller } from '../../../../types/interface';
 import { customCellStyle } from '../../utilities/customRow';
 import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
+import { Paginator } from 'primereact/paginator';
+import { generatePaymentExcelFile } from '../../utilities/generateExcel';
+import { SplitButton } from 'primereact/splitbutton';
+import { Checkbox } from 'primereact/checkbox';
 
 const PaymentPage = () => {
     let emptyPayment: Payment = {
@@ -63,18 +67,64 @@ const PaymentPage = () => {
     const toast = useRef<Toast>(null);
     const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
-    const { payments, loading } = useSelector((state: any) => state.paymentReducer);
+    const { payments, loading, pagination } = useSelector((state: any) => state.paymentReducer);
     const { resellers } = useSelector((state: any) => state.resellerReducer);
     const { paymentMethods } = useSelector((state: any) => state.paymentMethodsReducer);
     const { currencies } = useSelector((state: any) => state.currenciesReducer);
     const { t } = useTranslation();
+    const [searchTag, setSearchTag] = useState('');
+    const [filterDialogVisible, setFilterDialogVisible] = useState(false);
+    const [filters, setFilters] = useState({
+        filter_status: null as string | null,
+        filter_payment_method: null as number | null,
+        filter_startdate: null as string | null,
+        filter_enddate: null as string | null
+    });
+    const [activeFilters, setActiveFilters] = useState({});
+    const [refreshing, setRefreshing] = useState(false);
+    const filterRef = useRef<HTMLDivElement>(null);
+    const [resellerSearchTerm, setResellerSearchTerm] = useState('');
+    const [rollbackDialog, setRollbackDialog] = useState(false);
+    const [invalidateDialog, setInvalidateDialog] = useState(false);
+    const [invalidateNotes, setInvalidateNotes] = useState('');
+    const [verifyDialog, setVerifyDialog] = useState(false);
+    const [verifyAndSendDialog, setVerifyAndSendDialog] = useState(false);
+    const [verificationNotes, setVerificationNotes] = useState('');
+    const [showVerifyNotes, setShowVerifyNotes] = useState(false);
+    const [showVerifyAndSendNotes, setShowVerifyAndSendNotes] = useState(false);
 
     useEffect(() => {
-        dispatch(_fetchPayments());
-        dispatch(_fetchResellers());
+        dispatch(_fetchPayments(1, searchTag, activeFilters));
+        dispatch(_fetchResellers(1, '', '', 10000));
         dispatch(_fetchPaymentMethods());
         dispatch(_fetchCurrencies());
-    }, [dispatch]);
+    }, [dispatch, searchTag, activeFilters]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (resellerSearchTerm) {
+                dispatch(_fetchResellers(1, resellerSearchTerm));
+            } else {
+                dispatch(_fetchResellers(1, ''));
+            }
+        }, 300); // Debounce for 300ms
+
+        return () => clearTimeout(timer);
+    }, [resellerSearchTerm, dispatch]);
+
+    // Add this useEffect for click outside detection
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (target.closest('.p-dropdown-panel')) return;
+            if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
+                setFilterDialogVisible(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [filterDialogVisible]);
 
     const openNew = () => {
         setPayment(emptyPayment);
@@ -97,7 +147,7 @@ const PaymentPage = () => {
 
     const savePayment = () => {
         setSubmitted(true);
-        if (!payment.reseller || !payment.amount || !payment.notes || !payment.payment_method || !payment.currency || !payment.payment_date) {
+        if (!payment.reseller || !payment.amount || !payment.payment_method || !payment.currency || !payment.payment_date) {
             toast.current?.show({
                 severity: 'error',
                 summary: t('VALIDATION_ERROR'),
@@ -118,8 +168,10 @@ const PaymentPage = () => {
     };
 
     const editPayment = (payment: Payment) => {
-        setPayment({ ...payment });
+        const matchingReseller = resellers.find((r: any) => r.id === payment.reseller?.id);
 
+        setPayment({ ...payment, reseller: matchingReseller });
+        console.log(payment.reseller);
         setPaymentDialog(true);
     };
 
@@ -141,46 +193,215 @@ const PaymentPage = () => {
         setDeletePaymentsDialog(true);
     };
 
+    const confirmRollbackPayment = (payment: Payment) => {
+        setPayment(payment);
+        setRollbackDialog(true);
+    };
+
+    const rollbackPayment = () => {
+        if (!payment?.id) {
+            console.error('Payment  ID is undefined.');
+            return;
+        }
+        dispatch(_rollbackedPayment(payment?.id, toast, t));
+        hideRollbackDialog();
+    };
+
+    const confirmInvalidatePayment = (payment: Payment) => {
+        setPayment(payment);
+        setInvalidateNotes('');
+        setInvalidateDialog(true);
+    };
+
+    const handleInvalidatePayment = () => {
+        if (!payment?.id) {
+            console.error('Payment ID is undefined.');
+            return;
+        }
+
+        dispatch(_invalidatePayment(payment?.id, invalidateNotes, toast, t));
+
+        setInvalidateDialog(false);
+    };
+
+    const hideInvalidateDialog = () => {
+        setInvalidateDialog(false);
+    };
+
+    const hideRollbackDialog = () => {
+        setRollbackDialog(false);
+    };
+
+    const handleVerifyPayment = () => {
+        if (!payment?.id) {
+            console.error('Payment ID is undefined.');
+            return;
+        }
+
+        const notes = showVerifyNotes ? verificationNotes : '';
+        dispatch(_verifyPayment(payment?.id, notes, toast, t));
+        hideVerifyDialog();
+    };
+
+    const handleVerifyAndSendPayment = () => {
+        if (!payment?.id) {
+            console.error('Payment ID is undefined.');
+            return;
+        }
+
+        const notes = showVerifyAndSendNotes ? verificationNotes : '';
+        dispatch(_verifyAndSendPayment(payment?.id, notes, toast, t));
+        hideVerifyAndSendDialog();
+    };
+
+    const hideVerifyDialog = () => {
+        setVerifyDialog(false);
+        setShowVerifyNotes(false);
+        setVerificationNotes('');
+    };
+
+    const hideVerifyAndSendDialog = () => {
+        setVerifyAndSendDialog(false);
+        setShowVerifyAndSendNotes(false);
+        setVerificationNotes('');
+    };
+
+    const confirmVerifyPayment = (payment: Payment) => {
+        setPayment(payment);
+        setVerificationNotes('');
+        setShowVerifyNotes(false);
+        setVerifyDialog(true);
+    };
+
+    const confirmVerifyAndSendPayment = (payment: Payment) => {
+        setPayment(payment);
+        setVerificationNotes('');
+        setShowVerifyAndSendNotes(false);
+        setVerifyAndSendDialog(true);
+    };
+
     const rightToolbarTemplate = () => {
         return (
             <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label="Add Payment"
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+                <div className="flex justify-end items-center gap-2">
+                    {' '}
+                    {/* Added gap-2 here */}
+                    <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
+                        <Button className="p-button-info" label={t('FILTER')} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
+                        {filterDialogVisible && (
+                            <div
+                                className="p-card p-fluid"
+                                style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: isRTL() ? 0 : '',
+                                    right: isRTL() ? '' : 0,
+                                    width: '300px',
+                                    zIndex: 1000,
+                                    marginTop: '0.5rem',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                }}
+                            >
+                                <div className="p-card-body" style={{ padding: '1rem' }}>
+                                    <div className="grid">
+                                        {/* Status Filter */}
+                                        <div className="col-12">
+                                            <label htmlFor="statusFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('PAYMENT.TABLE.COLUMN.STATUS')}
+                                            </label>
+                                            <Dropdown
+                                                id="statusFilter"
+                                                options={[
+                                                    { label: t('COMPLETED'), value: 'completed' },
+                                                    { label: t('PENDING'), value: 'pending' },
+                                                    { label: t('FAILED'), value: 'failed' }
+                                                ]}
+                                                value={filters.filter_status}
+                                                onChange={(e) => setFilters({ ...filters, filter_status: e.value })}
+                                                placeholder={t('SELECT_STATUS')}
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
+
+                                        {/* Payment Method Filter */}
+                                        <div className="col-12">
+                                            <label htmlFor="paymentMethodFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('PAYMENT.TABLE.COLUMN.PAYMENTMETHOD')}
+                                            </label>
+                                            <Dropdown
+                                                id="paymentMethodFilter"
+                                                options={paymentMethods}
+                                                value={filters.filter_payment_method}
+                                                onChange={(e) => setFilters({ ...filters, filter_payment_method: e.value })}
+                                                optionLabel="method_name"
+                                                optionValue="id"
+                                                placeholder={t('SELECT_PAYMENT_METHOD')}
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
+
+                                        {/* Date Range Filters */}
+                                        <div className="col-12">
+                                            <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('START_DATE')}
+                                            </label>
+                                            <InputText type="date" id="startDateFilter" value={filters.filter_startdate || ''} onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })} style={{ width: '100%' }} />
+                                        </div>
+
+                                        <div className="col-12">
+                                            <label htmlFor="endDateFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('END_DATE')}
+                                            </label>
+                                            <InputText type="date" id="endDateFilter" value={filters.filter_enddate || ''} onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })} style={{ width: '100%' }} />
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="col-12 mt-3 flex justify-content-between gap-2">
+                                            <Button
+                                                label={t('RESET')}
+                                                icon="pi pi-times"
+                                                className="p-button-secondary p-button-sm"
+                                                onClick={() => {
+                                                    setFilters({
+                                                        filter_status: null,
+                                                        filter_payment_method: null,
+                                                        filter_startdate: null,
+                                                        filter_enddate: null
+                                                    });
+                                                }}
+                                            />
+                                            <Button
+                                                label={t('APPLY')}
+                                                icon="pi pi-check"
+                                                className="p-button-sm"
+                                                onClick={() => {
+                                                    handleSubmitFilter(filters);
+                                                    setFilterDialogVisible(false);
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <Button label="Add Payment" icon="pi pi-plus" severity="success" onClick={openNew} />
+                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
                 </div>
             </React.Fragment>
         );
     };
 
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <div className="flex items-center">
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-    //                 <i className="pi pi-search" />
-    //                 <InputText
-    //                     type="search"
-    //                     onInput={(e) => setGlobalFilter(e.currentTarget.value)}
-    //                     placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-    //                     className="w-full md:w-auto"
-    //                 />
-    //             </span>
-    //         </div>
-    //     );
-    // };
+    const leftToolbarTemplate = () => {
+        return (
+            <div className="flex items-center">
+                <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
+                    <i className="pi pi-search" />
+                    <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
+                </span>
+            </div>
+        );
+    };
 
     const resellerNameBodyTemplate = (rowData: Payment) => {
         return (
@@ -228,10 +449,31 @@ const PaymentPage = () => {
     };
 
     const statusBodyTemplate = (rowData: Payment) => {
+        const status = rowData.status?.toLowerCase() || 'unknown';
+
+        const getStatusClass = (status: string) => {
+            switch (status.toLowerCase()) {
+                case 'rollback':
+                    return 'bg-yellow-100 text-yellow-800';
+                case 'completed':
+                    return 'bg-green-100 text-green-800';
+                case 'rejected':
+                    return 'bg-red-100 text-red-800';
+                case 'failed':
+                    return 'bg-red-100 text-red-800';
+                case 'pending':
+                    return 'bg-yellow-100 text-red-800';
+                default:
+                    return 'bg-gray-100 text-gray-800';
+            }
+        };
+
+        const displayStatus = status !== 'unknown' ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
+
         return (
             <>
                 <span className="p-column-title">Status</span>
-                {rowData.status}
+                <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getStatusClass(rowData.status)}`}>{displayStatus}</span>
             </>
         );
     };
@@ -241,6 +483,15 @@ const PaymentPage = () => {
             <>
                 <span className="p-column-title">Note</span>
                 {rowData.notes}
+            </>
+        );
+    };
+
+    const performedByBodyTemplate = (rowData: Payment) => {
+        return (
+            <>
+                <span className="p-column-title">Performed By</span>
+                {rowData.performed_by_name}
             </>
         );
     };
@@ -276,13 +527,77 @@ const PaymentPage = () => {
         );
     };
 
+    // const actionBodyTemplate = (rowData: Payment) => {
+    //     return (
+    //         <>
+    //             <div className="flex flex-row">
+    //                 <Button icon="pi pi-pencil" rounded severity="success" className="mr-2" onClick={() => editPayment(rowData)} />
+    //                 <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeletePayment(rowData)} />
+    //             </div>
+    //         </>
+    //     );
+    // };
+
     const actionBodyTemplate = (rowData: Payment) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className="mr-2" onClick={() => editPayment(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeletePayment(rowData)} />
-            </>
-        );
+        const isRollbacked = rowData.status === 'rollbacked';
+        const isCompleted = rowData.status === 'completed';
+        const isPending = rowData.status === 'pending';
+
+        const items = [];
+
+        // Always include Delete
+        items.push({
+            label: t('Delete'),
+            icon: 'pi pi-trash',
+            command: () => confirmDeletePayment(rowData),
+            disabled: isRollbacked // Disabled only if rollbacked
+        });
+
+        if (isRollbacked) {
+            // All other actions are disabled (only Delete is shown but disabled above)
+            return <SplitButton label="" model={items} className="p-button-rounded" severity="info" dir="ltr" icon="pi pi-cog" />;
+        }
+
+        if (isCompleted) {
+            items.push({
+                label: t('Rollback'),
+                icon: 'pi pi-replay',
+                command: () => confirmRollbackPayment(rowData)
+            });
+        } else if (isPending) {
+            // Only show full set if not done/rollbacked/confirmed
+            items.push(
+                {
+                    label: t('Invalidate'),
+                    icon: 'pi pi-times-circle',
+                    command: () => confirmInvalidatePayment(rowData)
+                },
+                {
+                    label: t('Verify'),
+                    icon: 'pi pi-check-circle',
+                    command: () => confirmVerifyPayment(rowData)
+                },
+                {
+                    label: t('Verify_and_send'),
+                    icon: 'pi pi-check-square',
+                    command: () => confirmVerifyAndSendPayment(rowData)
+                },
+                {
+                    label: t('Rollback'),
+                    icon: 'pi pi-replay',
+                    command: () => confirmRollbackPayment(rowData)
+                },
+                {
+                    label: t('Edit'),
+                    icon: 'pi pi-pencil',
+                    command: () => editPayment(rowData)
+                }
+            );
+        } else {
+            return <SplitButton label="" model={items} className="p-button-rounded" severity="info" dir="ltr" icon="pi pi-cog" />;
+        }
+
+        return <SplitButton label="" model={items} className="p-button-rounded" severity="info" dir="ltr" icon="pi pi-cog" />;
     };
 
     // const header = (
@@ -313,22 +628,52 @@ const PaymentPage = () => {
             <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
         </>
     );
+    const rollbackDialogFooter = (
+        <>
+            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideRollbackDialog} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={rollbackPayment} />
+        </>
+    );
 
-useEffect(() => {
-  const currencyCode = payment?.reseller?.code||"";
+    useEffect(() => {
+        const currencyCode = payment?.reseller?.code || '';
 
-  const selectedCurrency = currencies.find(
-    (currency:Currency) => currency.code === currencyCode
-  );
+        const selectedCurrency = currencies.find((currency: Currency) => currency.code === currencyCode);
 
-  if (selectedCurrency) {
-    setPayment((prev) => ({
-      ...prev,
-      currency_id: selectedCurrency.id,
-      currency: selectedCurrency,
-    }));
-  }
-}, [payment?.reseller?.code,currencies]);
+        if (selectedCurrency) {
+            setPayment((prev) => ({
+                ...prev,
+                currency_id: selectedCurrency.id,
+                currency: selectedCurrency
+            }));
+        }
+    }, [payment?.reseller?.code, currencies]);
+
+    const onPageChange = (event: any) => {
+        const page = event.page + 1;
+        dispatch(_fetchPayments(page, searchTag));
+    };
+
+    // Add these helper functions
+    const handleSubmitFilter = (filters: any) => {
+        const cleanedFilters = Object.fromEntries(Object.entries(filters).filter(([_, value]) => value !== null && value !== ''));
+        setActiveFilters(cleanedFilters);
+    };
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await new Promise((res) => setTimeout(res, 1000));
+        dispatch(_fetchPayments(1, searchTag, activeFilters));
+        setRefreshing(false);
+    };
+
+    const exportToExcel = async () => {
+        await generatePaymentExcelFile({
+            t,
+            toast,
+            all: true
+        });
+    };
 
     return (
         <div className="grid crud-demo -m-5">
@@ -336,7 +681,7 @@ useEffect(() => {
                 <div className="card p-2">
                     {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
                     <Toast ref={toast} />
-                    <Toolbar className="mb-4" right={rightToolbarTemplate}></Toolbar>
+                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
 
                     <DataTable
                         ref={dt}
@@ -344,9 +689,8 @@ useEffect(() => {
                         selection={selectedCompanies}
                         onSelectionChange={(e) => setSelectedPayment(e.value as any)}
                         dataKey="id"
-                        paginator
-                        rows={10}
-                        rowsPerPageOptions={[5, 10, 25]}
+                        rows={pagination?.items_per_page}
+                        totalRecords={pagination?.total}
                         className="datatable-responsive"
                         paginatorTemplate={
                             isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
@@ -358,12 +702,12 @@ useEffect(() => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         // header={header}
                         responsiveLayout="scroll"
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.RESELLER')} body={resellerNameBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.PAYMENTMETHOD')} body={paymentMethodBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.AMOUNT')} body={amountBodyTemplate}></Column>
@@ -371,9 +715,20 @@ useEffect(() => {
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.REMAININGPAYMENTAMOUNT')} body={remainingPaymentBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.STATUS')} body={statusBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.NOTES')} body={noteBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PERFORMED_BY')} body={performedByBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.PAYMENTDATE')} body={paymentDateBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate}></Column>
                     </DataTable>
+
+                    <Paginator
+                        first={(pagination?.page - 1) * pagination?.items_per_page}
+                        rows={pagination?.items_per_page}
+                        totalRecords={pagination?.total}
+                        onPageChange={(e) => onPageChange(e)}
+                        template={
+                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                        }
+                    />
 
                     <Dialog visible={paymentDialog} style={{ width: '900px', padding: '5px' }} header={t('PAYMENT.DETAILS.TITLE')} modal className="p-fluid" footer={paymentDialogFooter} onHide={hideDialog}>
                         <div className="card flex  flex-wrap p-fluid mt-3 gap-4">
@@ -386,17 +741,25 @@ useEffect(() => {
                                         id="reseller"
                                         value={payment.reseller}
                                         options={resellers}
-                                        onChange={(e) =>
+                                        onChange={(e) => {
                                             setPayment((prev) => ({
                                                 ...prev,
                                                 reseller: e.value
-                                            }))
-                                        }
+                                            }));
+                                        }}
                                         optionLabel="reseller_name"
-                                        //optionValue='id'
+                                        filter
+                                        filterBy="reseller_name"
+                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                                        showFilterClear
                                         placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
                                         className="w-full"
+                                        panelClassName="min-w-[20rem]"
+                                        onFilter={(e) => {
+                                            setResellerSearchTerm(e.filter);
+                                        }}
                                     />
+
                                     {submitted && !payment.reseller && (
                                         <small className="p-invalid" style={{ color: 'red' }}>
                                             {t('THIS_FIELD_IS_REQUIRED')}
@@ -446,11 +809,11 @@ useEffect(() => {
                                         cols={30}
                                         placeholder={t('PAYMENT.FORM.INPUT.NOTES')}
                                     />
-                                    {submitted && !payment.notes && (
+                                    {/* {submitted && !payment.notes && (
                                         <small className="p-invalid" style={{ color: 'red' }}>
                                             {t('THIS_FIELD_IS_REQUIRED')}
                                         </small>
-                                    )}
+                                    )} */}
                                 </div>
                             </div>
 
@@ -486,7 +849,7 @@ useEffect(() => {
                                         {t('PAYMENT.FORM.INPUT.CURRENCY')}
                                     </label>
                                     <Dropdown
-                                    disabled
+                                        disabled
                                         id="currency"
                                         value={payment.currency}
                                         options={currencies}
@@ -554,6 +917,93 @@ useEffect(() => {
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
                             {payment && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
+                        </div>
+                    </Dialog>
+
+                    {/* Rollback Confirmation Dialog */}
+                    <Dialog visible={rollbackDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={rollbackDialogFooter} onHide={hideRollbackDialog}>
+                        <div className="flex align-items-center justify-content-center">
+                            <i className="pi pi-refresh mr-3" style={{ fontSize: '2rem' }} />
+                            {payment && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_ROLLBACK')}?</span>}
+                        </div>
+                    </Dialog>
+
+                    {/* invalidate dialog */}
+                    <Dialog
+                        visible={invalidateDialog}
+                        style={{ width: '450px' }}
+                        header={t('INVALIDATE_PAYMENT')}
+                        modal
+                        onHide={hideInvalidateDialog}
+                        footer={
+                            <>
+                                <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideInvalidateDialog} />
+                                <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={handleInvalidatePayment} />
+                            </>
+                        }
+                    >
+                        <div className="p-fluid">
+                            <div className="field">
+                                <label htmlFor="invalidateNotes">{t('NOTES')}</label>
+                                <InputTextarea id="invalidateNotes" value={invalidateNotes} onChange={(e) => setInvalidateNotes(e.target.value)} rows={3} placeholder={t('ENTER_INVALIDATION_REASON')} autoFocus />
+                            </div>
+                        </div>
+                    </Dialog>
+                    {/* Verify Payment Dialog */}
+                    <Dialog
+                        visible={verifyDialog}
+                        style={{ width: '450px' }}
+                        header={t('VERIFY_PAYMENT')}
+                        modal
+                        onHide={hideVerifyDialog}
+                        footer={
+                            <>
+                                <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideVerifyDialog} />
+                                <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={handleVerifyPayment} />
+                            </>
+                        }
+                    >
+                        <div className="p-fluid">
+                            <div className="field-checkbox mb-3">
+                                <Checkbox inputId="showVerifyNotes" checked={showVerifyNotes} onChange={(e) => setShowVerifyNotes(e.checked ?? false)} />
+                                <label htmlFor="showVerifyNotes">{t('ADD_NOTES')}</label>
+                            </div>
+
+                            {showVerifyNotes && (
+                                <div className="field">
+                                    <label htmlFor="verificationNotes">{t('NOTES')}</label>
+                                    <InputTextarea id="verificationNotes" value={verificationNotes} onChange={(e) => setVerificationNotes(e.target.value)} rows={3} placeholder={t('ENTER_VERIFICATION_NOTES')} />
+                                </div>
+                            )}
+                        </div>
+                    </Dialog>
+
+                    {/* Verify and Send Payment Dialog */}
+                    <Dialog
+                        visible={verifyAndSendDialog}
+                        style={{ width: '450px' }}
+                        header={t('VERIFY_AND_SEND_PAYMENT')}
+                        modal
+                        onHide={hideVerifyAndSendDialog}
+                        footer={
+                            <>
+                                <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideVerifyAndSendDialog} />
+                                <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={handleVerifyAndSendPayment} />
+                            </>
+                        }
+                    >
+                        <div className="p-fluid">
+                            <div className="field-checkbox mb-3">
+                                <Checkbox inputId="showVerifyAndSendNotes" checked={showVerifyAndSendNotes} onChange={(e) => setShowVerifyAndSendNotes(e.checked ?? false)} />
+                                <label htmlFor="showVerifyAndSendNotes">{t('ADD_NOTES')}</label>
+                            </div>
+
+                            {showVerifyAndSendNotes && (
+                                <div className="field">
+                                    <label htmlFor="verificationNotes">{t('NOTES')}</label>
+                                    <InputTextarea id="verificationNotes" value={verificationNotes} onChange={(e) => setVerificationNotes(e.target.value)} rows={3} placeholder={t('ENTER_VERIFICATION_NOTES')} />
+                                </div>
+                            )}
                         </div>
                     </Dialog>
                 </div>

@@ -13,7 +13,7 @@ import { useDispatch } from 'react-redux';
 import { _fetchCompanies, _deleteCompany, _addCompany, _editCompany } from '@/app/redux/actions/companyActions';
 import { useSelector } from 'react-redux';
 import { Dropdown } from 'primereact/dropdown';
-import { _addService, _deleteService, _editService, _fetchServiceList } from '@/app/redux/actions/serviceActions';
+import { _addService, _deleteSelectedServices, _deleteService, _editService, _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Company, Service } from '@/types/interface';
@@ -23,6 +23,9 @@ import { useTranslation } from 'react-i18next';
 import { customCellStyleImage } from '../../utilities/customRow';
 import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
+import { parseInputFormSchema, stringifyInputFormSchema } from '../../utilities/parseInputFormSchema';
+import { Badge } from 'primereact/badge';
+import { CustomFields } from '../../components/CustomFields';
 
 const Services = () => {
     let emptyService: Service = {
@@ -34,14 +37,15 @@ const Services = () => {
         created_at: '',
         updated_at: '',
         service_category: null,
-        company: null
+        company: null,
+        input_form_schema: []
     };
 
     const [serviceDialog, setServiceDialog] = useState(false);
     const [deleteServiceDialog, setDeleteServiceDialog] = useState(false);
     const [deleteServicesDialog, setDeleteServicesDialog] = useState(false);
     const [service, setService] = useState<Service>(emptyService);
-    const [selectedCompanies, setSelectedCompanyCode] = useState(null);
+    const [selectedServices, setSelectedServices] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
@@ -93,10 +97,43 @@ const Services = () => {
             });
             return;
         }
+
+        // Validate custom fields
+        const parsedFields = parseInputFormSchema(service.input_form_schema);
+        if (parsedFields && parsedFields.length > 0) {
+            for (let i = 0; i < parsedFields.length; i++) {
+                const field = parsedFields[i];
+                if (!field.name || field.name.trim() === '') {
+                    toast.current?.show({
+                        severity: 'error',
+                        summary: t('VALIDATION_ERROR'),
+                        detail: t('CUSTOM_FIELD_NAME_REQUIRED'),
+                        life: 3000
+                    });
+                    return;
+                }
+
+                if (!field.label.en || field.label.en.trim() === '') {
+                    toast.current?.show({
+                        severity: 'error',
+                        summary: t('VALIDATION_ERROR'),
+                        detail: t('CUSTOM_FIELD_LABEL_REQUIRED'),
+                        life: 3000
+                    });
+                    return;
+                }
+            }
+        }
+
+        const serviceData = {
+            ...service,
+            input_form_schema: stringifyInputFormSchema(parsedFields) // Stringify for API
+        };
+
         if (service.id && service.id !== 0) {
-            dispatch(_editService(service.id, service, toast, t));
+            dispatch(_editService(service.id, serviceData, toast, t));
         } else {
-            dispatch(_addService(service, toast, t));
+            dispatch(_addService(serviceData, toast, t));
         }
 
         setServiceDialog(false);
@@ -106,7 +143,9 @@ const Services = () => {
 
     const editService = (service: Service) => {
         //console.log(service)
-        setService({ ...service });
+        const matchingCompany = companies.find((r: any) => r.id === service.company?.id);
+
+        setService({ ...service, company: matchingCompany, input_form_schema: parseInputFormSchema(service.input_form_schema) });
 
         setServiceDialog(true);
     };
@@ -126,10 +165,40 @@ const Services = () => {
     };
 
     const confirmDeleteSelected = () => {
+        if (!selectedServices || (selectedServices as any).length === 0) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: t('VALIDATION_WARNING'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
         setDeleteServicesDialog(true);
     };
 
+    const deleteSelectedServices = async () => {
+        if (!selectedServices || (selectedServices as any).length === 0) {
+            toast.current?.show({
+                severity: 'error',
+                summary: t('VALIDATION_ERROR'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
+
+        const selectedIds = (selectedServices as Service[]).map((service) => service.id);
+
+        await _deleteSelectedServices(selectedIds, toast, t);
+        dispatch(_fetchServiceList());
+
+        setSelectedServices(null);
+        setDeleteServicesDialog(false);
+    };
+
     const rightToolbarTemplate = () => {
+        const hasSelectedServices = selectedServices && (selectedServices as any).length > 0;
         return (
             <React.Fragment>
                 <div className="flex justify-end items-center space-x-2">
@@ -141,14 +210,15 @@ const Services = () => {
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
                         onClick={openNew}
                     />
-                    <Button
+
+                    {/* <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                         label={t('APP.GENERAL.DELETE')}
                         icon="pi pi-trash"
                         severity="danger"
                         onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+                        disabled={!selectedServices || !(selectedServices as any).length}
+                    /> */}
                 </div>
             </React.Fragment>
         );
@@ -209,6 +279,16 @@ const Services = () => {
         );
     };
 
+    const customFieldsBodyTemplate = (rowData: Service) => {
+        const fieldCount = parseInputFormSchema(rowData.input_form_schema).length;
+        return (
+            <>
+                <span className="p-column-title">Custom Fields</span>
+                {fieldCount > 0 ? <Badge value={fieldCount} severity="info" /> : <span className="text-color-secondary">{rowData.input_form_schema?.length.toString()}</span>}
+            </>
+        );
+    };
+
     const actionBodyTemplate = (rowData: Service) => {
         return (
             <>
@@ -243,7 +323,7 @@ const Services = () => {
     const deleteCompaniesDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteServicesDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedServices} />
         </>
     );
 
@@ -271,8 +351,8 @@ const Services = () => {
                     <DataTable
                         ref={dt}
                         value={services}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedCompanyCode(e.value as any)}
+                        selection={selectedServices}
+                        onSelectionChange={(e) => setSelectedServices(e.value as any)}
                         dataKey="id"
                         paginator
                         rows={10}
@@ -288,12 +368,12 @@ const Services = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         // header={header}
                         responsiveLayout="scroll"
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="Company Name"
@@ -315,6 +395,8 @@ const Services = () => {
                             sortable
                             body={serviceCategoryNameBodyTemplate}
                         ></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TOTAL_CUSTOM_FIELD')} body={customFieldsBodyTemplate}></Column>
+
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
 
@@ -402,6 +484,16 @@ const Services = () => {
                                 </div>
                             </div>
                         </div>
+                        <CustomFields
+                            fields={parseInputFormSchema(service.input_form_schema)}
+                            onFieldsChange={(updatedFields) =>
+                                setService({
+                                    ...service,
+                                    input_form_schema: updatedFields // Keep as array for local state
+                                })
+                            }
+                            submitted={submitted}
+                        />{' '}
                     </Dialog>
 
                     <Dialog visible={deleteServiceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteServiceDialog}>
@@ -418,7 +510,7 @@ const Services = () => {
                     <Dialog visible={deleteServicesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteServicesDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {service && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
+                            {service && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
                 </div>

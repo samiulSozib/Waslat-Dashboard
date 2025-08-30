@@ -46,7 +46,7 @@ const CountryPage = () => {
     const [deleteCountryDialog, setDeleteCountryDialog] = useState(false);
     const [deleteCountrysDialog, setDeleteCountrysDialog] = useState(false);
     const [country, setCountry] = useState<Country>(emptyCountry);
-    const [selectedCompanies, setSelectedCountry] = useState(null);
+    const [selectedCountries, setSelectedCountry] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
@@ -132,25 +132,20 @@ const CountryPage = () => {
     };
 
     const rightToolbarTemplate = () => {
+        const hasSelectedCountries = selectedCountries && (selectedCountries as any).length > 0;
+
         return (
             <React.Fragment>
                 <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('COUNTRY.TABLE.CREATECOUNTRY')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+                        <Button
+                            style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
+                            label={t('COUNTRY.TABLE.CREATECOUNTRY')}
+                            icon="pi pi-plus"
+                            severity="success"
+                            className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
+                            onClick={openNew}
+                        />
+
                 </div>
             </React.Fragment>
         );
@@ -279,7 +274,7 @@ const CountryPage = () => {
                     <DataTable
                         ref={dt}
                         value={countries}
-                        selection={selectedCompanies}
+                        selection={selectedCountries}
                         onSelectionChange={(e) => setSelectedCountry(e.value as any)}
                         dataKey="id"
                         paginator
@@ -296,12 +291,12 @@ const CountryPage = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         // header={header}
                         responsiveLayout="scroll"
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header="" sortable body={imageBodyTemplate}></Column>
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
@@ -510,7 +505,7 @@ const CountryPage = () => {
                     <Dialog visible={deleteCountrysDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteCountrysDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {country && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
+                            {country && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected countries?</span>}
                         </div>
                     </Dialog>
                 </div>

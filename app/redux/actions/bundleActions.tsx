@@ -199,3 +199,37 @@ export const _deleteBundle = (bundleId: number, toast: React.RefObject<Toast>,t:
     });
   }
 };
+
+
+
+export const _deleteSelectedBundles = async (
+  bundleIds: number[],
+  toast: React.RefObject<Toast>,
+  t: (key: string) => string
+) => {
+  const token = getAuthToken();
+
+  try {
+    for (const id of bundleIds) {
+      await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/bundles/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    }
+
+    toast.current?.show({
+      severity: 'success',
+      summary: t('SUCCESS'),
+      detail: t('BUNDLES_DELETED'),
+      life: 3000,
+    });
+  } catch (error: any) {
+    toast.current?.show({
+      severity: 'error',
+      summary: t('ERROR'),
+      detail: t('BUNDLES_DELETE_FAILED'),
+      life: 3000,
+    });
+  }
+};

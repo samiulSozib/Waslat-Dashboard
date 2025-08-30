@@ -15,7 +15,7 @@ import { useSelector } from 'react-redux';
 import { Dropdown } from 'primereact/dropdown';
 import { _fetchCountries } from '@/app/redux/actions/countriesActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
-import { _addCompanyCode, _deleteCompanyCode, _editCompanyCode, _fetchCompanyCodes } from '@/app/redux/actions/companyCodeActions';
+import { _addCompanyCode, _deleteCompanyCode, _deleteSelectedCompanyCodes, _editCompanyCode, _fetchCompanyCodes } from '@/app/redux/actions/companyCodeActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Company, CompanyCode } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
@@ -40,7 +40,7 @@ const CompanyCodePage = () => {
     const [deleteCompanyCodeDialog, setDeleteCompanyCodeDialog] = useState(false);
     const [deleteCompanyCodesDialog, setDeleteCompanyCodesDialog] = useState(false);
     const [companyCode, setCompanyCode] = useState<CompanyCode>(emptyCompanyCode);
-    const [selectedCompanies, setSelectedCompanyCode] = useState(null);
+    const [selectedCompanyCodes, setSelectedCompanyCodes] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
@@ -102,7 +102,9 @@ const CompanyCodePage = () => {
 
     const editCompanyCode = (companyCode: CompanyCode) => {
         //console.log(companyCode.company)
-        setCompanyCode({ ...companyCode });
+                const matchingCompany = companies.find((r: any) => r.id === companyCode.company?.id);
+
+        setCompanyCode({ ...companyCode,company:matchingCompany });
 
         setCompanyCodeDialog(true);
     };
@@ -121,11 +123,47 @@ const CompanyCodePage = () => {
         setDeleteCompanyCodeDialog(false);
     };
 
-    const confirmDeleteSelected = () => {
+
+
+        const confirmDeleteSelected = () => {
+        if (!selectedCompanyCodes || (selectedCompanyCodes as any).length === 0) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: t('VALIDATION_WARNING'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
         setDeleteCompanyCodesDialog(true);
     };
 
+        const deleteSelectedCompanyCodes = async() => {
+            if (!selectedCompanyCodes || (selectedCompanyCodes as any).length === 0) {
+                toast.current?.show({
+                    severity: 'error',
+                    summary: t('VALIDATION_ERROR'),
+                    detail: t('NO_SELECTED_ITEMS_FOUND'),
+                    life: 3000
+                });
+                return;
+            }
+
+            const selectedIds = (selectedCompanyCodes as CompanyCode[]).map((companyCode) => companyCode.id);
+
+
+            await _deleteSelectedCompanyCodes(selectedIds,toast,t)
+            dispatch(_fetchCompanyCodes())
+
+
+
+            setSelectedCompanyCodes(null)
+            setDeleteCompanyCodesDialog(false)
+        };
+
+
     const rightToolbarTemplate = () => {
+        const hasSelectedCompanyCodes = selectedCompanyCodes && (selectedCompanyCodes as any).length > 0;
         return (
             <React.Fragment>
                 <div className="flex justify-end items-center space-x-2    ">
@@ -137,14 +175,16 @@ const CompanyCodePage = () => {
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
                         onClick={openNew}
                     />
-                    <Button
+
+                    {/* <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                         label={t('APP.GENERAL.DELETE')}
                         icon="pi pi-trash"
                         severity="danger"
                         onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+                        disabled={!selectedCompanyCodes || !(selectedCompanyCodes as any).length}
+                    /> */}
+
                 </div>
             </React.Fragment>
         );
@@ -231,7 +271,7 @@ const CompanyCodePage = () => {
     const deleteCompaniesDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCompanyCodesDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedCompanyCodes}/>
         </>
     );
 
@@ -259,8 +299,8 @@ const CompanyCodePage = () => {
                     <DataTable
                         ref={dt}
                         value={companyCodes}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedCompanyCode(e.value as any)}
+                        selection={selectedCompanyCodes}
+                        onSelectionChange={(e) => setSelectedCompanyCodes(e.value as any)}
                         dataKey="id"
                         paginator
                         rows={10}
@@ -281,7 +321,7 @@ const CompanyCodePage = () => {
                         // header={header}
                         responsiveLayout="scroll"
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="reserved_digit"
@@ -385,7 +425,7 @@ const CompanyCodePage = () => {
                     <Dialog visible={deleteCompanyCodesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteCompanyCodesDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {companyCode && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
+                            {companyCodes && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
                 </div>

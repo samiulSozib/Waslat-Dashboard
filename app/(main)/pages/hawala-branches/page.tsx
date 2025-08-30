@@ -143,14 +143,14 @@ const HawalaBranchPage = () => {
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
                         onClick={openNew}
                     />
-                    <Button
+                    {/* <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                         label={t('APP.GENERAL.DELETE')}
                         icon="pi pi-trash"
                         severity="danger"
                         onClick={confirmDeleteSelected}
                         disabled={!selectedHawalaBranches || !(selectedHawalaBranches as any).length}
-                    />
+                    /> */}
                 </div>
             </React.Fragment>
         );
@@ -291,7 +291,7 @@ const HawalaBranchPage = () => {
                         dir={isRTL() ? 'rtl' : 'ltr'}
                         style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="name" header={t('HAWALA.TABLE.NAME')} sortable body={nameBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="email" header={t('HAWALA.TABLE.EMAIL')} body={emailBodyTemplate} sortable></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="phone_number" header={t('HAWALA.TABLE.PHONE')} body={phoneBodyTemplate} sortable></Column>

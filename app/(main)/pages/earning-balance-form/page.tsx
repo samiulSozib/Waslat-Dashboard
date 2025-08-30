@@ -23,6 +23,7 @@ const AddEarningBalanceRequestPage = () => {
     const router = useRouter();
     const toast = useRef<Toast>(null);
     const { resellers, loading: resellersLoading } = useSelector((state: any) => state.resellerReducer);
+    const [resellerSearchTerm, setResellerSearchTerm] = useState('');
 
     // Form state
     const [formData, setFormData] = useState({
@@ -33,9 +34,20 @@ const AddEarningBalanceRequestPage = () => {
     const [submitted, setSubmitted] = useState(false);
 
     // Fetch resellers on component mount
+    // useEffect(() => {
+    //     dispatch(_fetchResellers());
+    // }, [dispatch]);
     useEffect(() => {
-        dispatch(_fetchResellers());
-    }, [dispatch]);
+        const timer = setTimeout(() => {
+            if (resellerSearchTerm) {
+                dispatch(_fetchResellers(1, resellerSearchTerm));
+            } else {
+                dispatch(_fetchResellers(1, ''));
+            }
+        }, 300); // Debounce for 300ms
+
+        return () => clearTimeout(timer);
+    }, [resellerSearchTerm, dispatch]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,7 +58,6 @@ const AddEarningBalanceRequestPage = () => {
         dispatch(_addEarningBalanceRequest(formData, toast, t));
         router.push('/pages/earning-balance-form');
         setFormData({ ...formData, reseller_id: '', amount: 0 });
-
     };
 
     // Templates for DataTable
@@ -77,7 +88,7 @@ const AddEarningBalanceRequestPage = () => {
                                 {t('EARNING_BALANCE_REQUEST.ADD_DIALOG.RESELLER')}
                                 <span className="text-red-500">*</span>
                             </label>
-                            <Dropdown
+                            {/* <Dropdown
                                 id="reseller"
                                 value={formData.reseller_id}
                                 options={
@@ -99,6 +110,32 @@ const AddEarningBalanceRequestPage = () => {
                                     'p-invalid': submitted && !formData.reseller_id
                                 })}
                             />
+                             */}
+
+                            <Dropdown
+                                id="reseller"
+                                value={formData.reseller_id}
+                                options={resellers.map((reseller: Reseller) => ({
+                                    label: reseller.reseller_name,
+                                    value: reseller.id
+                                }))}
+                                onChange={(e) => {
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        reseller_id: e.value
+                                    }));
+                                }}
+                                filter
+                                filterPlaceholder={t('SEARCH')}
+                                showFilterClear
+                                placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
+                                className="w-full"
+                                panelClassName="min-w-[20rem]"
+                                onFilter={(e) => {
+                                    setResellerSearchTerm(e.filter);
+                                }}
+                            />
+
                             {submitted && !formData.reseller_id && <small className="p-invalid block mt-1">{t('FORM.VALIDATION.REQUIRED')}</small>}
                         </div>
 

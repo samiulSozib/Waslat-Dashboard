@@ -138,7 +138,7 @@ const AdvertisementPage = () => {
             <React.Fragment>
                 <div className="flex justify-end items-center space-x-2">
                     <Button style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }} label={t('ADVERTISEMENT.TABLE.CREATEADVERTISEMENT')} icon="pi pi-plus" severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"} onClick={openNew} />
-                    <Button style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }} label={t("APP.GENERAL.DELETE")} icon="pi pi-trash" severity="danger" onClick={confirmDeleteSelected} disabled={!selectedCompanies || !(selectedCompanies as any).length} />
+                    {/* <Button style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }} label={t("APP.GENERAL.DELETE")} icon="pi pi-trash" severity="danger" onClick={confirmDeleteSelected} disabled={!selectedCompanies || !(selectedCompanies as any).length} /> */}
                 </div>
             </React.Fragment>
         );
@@ -287,7 +287,7 @@ const AdvertisementPage = () => {
                         dir={isRTL() ? 'rtl' : 'ltr'}
                         style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTIMAGE')} sortable body={imageBodyTemplate}></Column>
                         <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="name" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTTITLE')}  sortable body={advertisementTitleBodyTemplate}></Column>
                         <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="status" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTSTATUS')}  body={statusBodyTemplate} sortable></Column>

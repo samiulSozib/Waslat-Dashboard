@@ -23,12 +23,26 @@ const getAuthToken = () => {
 
 // Fetch Reseller Balance Transaction List
 export const _fetchMoneyTransactionsList =
-    (page: number = 1,search:string='') => async (dispatch: Dispatch) => {
+    (page: number = 1,search:string='',filters: any = {}) => async (dispatch: Dispatch) => {
         dispatch({ type: FETCH_MONEY_TRANSACTIONS_LIST_REQUEST });
         try {
             const token = getAuthToken();
+            const queryParams = new URLSearchParams();
+
+        queryParams.append('page', String(page));
+        queryParams.append('search', search);
+
+
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== '') {
+                queryParams.append(key, String(value));
+            }
+        });
+
+
+        const queryString = queryParams.toString();
             const response = await axios.get(
-                `${process.env.NEXT_PUBLIC_BASE_URL}/transactions?page=${page}&items_per_page=15&search=${search}`,
+                `${process.env.NEXT_PUBLIC_BASE_URL}/transactions?page=${page}&items_per_page=15&${queryString}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -172,4 +186,37 @@ export const _deleteMoneyTransaction = (
             life: 3000,
         });
     }
+};
+
+
+export const _deleteSelectedTransactions = async (
+  transactionIds: number[],
+  toast: React.RefObject<Toast>,
+  t: (key: string) => string
+) => {
+  const token = getAuthToken();
+
+  try {
+    for (const id of transactionIds) {
+      await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/transactions/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    }
+
+    toast.current?.show({
+      severity: 'success',
+      summary: t('SUCCESS'),
+      detail: t('TRANSACTIONS_DELETED'),
+      life: 3000,
+    });
+  } catch (error: any) {
+    toast.current?.show({
+      severity: 'error',
+      summary: t('ERROR'),
+      detail: t('TRANSACTIONS_DELETE_FAILED'),
+      life: 3000,
+    });
+  }
 };

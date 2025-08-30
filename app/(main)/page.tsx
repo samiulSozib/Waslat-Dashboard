@@ -17,6 +17,7 @@ import { AppDispatch } from '../redux/store';
 import { _fetchPurchasedProducts } from '../redux/actions/purchasedProductsActions';
 import withAuth from './authGuard';
 import { useTranslation } from 'react-i18next';
+import { _fetchPaymentTypes } from '../redux/actions/paymentTypeActions';
 
 interface CurrencyBreakdown {
     [currency: string]: {

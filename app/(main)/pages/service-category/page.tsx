@@ -14,7 +14,7 @@ import { useSelector } from 'react-redux';
 import { Dropdown } from 'primereact/dropdown';
 import { _fetchCountries } from '@/app/redux/actions/countriesActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
-import { _addServiceCategory, _deleteServiceCategory, _editServiceCategory, _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
+import { _addServiceCategory, _deleteSelectedServiceCategories, _deleteServiceCategory, _editServiceCategory, _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
 import { AppDispatch } from '@/app/redux/store';
 import { ServiceCategory } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
@@ -24,6 +24,9 @@ import { customCellStyle, customCellStyleImage } from '../../utilities/customRow
 import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
 import { FileUpload } from 'primereact/fileupload';
+import { parseInputFormSchema, stringifyInputFormSchema } from '../../utilities/parseInputFormSchema';
+import { Badge } from 'primereact/badge';
+import { CustomFields } from '../../components/CustomFields';
 
 const Category = () => {
     let emptyServiceCategory: ServiceCategory = {
@@ -34,15 +37,15 @@ const Category = () => {
         category_image_url: '',
         deleted_at: '',
         created_at: '',
-        updated_at: ''
+        updated_at: '',
+        input_form_schema: []
     };
-
 
     const [serviceCategoryDialog, setServiceCategoryDialog] = useState(false);
     const [deleteServiceCategoryDialog, setDeleteServiceCategoryDialog] = useState(false);
     const [deleteServiceCategoriesDialog, setDeleteServiceCategoriesDialog] = useState(false);
     const [serviceCategory, setServiceCategory] = useState<ServiceCategory>(emptyServiceCategory);
-    const [selectedCompanies, setSelectedCompanyCode] = useState(null);
+    const [selectedServiceCategories, setSelectedServiceCategories] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
@@ -85,10 +88,41 @@ const Category = () => {
             });
             return;
         }
+
+        const parsedFields = parseInputFormSchema(serviceCategory.input_form_schema);
+        if (parsedFields && parsedFields.length > 0) {
+            for (let i = 0; i < parsedFields.length; i++) {
+                const field = parsedFields[i];
+                if (!field.name || field.name.trim() === '') {
+                    toast.current?.show({
+                        severity: 'error',
+                        summary: t('VALIDATION_ERROR'),
+                        detail: t('CUSTOM_FIELD_NAME_REQUIRED'),
+                        life: 3000
+                    });
+                    return;
+                }
+
+                if (!field.label.en || field.label.en.trim() === '') {
+                    toast.current?.show({
+                        severity: 'error',
+                        summary: t('VALIDATION_ERROR'),
+                        detail: t('CUSTOM_FIELD_LABEL_REQUIRED'),
+                        life: 3000
+                    });
+                    return;
+                }
+            }
+        }
+
+        const serviceCategoryData = {
+            ...serviceCategory,
+            input_form_schema: stringifyInputFormSchema(parsedFields) // Stringify for API
+        };
         if (serviceCategory.id && serviceCategory.id !== 0) {
-            dispatch(_editServiceCategory(serviceCategory, toast, t));
+            dispatch(_editServiceCategory(serviceCategoryData, toast, t));
         } else {
-            dispatch(_addServiceCategory(serviceCategory, toast, t));
+            dispatch(_addServiceCategory(serviceCategoryData, toast, t));
         }
 
         setServiceCategoryDialog(false);
@@ -97,7 +131,7 @@ const Category = () => {
     };
 
     const editServiceCategory = (serviceCategory: ServiceCategory) => {
-        setServiceCategory({ ...serviceCategory });
+        setServiceCategory({ ...serviceCategory, input_form_schema: parseInputFormSchema(serviceCategory.input_form_schema) });
 
         setServiceCategoryDialog(true);
     };
@@ -117,10 +151,40 @@ const Category = () => {
     };
 
     const confirmDeleteSelected = () => {
+        if (!selectedServiceCategories || (selectedServiceCategories as any).length === 0) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: t('VALIDATION_WARNING'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
         setDeleteServiceCategoriesDialog(true);
     };
 
+    const deleteSelectedServiceCategories = async () => {
+        if (!selectedServiceCategories || (selectedServiceCategories as any).length === 0) {
+            toast.current?.show({
+                severity: 'error',
+                summary: t('VALIDATION_ERROR'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
+
+        const selectedIds = (selectedServiceCategories as ServiceCategory[]).map((category) => category.id);
+
+        await _deleteSelectedServiceCategories(selectedIds, toast, t);
+        dispatch(_fetchServiceCategories());
+
+        setSelectedServiceCategories(null);
+        setDeleteServiceCategoriesDialog(false);
+    };
+
     const rightToolbarTemplate = () => {
+        const hasSelectedServiceCategories = selectedServiceCategories && (selectedServiceCategories as any).length > 0;
         return (
             <React.Fragment>
                 <div className="flex justify-end items-center space-x-2  ">
@@ -132,14 +196,15 @@ const Category = () => {
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
                         onClick={openNew}
                     />
-                    <Button
+
+                    {/* <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                         label={t('APP.GENERAL.DELETE')}
                         icon="pi pi-trash"
                         severity="danger"
                         onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+                        disabled={!selectedServiceCategories || !(selectedServiceCategories as any).length}
+                    /> */}
                 </div>
             </React.Fragment>
         );
@@ -179,22 +244,35 @@ const Category = () => {
         );
     };
 
-        const imageBodyTemplate = (rowData: ServiceCategory) => {
-            return (
-                <>
-                    <span className="p-column-title">Image</span>
-                    <img src={`${rowData?.category_image_url}`} alt="" className="shadow-2"
+    const customFieldsBodyTemplate = (rowData: ServiceCategory) => {
+        const fieldCount = parseInputFormSchema(rowData.input_form_schema).length;
+        return (
+            <>
+                <span className="p-column-title">Custom Fields</span>
+                {fieldCount > 0 ? <Badge value={fieldCount} severity="info" /> : <span className="text-color-secondary">{rowData.input_form_schema?.length.toString()}</span>}
+            </>
+        );
+    };
+
+    const imageBodyTemplate = (rowData: ServiceCategory) => {
+        return (
+            <>
+                <span className="p-column-title">Image</span>
+                <img
+                    src={`${rowData?.category_image_url}`}
+                    alt=""
+                    className="shadow-2"
                     style={{
-                        padding:'2px',
+                        padding: '2px',
                         width: '45px',
                         height: '45px',
                         borderRadius: '50%', // Makes the image circular
-                        objectFit: 'cover', // Ensures the image is cropped correctly within the circle
-                    }}/>
-                </>
-            );
-        };
-
+                        objectFit: 'cover' // Ensures the image is cropped correctly within the circle
+                    }}
+                />
+            </>
+        );
+    };
 
     const actionBodyTemplate = (rowData: ServiceCategory) => {
         return (
@@ -230,7 +308,7 @@ const Category = () => {
     const deleteServiceCategoriesDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteServiceCategoriesDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedServiceCategories} />
         </>
     );
 
@@ -245,8 +323,8 @@ const Category = () => {
                     <DataTable
                         ref={dt}
                         value={serviceCategories}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedCompanyCode(e.value as any)}
+                        selection={selectedServiceCategories}
+                        onSelectionChange={(e) => setSelectedServiceCategories(e.value as any)}
                         dataKey="id"
                         paginator
                         rows={10}
@@ -262,13 +340,13 @@ const Category = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         // header={header}
                         responsiveLayout="scroll"
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} header={t('SERVICECATEGORY.TABLE.COLUMN.IMAGE')} body={imageBodyTemplate}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
+                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('SERVICECATEGORY.TABLE.COLUMN.IMAGE')} body={imageBodyTemplate}></Column>
 
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
@@ -284,6 +362,8 @@ const Category = () => {
                             body={serviceCategoryTypeBodyTemplate}
                             sortable
                         ></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TOTAL_CUSTOM_FIELD')} body={customFieldsBodyTemplate}></Column>
+
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
 
@@ -370,6 +450,16 @@ const Category = () => {
                                 </div>
                             </div>
                         </div>
+                        <CustomFields
+                            fields={parseInputFormSchema(serviceCategory.input_form_schema)}
+                            onFieldsChange={(updatedFields) =>
+                                setServiceCategory({
+                                    ...serviceCategory,
+                                    input_form_schema: updatedFields // Keep as array for local state
+                                })
+                            }
+                            submitted={submitted}
+                        />{' '}
                     </Dialog>
 
                     <Dialog visible={deleteServiceCategoryDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteServiceCategoryDialogFooter} onHide={hideDeleteServiceCategoryDialog}>
@@ -386,7 +476,7 @@ const Category = () => {
                     <Dialog visible={deleteServiceCategoriesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteServiceCategoriesDialogFooter} onHide={hideDeleteServiceCategoriesDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {serviceCategory && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected categories?</span>}
+                            {serviceCategory && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
                 </div>

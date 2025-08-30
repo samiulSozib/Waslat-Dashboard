@@ -19,6 +19,11 @@ import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Toast } from "primereact/toast";
 import { isRTL } from "@/app/(main)/utilities/rtlUtil";
+import ResellerOrders from "@/app/(main)/components/ResellerOrders";
+import ResellerBalances from "@/app/(main)/components/ResellerBalances";
+import ResellerPayments from "@/app/(main)/components/ResellerPayment";
+import ResellerTransactions from "@/app/(main)/components/ResellerTransaction";
+import ResellerSubResellers from "@/app/(main)/components/ResellerSubResellers";
 
 
 // import { useRouter } from "next/router";
@@ -275,14 +280,16 @@ const ResellerDetailsPage = ({params}: ResellerDetailsPageProps) => {
 
                         <div className="col-6 lg:col-6 xl:col-3" >
                             <div className="card" style={{maxHeight:'120px' ,backgroundImage:"linear-gradient(to right, #dbeafe, #c7d2fe)"}}>
-                                <h4>{singleReseller.balance} {userInfo?.currency?.symbol}</h4>
-                                <span>{t('RESELLER.VIEW.BALANCE')}</span>
+                                <span>{singleReseller.balance} {userInfo?.currency?.symbol}</span>
+                                <br />
+                                <span >{t('RESELLER.VIEW.BALANCE')}</span>
                             </div>
                         </div>
 
                         <div className="col-6 lg:col-6 xl:col-3" >
                             <div className="card" style={{maxHeight:'120px',backgroundImage:"linear-gradient(to right, #f3e8ff, #fbcfe8)"}}>
-                                <h4>{singleReseller.today_orders}</h4>
+                                <span>{singleReseller.today_orders}</span>
+                                <br />
                                 <span>{t('RESELLER.VIEW.TODAYORDER')}</span>
                             </div>
                         </div>
@@ -290,35 +297,40 @@ const ResellerDetailsPage = ({params}: ResellerDetailsPageProps) => {
 
                         <div className="col-6 lg:col-6 xl:col-3" >
                             <div className="card" style={{maxHeight:'120px',backgroundImage:"linear-gradient(to right, #d1fae5, #99f6e4)"}}>
-                                <h4>{singleReseller.total_orders}</h4>
+                                <span>{singleReseller.total_orders}</span>
+                                <br />
                                 <span>{t('RESELLER.VIEW.TOTALORDER')}</span>
                             </div>
                         </div>
 
                         <div className="col-6 lg:col-6 xl:col-3" >
                             <div className="card" style={{maxHeight:'120px',backgroundImage:"linear-gradient(to right, #fef9c3, #fed7aa)"}}>
-                                <h4>{singleReseller.today_sale}</h4>
+                                <span>{singleReseller.today_sale}</span>
+                                <br />
                                 <span>{t('RESELLER.VIEW.TODAYSALE')}</span>
                             </div>
                         </div>
 
                         <div className="col-6 lg:col-6 xl:col-3" >
                             <div className="card" style={{maxHeight:'120px',backgroundImage:"linear-gradient(to right, #fae8ff, #e9d5ff)"}}>
-                                <h4>{singleReseller.total_sale}</h4>
+                                <span>{singleReseller.total_sale}</span>
+                                <br />
                                 <span>{t('RESELLER.VIEW.TOTALSALE')}</span>
                             </div>
                         </div>
 
                         <div className="col-6 lg:col-6 xl:col-3" >
                             <div className="card" style={{maxHeight:'120px',backgroundImage:"linear-gradient(to right, #cffafe, #bfdbfe)"}}>
-                                <h4>{singleReseller.today_profit}</h4>
+                                <span>{singleReseller.today_profit}</span>
+                                <br />
                                 <span>{t('RESELLER.VIEW.TODAYPROFIT')}</span>
                             </div>
                         </div>
 
                         <div className="col-6 lg:col-6 xl:col-3" >
                             <div className="card" style={{maxHeight:'120px',backgroundImage:"linear-gradient(to right, #e0e7ff, #e9d5ff)"}}>
-                                <h4>{singleReseller.total_profit}</h4>
+                                <span>{singleReseller.total_profit}</span>
+                                <br />
                                 <span>{t('RESELLER.VIEW.TOTALPROFIT')}</span>
                             </div>
                         </div>
@@ -327,7 +339,7 @@ const ResellerDetailsPage = ({params}: ResellerDetailsPageProps) => {
 
 
             <TabView>
-                <TabPanel header="Overview">
+                <TabPanel header={t('OVERVIEW')}>
                 <p>
                         Sed ut perspiciatis unde omnis iste natus error sit voluptatem
                         accusantium doloremque laudantium, totam rem aperiam, eaque ipsa
@@ -335,7 +347,7 @@ const ResellerDetailsPage = ({params}: ResellerDetailsPageProps) => {
                         vitae dicta sunt explicabo.
                     </p>
                 </TabPanel>
-                <TabPanel header="Settings">
+                <TabPanel header={t('SETTINGS')}>
                     <div className="card" style={{margin:"-20px", marginTop:'10px',marginBottom:'30px',backgroundImage:"linear-gradient(to right, #ffedd5, #fde68a)"}}>
                         <h5>{t('RESELLER.PASSWORDSETTING.RESELLERPASSWORDSETTING')}</h5>
                         <hr />
@@ -365,6 +377,22 @@ const ResellerDetailsPage = ({params}: ResellerDetailsPageProps) => {
                         </div>
                         <hr />
                     </div>
+                </TabPanel>
+
+                <TabPanel header={t('SUB_RESELLERS')}>
+                    <ResellerSubResellers resellerId={Number(params.id)} />
+                </TabPanel>
+                <TabPanel header={t('TRANSACTIONS')}>
+                    <ResellerTransactions resellerId={Number(params.id)} />
+                </TabPanel>
+                <TabPanel header={t('ORDERS')}>
+                    <ResellerOrders resellerId={Number(params.id)} />
+                </TabPanel>
+                <TabPanel header={t('BALANCES')}>
+                    <ResellerBalances resellerId={Number(params.id)}/>
+                </TabPanel>
+                <TabPanel header={t('PAYMENTS')}>
+                    <ResellerPayments resellerId={Number(params.id)}/>
                 </TabPanel>
 
             </TabView>

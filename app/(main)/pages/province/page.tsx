@@ -17,7 +17,7 @@ import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Country, Province } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
-import { _addProvince, _deleteProvince, _editProvince, _fetchProvinces } from '@/app/redux/actions/provinceActions';
+import { _addProvince, _deleteProvince, _deleteSelectedProvinces, _editProvince, _fetchProvinces } from '@/app/redux/actions/provinceActions';
 import { countriesReducer } from '../../../redux/reducers/countriesReducer';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
@@ -40,7 +40,7 @@ const ProvincePage = () => {
     const [deleteProvinceDialog, setDeleteProvinceDialog] = useState(false);
     const [deleteProvincesDialog, setDeleteProvincesDialog] = useState(false);
     const [province, setProvince] = useState<Province>(emptyProvince);
-    const [selectedCompanies, setSelectedProvince] = useState(null);
+    const [selectedProvinces, setSelectedProvinces] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
@@ -119,30 +119,61 @@ const ProvincePage = () => {
         setDeleteProvinceDialog(false);
     };
 
+
+
     const confirmDeleteSelected = () => {
-        setDeleteProvincesDialog(true);
+    if (!selectedProvinces || (selectedProvinces as any).length === 0) {
+        toast.current?.show({
+            severity: 'warn',
+            summary: t('VALIDATION_WARNING'),
+            detail: t('NO_SELECTED_ITEMS_FOUND'),
+            life: 3000
+        });
+        return;
+    }
+    setDeleteProvincesDialog(true);
+};
+
+    const deleteSelectedProvinces = async() => {
+        if (!selectedProvinces || (selectedProvinces as any).length === 0) {
+            toast.current?.show({
+                severity: 'error',
+                summary: t('VALIDATION_ERROR'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
+
+        const selectedIds = (selectedProvinces as Province[]).map((province) => province.id);
+
+
+        await _deleteSelectedProvinces(selectedIds,toast,t)
+        dispatch(_fetchProvinces())
+
+
+        setSelectedProvinces(null)
+        setDeleteProvincesDialog(false)
     };
 
+
+
     const rightToolbarTemplate = () => {
+        const hasSelectedProvinces = selectedProvinces && (selectedProvinces as any).length > 0;
+
         return (
             <React.Fragment>
                 <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('PROVINCE.TABLE.CREATEPROVINCE')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+                        <Button
+                            style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
+                            label={t('CREATE_PROVINCE')}
+                            icon="pi pi-plus"
+                            severity="success"
+                            className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
+                            onClick={openNew}
+                        />
+
+
                 </div>
             </React.Fragment>
         );
@@ -216,7 +247,7 @@ const ProvincePage = () => {
     const deleteCompaniesDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteProvincesDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedProvinces} />
         </>
     );
 
@@ -233,6 +264,8 @@ const ProvincePage = () => {
         }
     }, [province.country_id, countries]);
 
+
+
     return (
         <div className="grid crud-demo -m-5">
             <div className="col-12">
@@ -244,8 +277,8 @@ const ProvincePage = () => {
                     <DataTable
                         ref={dt}
                         value={provinces}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedProvince(e.value as any)}
+                        selection={selectedProvinces}
+                        onSelectionChange={(e) => setSelectedProvinces(e.value as any)}
                         dataKey="id"
                         paginator
                         rows={10}
@@ -261,12 +294,12 @@ const ProvincePage = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         // header={header}
                         responsiveLayout="scroll"
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="province_name"
@@ -355,7 +388,7 @@ const ProvincePage = () => {
                     <Dialog visible={deleteProvincesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteProvincesDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {province && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
+                            {selectedProvinces && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
                 </div>

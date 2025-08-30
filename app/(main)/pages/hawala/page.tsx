@@ -88,14 +88,14 @@ const OrderPage = () => {
             <React.Fragment>
                 <div className="my-2">
                     {/* <Button label="New" icon="pi pi-plus" severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"} onClick={openNew} /> */}
-                    <Button
+                    {/* <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                         label={t('APP.GENERAL.DELETE')}
                         icon="pi pi-trash"
                         severity="danger"
                         onClick={confirmDeleteSelected}
                         disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+                    /> */}
                 </div>
             </React.Fragment>
         );
@@ -404,7 +404,7 @@ const OrderPage = () => {
                                 : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
                         }
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
 
                         <Column

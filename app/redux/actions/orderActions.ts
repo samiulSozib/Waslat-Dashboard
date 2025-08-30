@@ -36,6 +36,7 @@ export const _fetchOrders = (page: number = 1, search: string = '', filters: any
 
         queryParams.append('page', String(page));
         queryParams.append('search', search);
+        queryParams.append('items_per_page','15');
 
         Object.entries(filters).forEach(([key, value]) => {
             if (value !== null && value !== undefined && value !== '') {
@@ -144,7 +145,7 @@ export const _changeOrderStatus = (
   status: number,
   toast: React.RefObject<Toast>,
   t: (key: string) => string,
-  rejectReason?: string,
+  rejectedReason?: string,
 
 ) => {
   return async (dispatch: Dispatch) => {
@@ -170,7 +171,7 @@ export const _changeOrderStatus = (
         case 2:
           response = await axios.get(`${baseURL}/reject-order/${orderId}`, {
             headers: { Authorization: `Bearer ${token}` },
-            params: { rejectReason },
+            params: { rejectReason:rejectedReason },
           });
           break;
         default:
@@ -187,7 +188,7 @@ export const _changeOrderStatus = (
 
         dispatch({
           type: CHANGE_ORDER_STATUS_SUCCESS,
-          payload: { orderId, status, message: response.data.message },
+          payload: { orderId, status, message: response.data.message,...(status === 2 && { rejectedReason }) },
         });
 
       } else {

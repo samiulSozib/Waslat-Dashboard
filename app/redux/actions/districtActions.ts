@@ -129,3 +129,37 @@ export const _deleteDistrict = (id: number, toast: React.RefObject<Toast>, t: (k
         });
     }
 };
+
+
+
+export const _deleteSelectedDistricts = async (
+  provinceIds: number[],
+  toast: React.RefObject<Toast>,
+  t: (key: string) => string
+) => {
+  const token = getAuthToken();
+
+  try {
+    for (const id of provinceIds) {
+      await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/districts/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    }
+
+    toast.current?.show({
+      severity: 'success',
+      summary: t('SUCCESS'),
+      detail: t('DISTRICTS_DELETED'),
+      life: 3000,
+    });
+  } catch (error: any) {
+    toast.current?.show({
+      severity: 'error',
+      summary: t('ERROR'),
+      detail: t('DISTRICTS_DELETE_FAILED'),
+      life: 3000,
+    });
+  }
+};

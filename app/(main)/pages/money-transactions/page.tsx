@@ -22,12 +22,13 @@ import { currenciesReducer } from '../../../redux/reducers/currenciesReducer';
 import { AppDispatch } from '@/app/redux/store';
 import { Bundle, MoneyTransaction } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
-import { _fetchMoneyTransactionsList } from '@/app/redux/actions/moneyTransactionsActions';
+import { _deleteSelectedTransactions, _fetchMoneyTransactionsList } from '@/app/redux/actions/moneyTransactionsActions';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
 import { customCellStyle } from '../../utilities/customRow';
 import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
+import { generateTransactionExcelFile } from '../../utilities/generateExcel';
 
 const TransactionPage = () => {
     let emptyBundle: Bundle = {
@@ -56,7 +57,7 @@ const TransactionPage = () => {
     const [deleteServiceDialog, setDeleteServiceDialog] = useState(false);
     const [deleteServicesDialog, setDeleteServicesDialog] = useState(false);
     const [bundle, setBundle] = useState<Bundle>(emptyBundle);
-    const [selectedCompanies, setSelectedCompanyCode] = useState(null);
+    const [selectedTransactions, setSelectedTransactions] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
@@ -66,14 +67,40 @@ const TransactionPage = () => {
     const { t } = useTranslation();
     const [searchTag, setSearchTag] = useState('');
 
+    const [filterDialogVisible, setFilterDialogVisible] = useState(false);
+    const [filters, setFilters] = useState({
+        filter_transactiontype: null as string | null,
+        filter_transactioncategory: null as string | null,
+        filter_transactionpurpose: null as string | null,
+        filter_startdate: null as string | null,
+        filter_enddate: null as string | null
+    });
+    const [activeFilters, setActiveFilters] = useState({});
+    const [refreshing, setRefreshing] = useState(false);
+    const filterRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
-        dispatch(_fetchMoneyTransactionsList(1, searchTag));
+        dispatch(_fetchMoneyTransactionsList(1, searchTag, activeFilters));
         dispatch(_fetchBundleList());
         dispatch(_fetchCurrencies());
         dispatch(_fetchServiceList());
         dispatch(_fetchCompanies());
         dispatch(_fetchServiceCategories());
-    }, [dispatch, searchTag]);
+    }, [dispatch, searchTag, activeFilters]);
+
+    // Add this useEffect for click outside detection
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (target.closest('.p-dropdown-panel')) return;
+            if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
+                setFilterDialogVisible(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [filterDialogVisible]);
 
     useEffect(() => {
         //console.log(transactions)
@@ -131,22 +158,179 @@ const TransactionPage = () => {
     };
 
     const confirmDeleteSelected = () => {
+        if (!selectedTransactions || (selectedTransactions as any).length === 0) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: t('VALIDATION_WARNING'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
         setDeleteServicesDialog(true);
     };
 
+    const deleteSelectedTransactions = async () => {
+        if (!selectedTransactions || (selectedTransactions as any).length === 0) {
+            toast.current?.show({
+                severity: 'error',
+                summary: t('VALIDATION_ERROR'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
+
+        const selectedIds = (selectedTransactions as MoneyTransaction[]).map((transaction) => transaction.id);
+
+        await _deleteSelectedTransactions(selectedIds, toast, t);
+        dispatch(_fetchMoneyTransactionsList());
+
+        setSelectedTransactions(null);
+        setDeleteServicesDialog(false);
+    };
+
     const rightToolbarTemplate = () => {
+        const hasSelectedTransactions = selectedTransactions && (selectedTransactions as any).length > 0;
         return (
             <React.Fragment>
-                <div className="my-2">
-                    {/* <Button label="New" icon="pi pi-plus" severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"} onClick={openNew} /> */}
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+                <div className="my-2 flex items-center gap-2">
+                    <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
+                        <Button className="p-button-info" label={t('FILTER')} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
+                        {filterDialogVisible && (
+                            <div
+                                className="p-card p-fluid"
+                                style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: isRTL() ? 0 : '',
+                                    right: isRTL() ? '' : 0,
+                                    width: '300px',
+                                    zIndex: 1000,
+                                    marginTop: '0.5rem',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                }}
+                            >
+                                <div className="p-card-body" style={{ padding: '1rem' }}>
+                                    <div className="grid">
+                                        {/* Transaction Type Filter */}
+                                        <div className="col-12">
+                                            <label htmlFor="transactionTypeFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('TRANSACTION.TABLE.COLUMN.TYPE')}
+                                            </label>
+                                            <Dropdown
+                                                id="transactionTypeFilter"
+                                                options={[
+                                                    { label: t('CREDIT'), value: 'credit' },
+                                                    { label: t('DEBIT'), value: 'debit' }
+                                                ]}
+                                                value={filters.filter_transactiontype}
+                                                onChange={(e) => setFilters({ ...filters, filter_transactiontype: e.value })}
+                                                placeholder={t('SELECT_TYPE')}
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
+
+                                        {/* Transaction Category Filter */}
+                                        <div className="col-12">
+                                            <label htmlFor="transactionCategoryFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('TRANSACTION.TABLE.COLUMN.CATEGORY')}
+                                            </label>
+                                            <Dropdown
+                                                id="transactionCategoryFilter"
+                                                options={[
+                                                    { label: t('ADMIN_TO_RESELLER'), value: 'admin-reseller' },
+                                                    { label: t('RESELLER_TO_SUBRESELLER'), value: 'reseller-subreseller' }
+                                                ]}
+                                                value={filters.filter_transactioncategory}
+                                                onChange={(e) => setFilters({ ...filters, filter_transactioncategory: e.value })}
+                                                placeholder={t('SELECT_CATEGORY')}
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
+
+                                        {/* Transaction Purpose Filter */}
+                                        <div className="col-12">
+                                            <label htmlFor="transactionPurposeFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('TRANSACTION.TABLE.COLUMN.PURPOSE')}
+                                            </label>
+                                            <Dropdown
+                                                id="transactionPurposeFilter"
+                                                options={[
+                                                    { label: t('FILTER.ORDER'), value: 'order' },
+                                                    { label: t('MONEY_TRANSFER'), value: 'money' }
+                                                ]}
+                                                value={filters.filter_transactionpurpose}
+                                                onChange={(e) => setFilters({ ...filters, filter_transactionpurpose: e.value })}
+                                                placeholder={t('SELECT_PURPOSE')}
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
+
+                                        {/* Date Range Filters */}
+                                        <div className="col-12">
+                                            <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('START_DATE')}
+                                            </label>
+                                            <InputText type="date" id="startDateFilter" value={filters.filter_startdate || ''} onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })} style={{ width: '100%' }} />
+                                        </div>
+
+                                        <div className="col-12">
+                                            <label htmlFor="endDateFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('END_DATE')}
+                                            </label>
+                                            <InputText type="date" id="endDateFilter" value={filters.filter_enddate || ''} onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })} style={{ width: '100%' }} />
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="col-12 mt-3 flex justify-content-between gap-2">
+                                            <Button
+                                                label={t('RESET')}
+                                                icon="pi pi-times"
+                                                className="p-button-secondary p-button-sm"
+                                                onClick={() => {
+                                                    setFilters({
+                                                        filter_transactiontype: null,
+                                                        filter_transactioncategory: null,
+                                                        filter_transactionpurpose: null,
+                                                        filter_startdate: null,
+                                                        filter_enddate: null
+                                                    });
+                                                }}
+                                            />
+                                            <Button
+                                                label={t('APPLY')}
+                                                icon="pi pi-check"
+                                                className="p-button-sm"
+                                                onClick={() => {
+                                                    handleSubmitFilter(filters);
+                                                    setFilterDialogVisible(false);
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    {/* <Button
+                    style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
+                    label={t('APP.GENERAL.DELETE')}
+                    icon="pi pi-trash"
+                    severity="danger"
+                    onClick={confirmDeleteSelected}
+                    disabled={!selectedTransactions || !(selectedTransactions as any).length}
+                /> */}
+                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+                        {/* <Button
+                            style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
+                            label={t('APP.GENERAL.DELETE')}
+                            icon="pi pi-trash"
+                            severity="danger"
+                            onClick={confirmDeleteSelected}
+                            disabled={!selectedTransactions || !(selectedTransactions as any).length}
+                        /> */}
+
                 </div>
             </React.Fragment>
         );
@@ -185,7 +369,7 @@ const TransactionPage = () => {
         return (
             <>
                 <span className="p-column-title">Currency</span>
-                <span style={{ fontSize: '0.9rem' }}>{rowData.currency?.name}</span>
+                <span style={{ fontSize: '0.9rem' }}>{rowData?.reseller?.user?.currency?.code}</span>
             </>
         );
     };
@@ -299,48 +483,31 @@ const TransactionPage = () => {
         );
     };
 
-    // const actionBodyTemplate = (rowData: Bundle) => {
-    //     return (
-    //         <>
-    //             <Button icon="pi pi-pencil" rounded severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"}  onClick={()=>editService(rowData)}/>
-    //             <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteService(rowData)} />
-    //         </>
-    //     );
-    // };
-
-    // const header = (
-    //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-    //         <h5 className="m-0">Manage Products</h5>
-    //         <span className="block mt-2 md:mt-0 p-input-icon-left">
-    //             <i className="pi pi-search" />
-    //             <InputText type="search" onInput={(e) => setGlobalFilter(e.currentTarget.value)} placeholder="Search..." />
-    //         </span>
-    //     </div>
-    // );
-
-    // const companyDialogFooter = (
-    //     <>
-    //         <Button label="Cancel" icon="pi pi-times" text onClick={hideDialog} />
-    //         <Button label="Save" icon="pi pi-check" text onClick={saveService} />
-    //     </>
-    // );
-    // const deleteCompanyDialogFooter = (
-    //     <>
-    //         <Button label="No" icon="pi pi-times" text onClick={hideDeleteServiceDialog} />
-    //         <Button label="Yes" icon="pi pi-check" text onClick={deleteService} />
-    //     </>
-    // );
-    // const deleteCompaniesDialogFooter = (
-    //     <>
-    //         <Button label="No" icon="pi pi-times" text onClick={hideDeleteServicesDialog} />
-    //         <Button label="Yes" icon="pi pi-check" text  />
-    //     </>
-    // );
-
     const onPageChange = (event: any) => {
         const page = event.page + 1;
         dispatch(_fetchMoneyTransactionsList(page, searchTag));
     };
+
+    const handleSubmitFilter = (filters: any) => {
+        const cleanedFilters = Object.fromEntries(Object.entries(filters).filter(([_, value]) => value !== null && value !== ''));
+        setActiveFilters(cleanedFilters);
+    };
+
+    const exportToExcel = async () => {
+        await generateTransactionExcelFile({
+            transactions,
+            t,
+            toast,
+            all: true
+        });
+    };
+
+    const deleteCompaniesDialogFooter = (
+        <>
+            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteServicesDialog} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedTransactions} />
+        </>
+    );
 
     return (
         <div className="grid crud-demo -m-5">
@@ -353,8 +520,8 @@ const TransactionPage = () => {
                     <DataTable
                         ref={dt}
                         value={transactions}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedCompanyCode(e.value as any)}
+                        selection={selectedTransactions}
+                        onSelectionChange={(e) => setSelectedTransactions(e.value as any)}
                         dataKey="id"
                         className="datatable-responsive"
                         globalFilter={globalFilter}
@@ -370,9 +537,9 @@ const TransactionPage = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Reseller" header={t('TRANSACTION.TABLE.COLUMN.RESELLERNAME')} body={resellerBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Amount" header={t('TRANSACTION.TABLE.COLUMN.AMOUNT')} body={amountBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Currency" header={t('TRANSACTION.TABLE.COLUMN.CURRENCY')} body={currencyBodyTemplate}></Column>
@@ -418,204 +585,12 @@ const TransactionPage = () => {
                             isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
                         }
                     />
-
-                    {/* <Dialog visible={serviceDialog}  style={{ width: '700px' }} header="Bundle Details" modal className="p-fluid" footer={companyDialogFooter} onHide={hideDialog}>
-                        <div className="formgrid grid">
-                            <div className="field col">
-                                <label htmlFor="name">Bundle Title</label>
-                                <InputText
-                                    id="bundle_title"
-                                    value={bundle.bundle_title}
-                                    onChange={(e) =>
-                                        setBundle((perv) => ({
-                                            ...perv,
-                                            bundle_title: e.target.value,
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    className={classNames({
-                                        'p-invalid': submitted && !bundle.bundle_title
-                                    })}
-                                />
-                                {submitted && !bundle.bundle_title && <small className="p-invalid">Bundle Title is required.</small>}
-                            </div>
-
-                            <div className="field col">
-                                <label htmlFor="name">Bundle Description</label>
-                                <InputText
-                                    id="bundle_description"
-                                    value={bundle.bundle_description}
-                                    onChange={(e) =>
-                                        setBundle((perv) => ({
-                                            ...perv,
-                                            bundle_description: e.target.value,
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    className={classNames({
-                                        'p-invalid': submitted && !bundle.bundle_description
-                                    })}
-                                />
-                                {submitted && !bundle.bundle_description && <small className="p-invalid">Bundle Description is required.</small>}
-                            </div>
-                        </div>
-
-                        <div className="formgrid grid">
-                            <div className="field col">
-                                <label htmlFor="name">Admin Buying Price</label>
-                                <InputText
-                                    id="admin_buying_price"
-                                    value={bundle.admin_buying_price}
-                                    onChange={(e) =>
-                                        setBundle((perv) => ({
-                                            ...perv,
-                                            admin_buying_price: e.target.value,
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    className={classNames({
-                                        'p-invalid': submitted && !bundle.admin_buying_price
-                                    })}
-                                />
-                                {submitted && !bundle.admin_buying_price && <small className="p-invalid">Admin Buying Price is required.</small>}
-                            </div>
-
-                            <div className="field col">
-                                <label htmlFor="name">Buying Price</label>
-                                <InputText
-                                    id="buying_price"
-                                    value={bundle.buying_price}
-                                    onChange={(e) =>
-                                        setBundle((perv) => ({
-                                            ...perv,
-                                            buying_price: e.target.value,
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    className={classNames({
-                                        'p-invalid': submitted && !bundle.buying_price
-                                    })}
-                                />
-                                {submitted && !bundle.buying_price && <small className="p-invalid">Buying Price is required.</small>}
-                            </div>
-                        </div>
-
-
-                        <div className="formgrid grid">
-                            <div className="field col">
-                                <label htmlFor="name">Selling Price</label>
-                                <InputText
-                                    id="buying_price"
-                                    value={bundle.selling_price}
-                                    onChange={(e) =>
-                                        setBundle((perv) => ({
-                                            ...perv,
-                                            selling_price: e.target.value,
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    className={classNames({
-                                        'p-invalid': submitted && !bundle.selling_price
-                                    })}
-                                />
-                                {submitted && !bundle.selling_price && <small className="p-invalid">Selling Price is required.</small>}
-                            </div>
-                            <div className="field col">
-                                <label htmlFor="country_id">Validity Type</label>
-                                <Dropdown
-                                    id="validity_type"
-                                    value={bundle.validity_type}
-                                    options={[
-                                        { label: "Unlimited", value: "unlimited" },
-                                        { label: "Daily", value: "daily" },
-                                        { label: "Nightly", value: "nightly" },
-                                        { label: "Weekly", value: "weekly" },
-                                        { label: "Monthly", value: "monthly" },
-                                        { label: "Yearly", value: "yearly" }
-                                    ]}
-                                    onChange={(e) =>
-                                        setBundle((prev) => ({
-                                            ...prev,
-                                            validity_type: e.value,
-                                        }))
-                                    }
-                                    placeholder="Choose a Type"
-                                    className="w-full"
-                                />
-
-                            </div>
-                        </div>
-
-                        <div className="formgrid grid">
-                            <div className="field col">
-                                <label htmlFor="name">Service</label>
-                                <Dropdown
-                                    id="service_id"
-                                    value={bundle.service_id}
-                                    options={services}
-                                    onChange={(e) =>
-                                        setBundle((prev) => ({
-                                            ...prev,
-                                            service_id: e.value,
-                                        }))
-                                    }
-                                    optionLabel='company.company_name'
-                                    optionValue='id'
-                                    placeholder="Choose a Type"
-                                    className="w-full"
-                                    itemTemplate={(option) => (
-                                        <div style={{display:'flex', gap:"5px"}}>
-                                            <div>{option.service_category?.category_name}</div>
-                                            <div>{option.company?.company_name}</div>
-                                        </div>
-                                    )}
-                                />
-                            </div>
-                            <div className="field col">
-                                <label htmlFor="country_id">Currency</label>
-                                <Dropdown
-                                    id="currency_id"
-                                    value={bundle.currency_id}
-                                    options={currencies}
-                                    onChange={(e) =>
-                                        setBundle((prev) => ({
-                                            ...prev,
-                                            currency_id: e.value,
-                                        }))
-                                    }
-                                    optionLabel='name'
-                                    optionValue='id'
-                                    placeholder="Choose a Type"
-                                    className="w-full"
-                                />
-
-                            </div>
-                        </div>
-
-                    </Dialog>
-
-                    <Dialog visible={deleteServiceDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteCompanyDialogFooter} onHide={hideDeleteServiceDialog}>
+                    <Dialog visible={deleteServicesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteServicesDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {bundle && (
-                                <span>
-                                    {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{bundle.bundle_title}</b>
-                                </span>
-                            )}
+                            {<span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
-
-                    <Dialog visible={deleteServicesDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteServicesDialog}>
-                        <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {bundle && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
-                        </div>
-                    </Dialog> */}
                 </div>
             </div>
         </div>

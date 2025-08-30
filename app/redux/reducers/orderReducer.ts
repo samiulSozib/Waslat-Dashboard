@@ -178,11 +178,18 @@ export const orderReducer = (state = initialState, action: any): OrderState => {
                 loading: false,
                 orders: state.orders.map((order) =>
                     order.id === action.payload.orderId
-                        ? { ...order, status: action.payload.status }
+                        ? {
+                            ...order,
+                            status: action.payload.status,
+                            ...(action.payload.status === 2 && {
+                                reject_reason: action.payload.rejectedReason || '',
+                            }),
+                        }
                         : order
                 ),
                 error: null,
             };
+
 
         case FETCH_ORDERS_FAIL:
         case ADD_ORDER_FAIL:

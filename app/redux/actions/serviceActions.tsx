@@ -222,7 +222,8 @@ export const _addService = (newServiceData: Service, toast: React.RefObject<Toas
     const body = {
       service_name: newServiceData.service_name,
       service_category_id: newServiceData.service_category?.id,
-      company_id: newServiceData.company?.id
+      company_id: newServiceData.company?.id,
+      input_form_schema:newServiceData.input_form_schema
     };
 
     const token = getAuthToken();
@@ -265,7 +266,8 @@ export const _editService = (serviceId: number, updatedServiceData: Service, toa
     const body = {
       service_name: updatedServiceData.service_name,
       service_category_id: updatedServiceData.service_category?.id,
-      company_id: updatedServiceData.company?.id
+      company_id: updatedServiceData.company?.id,
+      input_form_schema:updatedServiceData.input_form_schema
     };
 
     const token = getAuthToken();
@@ -328,3 +330,37 @@ export const _deleteService = (serviceId: number, toast: React.RefObject<Toast>,
     });
   }
 };
+
+
+export const _deleteSelectedServices = async (
+  servicesIds: number[],
+  toast: React.RefObject<Toast>,
+  t: (key: string) => string
+) => {
+  const token = getAuthToken();
+
+  try {
+    for (const id of servicesIds) {
+      await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/services/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    }
+
+    toast.current?.show({
+      severity: 'success',
+      summary: t('SUCCESS'),
+      detail: t('SERVICES_DELETED'),
+      life: 3000,
+    });
+  } catch (error: any) {
+    toast.current?.show({
+      severity: 'error',
+      summary: t('ERROR'),
+      detail: t('SERVICES_DELETE_FAILED'),
+      life: 3000,
+    });
+  }
+};
+

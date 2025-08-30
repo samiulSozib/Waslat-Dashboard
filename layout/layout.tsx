@@ -3,7 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEventListener, useMountEffect, useUnmountEffect } from 'primereact/hooks';
-import React, { useContext, useEffect, useRef } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { classNames } from 'primereact/utils';
 import AppFooter from './AppFooter';
 import AppSidebar from './AppSidebar';
@@ -121,6 +121,35 @@ const Layout = ({ children }: ChildContainerProps) => {
         'p-input-filled': layoutConfig.inputStyle === 'filled',
         'p-ripple-disabled': !layoutConfig.ripple
     });
+
+    const router = useRouter();
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+    useEffect(() => {
+        // This runs only on client side
+        const checkAuth = () => {
+            try {
+                const token = localStorage.getItem('api_token');
+                if (!token && pathname !== '/auth/login') {
+                    router.push('/auth/login');
+                } else {
+                    setIsAuthenticated(true);
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                router.push('/auth/login');
+            }
+        };
+
+        checkAuth();
+    }, [router, pathname]);
+
+    // Don't render anything until auth check is complete
+    if (!isAuthenticated && pathname !== '/auth/login') {
+        return null; // or a loading spinner
+    }
+
+
 
     return (
         <React.Fragment>

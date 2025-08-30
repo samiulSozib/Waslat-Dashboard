@@ -167,14 +167,14 @@ const GroupPricingPage = () => {
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
                         onClick={openNew}
                     />
-                    <Button
+                    {/* <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                         label={t('APP.GENERAL.DELETE')}
                         icon="pi pi-trash"
                         severity="danger"
                         onClick={confirmDeleteSelected}
                         disabled={!selectedGroupPricings || !(selectedGroupPricings as any).length}
-                    />
+                    /> */}
                 </div>
             </React.Fragment>
         );
@@ -307,7 +307,7 @@ const GroupPricingPage = () => {
                         globalFilter={globalFilter}
                         responsiveLayout="scroll"
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="reseller_group" header={t('GROUP.PRICING.TABLE.RESELLER_GROUP')} body={ResellerGroupBodyTemplate} />
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="service" header={t('GROUP.PRICING.TABLE.SERVICE')} body={ServiceBodyTemplate} />
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="use_fixed_fee" header={t('GROUP.PRICING.TABLE.USE_FIXED_FEE')} body={useFixedFeeBodyTemplate} />

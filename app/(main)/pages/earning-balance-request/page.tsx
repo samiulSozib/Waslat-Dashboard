@@ -43,11 +43,12 @@ const EarningBalanceRequest = () => {
     const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedStatus, setSelectedStatus] = useState<string>('');
+    const [resellerSearchTerm, setResellerSearchTerm] = useState('');
 
     // Form state
     const [formData, setFormData] = useState({
         reseller_id: '',
-        amount: 0,
+        amount: 0
     });
 
     // Fetch data on component mount and when search term changes
@@ -56,11 +57,23 @@ const EarningBalanceRequest = () => {
         dispatch(_fetchEarningBalanceRequestList(1, searchTerm));
     }, [dispatch, searchTerm]);
 
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (resellerSearchTerm) {
+                dispatch(_fetchResellers(1, resellerSearchTerm));
+            } else {
+                dispatch(_fetchResellers(1, ''));
+            }
+        }, 300); // Debounce for 300ms
+
+        return () => clearTimeout(timer);
+    }, [resellerSearchTerm, dispatch]);
+
     // Dialog handlers
     const openNew = () => {
         setFormData({
             reseller_id: '',
-            amount: 0,
+            amount: 0
         });
         setSubmitted(false);
         setAddDialogVisible(true);
@@ -89,15 +102,9 @@ const EarningBalanceRequest = () => {
     const changeStatus = () => {
         if (!selectedRequest?.id || !selectedStatus) return;
 
-        dispatch(_changeEarningBalanceStatus(
-            selectedRequest.id,
-            selectedStatus,
-            toast,
-            t
+        dispatch(_changeEarningBalanceStatus(selectedRequest.id, selectedStatus, toast, t));
 
-        ));
-
-        setStatusChangeDialog(false)
+        setStatusChangeDialog(false);
     };
 
     const submitRequest = () => {
@@ -105,12 +112,9 @@ const EarningBalanceRequest = () => {
 
         if (!formData.reseller_id || formData.amount <= 0) return;
 
-        dispatch(_addEarningBalanceRequest(
-            formData,
-            toast,
-            t,
-
-        ));
+        dispatch(_addEarningBalanceRequest(formData, toast, t));
+        dispatch(_fetchEarningBalanceRequestList());
+        setAddDialogVisible(false);
     };
 
     // Templates for DataTable
@@ -119,11 +123,7 @@ const EarningBalanceRequest = () => {
             <React.Fragment>
                 <span className="block mt-2 md:mt-0 p-input-icon-left">
                     <i className="pi pi-search" />
-                    <InputText
-                        type="search"
-                        onInput={(e) => setSearchTerm(e.currentTarget.value)}
-                        placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                    />
+                    <InputText type="search" onInput={(e) => setSearchTerm(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
                 </span>
             </React.Fragment>
         );
@@ -133,21 +133,15 @@ const EarningBalanceRequest = () => {
         return (
             <React.Fragment>
                 <div className="flex justify-content gap-2">
-                    <Button
-                        label={t('APP.GENERAL.NEW')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={isRTL() ? 'rtl-button' : ''}
-                        onClick={openNew}
-                    />
-                    <Button
+                    <Button label={t('APP.GENERAL.NEW')} icon="pi pi-plus" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={openNew} />
+                    {/* <Button
                         label={t('APP.GENERAL.DELETE')}
                         icon="pi pi-trash"
                         severity="danger"
                         onClick={() => setDeleteDialogVisible(true)}
                         disabled={!selectedRequests || selectedRequests.length === 0}
                         className={isRTL() ? 'rtl-button' : ''}
-                    />
+                    /> */}
                 </div>
             </React.Fragment>
         );
@@ -171,32 +165,31 @@ const EarningBalanceRequest = () => {
         );
     };
 
-       const reviewedByBodyTemplate = (rowData: EarningBalance) => {
-            return (
-                <>
-                    <span className="p-column-title">{t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.REVIEWED_BY')}</span>
-                    <span style={{ fontSize: '0.8rem',  }}>{rowData.reviewed_by}</span>
-                </>
-            );
-        };
-            const reviewedAtBodyTemplate = (rowData: EarningBalance) => {
-            return (
-                <>
-                    <span className="p-column-title">{t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.REVIEWED_AT')}</span>
-                    <span style={{ fontSize: '0.8rem',  }}>{rowData.reviewed_at}</span>
-                </>
-            );
-        };
+    const reviewedByBodyTemplate = (rowData: EarningBalance) => {
+        return (
+            <>
+                <span className="p-column-title">{t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.REVIEWED_BY')}</span>
+                <span style={{ fontSize: '0.8rem' }}>{rowData.reviewed_by}</span>
+            </>
+        );
+    };
+    const reviewedAtBodyTemplate = (rowData: EarningBalance) => {
+        return (
+            <>
+                <span className="p-column-title">{t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.REVIEWED_AT')}</span>
+                <span style={{ fontSize: '0.8rem' }}>{rowData.reviewed_at}</span>
+            </>
+        );
+    };
 
-            const adminNotesBodyTemplate = (rowData: EarningBalance) => {
-            return (
-                <>
-                    <span className="p-column-title">{t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.NOTES')}</span>
-                    <span style={{ fontSize: '0.8rem',  }}>{rowData.admin_note}</span>
-                </>
-            );
-        };
-
+    const adminNotesBodyTemplate = (rowData: EarningBalance) => {
+        return (
+            <>
+                <span className="p-column-title">{t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.NOTES')}</span>
+                <span style={{ fontSize: '0.8rem' }}>{rowData.admin_note}</span>
+            </>
+        );
+    };
 
     const statusBodyTemplate = (rowData: EarningBalance) => {
         const getStatusInfo = (status: string | null) => {
@@ -229,9 +222,7 @@ const EarningBalanceRequest = () => {
         return (
             <>
                 <span className="p-column-title">{t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.STATUS')}</span>
-                <span className={`inline-block px-2 py-1 rounded text-sm font-semibold ${statusInfo.class}`}>
-                    {statusInfo.label}
-                </span>
+                <span className={`inline-block px-2 py-1 rounded text-sm font-semibold ${statusInfo.class}`}>{statusInfo.label}</span>
             </>
         );
     };
@@ -255,56 +246,21 @@ const EarningBalanceRequest = () => {
             }
         ];
 
-        return (
-            <SplitButton
-                label=""
-                icon="pi pi-cog"
-                model={items}
-                className="p-button-rounded"
-                severity="info"
-                dir={isRTL() ? 'rtl' : 'ltr'}
-            />
-        );
+        return <SplitButton label="" icon="pi pi-cog" model={items} className="p-button-rounded" severity="info" dir={isRTL() ? 'rtl' : 'ltr'} />;
     };
 
     // Dialog footers
     const addDialogFooter = (
         <>
-            <Button
-                label={t('APP.GENERAL.CANCEL')}
-                icon="pi pi-times"
-                severity="danger"
-                onClick={hideDialog}
-                className={isRTL() ? 'rtl-button' : ''}
-            />
-            <Button
-                label={t('FORM.GENERAL.SUBMIT')}
-                icon="pi pi-check"
-                severity="success"
-                onClick={submitRequest}
-                loading={loading}
-                className={isRTL() ? 'rtl-button' : ''}
-            />
+            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideDialog} className={isRTL() ? 'rtl-button' : ''} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={submitRequest} loading={loading} className={isRTL() ? 'rtl-button' : ''} />
         </>
     );
 
     const statusChangeDialogFooter = (
         <>
-            <Button
-                label={t('APP.GENERAL.CANCEL')}
-                icon="pi pi-times"
-                severity="danger"
-                onClick={() => setStatusChangeDialog(false)}
-                className={isRTL() ? 'rtl-button' : ''}
-            />
-            <Button
-                label={t('FORM.GENERAL.SUBMIT')}
-                icon="pi pi-check"
-                severity="success"
-                onClick={changeStatus}
-                loading={loading}
-                className={isRTL() ? 'rtl-button' : ''}
-            />
+            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={() => setStatusChangeDialog(false)} className={isRTL() ? 'rtl-button' : ''} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={changeStatus} loading={loading} className={isRTL() ? 'rtl-button' : ''} />
         </>
     );
 
@@ -314,11 +270,7 @@ const EarningBalanceRequest = () => {
                 <div className="card p-2">
                     {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
                     <Toast ref={toast} />
-                    <Toolbar
-                        className="mb-4"
-                        left={leftToolbarTemplate}
-                        right={rightToolbarTemplate}
-                    />
+                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate} />
 
                     <DataTable
                         ref={dt}
@@ -330,31 +282,16 @@ const EarningBalanceRequest = () => {
                         globalFilter={globalFilter}
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         responsiveLayout="scroll"
                     >
-                        <Column
+                        {/* <Column
                             headerStyle={{ width: '4rem' }}
-                        />
-                        <Column
-                            body={actionBodyTemplate}
-                            headerStyle={{ minWidth: '10rem' }}
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                        />
+                        /> */}
+                        <Column body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
 
-                        <Column
-                            header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.RESELLER')}
-                            body={resellerBodyTemplate}
-                            sortable
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                        />
-                        <Column
-                            header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.AMOUNT')}
-                            body={amountBodyTemplate}
-                            sortable
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                        />
-
+                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.RESELLER')} body={resellerBodyTemplate} sortable style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
+                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.AMOUNT')} body={amountBodyTemplate} sortable style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
 
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
@@ -379,30 +316,31 @@ const EarningBalanceRequest = () => {
                             body={adminNotesBodyTemplate}
                             sortable
                         ></Column>
-                        <Column
-
-                            header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.STATUS')}
-                            body={statusBodyTemplate}
-                            sortable
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                        />
+                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.STATUS')} body={statusBodyTemplate} sortable style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
                     </DataTable>
 
                     {/* Add Earning Balance Dialog */}
-                    <Dialog
-                        visible={addDialogVisible}
-                        style={{ width: '500px' }}
-                        header={t('EARNING_BALANCE_REQUEST.ADD_DIALOG.TITLE')}
-                        modal
-                        className="p-fluid"
-                        footer={addDialogFooter}
-                        onHide={hideDialog}
-                    >
+                    <Dialog visible={addDialogVisible} style={{ width: '500px' }} header={t('EARNING_BALANCE_REQUEST.ADD_DIALOG.TITLE')} modal className="p-fluid" footer={addDialogFooter} onHide={hideDialog}>
                         <div className="field">
                             <label htmlFor="reseller">
                                 {t('EARNING_BALANCE_REQUEST.ADD_DIALOG.RESELLER')}
                                 <span className="text-red-500">*</span>
                             </label>
+                            {/* <Dropdown
+                                id="reseller"
+                                value={formData.reseller_id}
+                                options={resellers.map((reseller: Reseller) => ({
+                                    label: reseller.reseller_name,
+                                    value: reseller.id
+                                }))}
+                                onChange={(e) => setFormData({ ...formData, reseller_id: e.value })}
+                                placeholder={t('FORM.GENERAL.SELECT')}
+                                required
+                                className={classNames({
+                                    'p-invalid': submitted && !formData.reseller_id
+                                })}
+                                // loading={resellersLoading}
+                            /> */}
                             <Dropdown
                                 id="reseller"
                                 value={formData.reseller_id}
@@ -410,19 +348,24 @@ const EarningBalanceRequest = () => {
                                     label: reseller.reseller_name,
                                     value: reseller.id
                                 }))}
-                                onChange={(e) => setFormData({...formData, reseller_id: e.value})}
-                                placeholder={t('FORM.GENERAL.SELECT')}
-                                required
-                                className={classNames({
-                                    'p-invalid': submitted && !formData.reseller_id
-                                })}
-                                // loading={resellersLoading}
+                                onChange={(e) => {
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        reseller_id: e.value
+                                    }));
+                                }}
+                                filter
+                                filterPlaceholder={t('SEARCH')}
+                                showFilterClear
+                                placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
+                                className="w-full"
+                                panelClassName="min-w-[20rem]"
+                                onFilter={(e) => {
+                                    setResellerSearchTerm(e.filter);
+                                }}
                             />
-                            {submitted && !formData.reseller_id && (
-                                <small className="p-invalid">
-                                    {t('FORM.VALIDATION.REQUIRED')}
-                                </small>
-                            )}
+
+                            {submitted && !formData.reseller_id && <small className="p-invalid">{t('FORM.VALIDATION.REQUIRED')}</small>}
                         </div>
 
                         <div className="field">
@@ -433,7 +376,7 @@ const EarningBalanceRequest = () => {
                             <InputNumber
                                 id="amount"
                                 value={formData.amount}
-                                onValueChange={(e) => setFormData({...formData, amount: e.value || 0})}
+                                onValueChange={(e) => setFormData({ ...formData, amount: e.value || 0 })}
                                 mode="currency"
                                 currency="USD"
                                 locale="en-US"
@@ -442,23 +385,12 @@ const EarningBalanceRequest = () => {
                                     'p-invalid': submitted && formData.amount <= 0
                                 })}
                             />
-                            {submitted && formData.amount <= 0 && (
-                                <small className="p-invalid">
-                                    {t('FORM.VALIDATION.AMOUNT_POSITIVE')}
-                                </small>
-                            )}
+                            {submitted && formData.amount <= 0 && <small className="p-invalid">{t('FORM.VALIDATION.AMOUNT_POSITIVE')}</small>}
                         </div>
                     </Dialog>
 
                     {/* Status Change Dialog */}
-                    <Dialog
-                        visible={statusChangeDialog}
-                        style={{ width: '450px' }}
-                        header={t('EARNING_BALANCE_REQUEST.STATUS_DIALOG.TITLE')}
-                        modal
-                        footer={statusChangeDialogFooter}
-                        onHide={() => setStatusChangeDialog(false)}
-                    >
+                    <Dialog visible={statusChangeDialog} style={{ width: '450px' }} header={t('EARNING_BALANCE_REQUEST.STATUS_DIALOG.TITLE')} modal footer={statusChangeDialogFooter} onHide={() => setStatusChangeDialog(false)}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
                             {selectedRequest && (
@@ -466,8 +398,7 @@ const EarningBalanceRequest = () => {
                                     {t('EARNING_BALANCE_REQUEST.STATUS_DIALOG.CONFIRMATION')}
                                     <b>{selectedRequest.amount}</b> {t('FOR')} {selectedRequest.reseller?.reseller_name}?
                                     <br />
-                                    {t('NEW_STATUS')}:{' '}
-                                    {selectedStatus === 'approved' && t('ORDER.STATUS.CONFIRMED')}
+                                    {t('NEW_STATUS')}: {selectedStatus === 'approved' && t('ORDER.STATUS.CONFIRMED')}
                                     {selectedStatus === 'rejected' && t('ORDER.STATUS.REJECTED')}
                                 </span>
                             )}
@@ -482,12 +413,7 @@ const EarningBalanceRequest = () => {
                         modal
                         footer={
                             <>
-                                <Button
-                                    label={t('APP.GENERAL.CANCEL')}
-                                    icon="pi pi-times"
-                                    severity="danger"
-                                    onClick={hideDeleteDialog}
-                                />
+                                <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideDeleteDialog} />
                                 <Button
                                     label={t('FORM.GENERAL.SUBMIT')}
                                     icon="pi pi-check"
@@ -503,9 +429,7 @@ const EarningBalanceRequest = () => {
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
                             {selectedRequest && (
                                 <span>
-                                    {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the request for{' '}
-                                    <b>{selectedRequest.amount}</b> {t('FOR')}{' '}
-                                    {selectedRequest.reseller?.reseller_name}?
+                                    {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the request for <b>{selectedRequest.amount}</b> {t('FOR')} {selectedRequest.reseller?.reseller_name}?
                                 </span>
                             )}
                         </div>

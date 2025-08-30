@@ -15,7 +15,7 @@ import { useSelector } from 'react-redux';
 import { Dropdown } from 'primereact/dropdown';
 import { _addService, _deleteService, _editService, _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
-import { _addBundle, _deleteBundle, _editBundle, _fetchBundleList } from '@/app/redux/actions/bundleActions';
+import { _addBundle, _deleteBundle, _deleteSelectedBundles, _editBundle, _fetchBundleList } from '@/app/redux/actions/bundleActions';
 import { Paginator } from 'primereact/paginator';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import { currenciesReducer } from '../../../redux/reducers/currenciesReducer';
@@ -55,7 +55,7 @@ const BundlePage = () => {
     const [deleteServiceDialog, setDeleteServiceDialog] = useState(false);
     const [deleteServicesDialog, setDeleteServicesDialog] = useState(false);
     const [bundle, setBundle] = useState<Bundle>(emptyBundle);
-    const [selectedCompanies, setSelectedCompanyCode] = useState(null);
+    const [selectedBundles, setSelectedBundles] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
@@ -129,6 +129,7 @@ const BundlePage = () => {
             });
             return;
         }
+
         if (bundle.id && bundle.id !== 0) {
             dispatch(_editBundle(bundle.id, bundle, toast, t));
         } else {
@@ -141,7 +142,8 @@ const BundlePage = () => {
     };
 
     const editService = (bundle: Bundle) => {
-        setBundle({ ...bundle });
+        console.log(bundle);
+        setBundle({ ...bundle, service_id: bundle.service?.id || 0 });
 
         setServiceDialog(true);
     };
@@ -158,10 +160,6 @@ const BundlePage = () => {
         }
         dispatch(_deleteBundle(bundle?.id, toast, t));
         setDeleteServiceDialog(false);
-    };
-
-    const confirmDeleteSelected = () => {
-        setDeleteServicesDialog(true);
     };
 
     // Add this useEffect hook to your component
@@ -192,7 +190,41 @@ const BundlePage = () => {
         setActiveFilters(filters);
     };
 
+    const confirmDeleteSelected = () => {
+        if (!selectedBundles || (selectedBundles as any).length === 0) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: t('VALIDATION_WARNING'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
+        setDeleteServicesDialog(true);
+    };
+
+    const deleteSelectedBundles = async () => {
+        if (!selectedBundles || (selectedBundles as any).length === 0) {
+            toast.current?.show({
+                severity: 'error',
+                summary: t('VALIDATION_ERROR'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
+
+        const selectedIds = (selectedBundles as Bundle[]).map((bundle) => bundle.id);
+
+        await _deleteSelectedBundles(selectedIds, toast, t);
+        dispatch(_fetchBundleList());
+
+        setSelectedBundles(null);
+        setDeleteServicesDialog(false);
+    };
+
     const rightToolbarTemplate = () => {
+        const hasSelectedBundles = selectedBundles && (selectedBundles as any).length > 0;
         return (
             <React.Fragment>
                 <div className="my-2" style={{ display: 'flex', gap: '0.5rem', position: 'relative' }}>
@@ -256,11 +288,12 @@ const BundlePage = () => {
                                             </label>
                                             <Dropdown
                                                 id="serviceFilter"
+                                                value={services.find((s: Service) => s.id === filters.filter_service_id) || null}
                                                 options={services}
-                                                value={filters.filter_service_id}
-                                                onChange={(e) => setFilters({ ...filters, filter_service_id: e.value })}
-                                                optionLabel="service_name" // Adjust based on your service object structure
-                                                optionValue="id"
+                                                // value={filters.filter_service_id}
+                                                onChange={(e) => {console.log(e.value.id),setFilters({ ...filters, filter_service_id: e.value.id })}}
+                                                optionLabel="company.company_name" // Adjust based on your service object structure
+                                                //  optionValue="id"
                                                 placeholder={t('ORDER.FILTER.SELECT_SERVICE')}
                                                 style={{ width: '100%' }}
                                                 itemTemplate={(option) => (
@@ -269,6 +302,15 @@ const BundlePage = () => {
                                                         <div>- {option.company?.company_name}</div>
                                                     </div>
                                                 )}
+                                                valueTemplate={(option) => {
+                                                    if (!option) return t('BUNDLE.FORM.PLACEHOLDER.SERVICENAME');
+                                                    return (
+                                                        <div style={{ display: 'flex', gap: '5px' }}>
+                                                            <div>{option.service_category?.category_name}</div>
+                                                            <div>- {option.company?.company_name}</div>
+                                                        </div>
+                                                    );
+                                                }}
                                             />
                                         </div>
 
@@ -314,14 +356,15 @@ const BundlePage = () => {
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
                         onClick={openNew}
                     />
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+
+                    {/* <Button
+                            style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
+                            label={t('APP.GENERAL.DELETE')}
+                            icon="pi pi-trash"
+                            severity="danger"
+                            onClick={confirmDeleteSelected}
+                            disabled={!selectedBundles || !(selectedBundles as any).length}
+                        /> */}
                 </div>
             </React.Fragment>
         );
@@ -497,13 +540,13 @@ const BundlePage = () => {
     const deleteCompaniesDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteServicesDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedBundles} />
         </>
     );
 
     const onPageChange = (event: any) => {
         const page = event.page + 1;
-        dispatch(_fetchBundleList(page, searchTag));
+        dispatch(_fetchBundleList(page, searchTag, activeFilters));
     };
 
     useEffect(() => {
@@ -530,14 +573,14 @@ const BundlePage = () => {
                     <DataTable
                         ref={dt}
                         value={bundles}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedCompanyCode(e.value as any)}
+                        selection={selectedBundles}
+                        onSelectionChange={(e) => setSelectedBundles(e.value as any)}
                         dataKey="id"
                         className="datatable-responsive"
                         globalFilter={globalFilter}
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         // header={header}
                         responsiveLayout="scroll"
                         paginator={false} // Disable PrimeReact's built-in paginator
@@ -549,7 +592,7 @@ const BundlePage = () => {
                                 : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
                         }
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Bundle Title" header={t('BUNDLE.TABLE.COLUMN.BUNDLENAME')} body={bundleTitleBodyTemplate}></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
@@ -777,31 +820,43 @@ const BundlePage = () => {
                                     </label>
                                     <Dropdown
                                         id="service"
-                                        value={bundle.service}
+                                        value={services.find((s: Service) => s.id === bundle.service_id) || null}
                                         options={services}
-                                        onChange={(e) =>
+                                        onChange={(e) => {
                                             setBundle((prev) => ({
                                                 ...prev,
+                                                service_id: e.value.id,
                                                 service: e.value
-                                            }))
-                                        }
+                                            }));
+                                        }}
                                         optionLabel="company.company_name"
-                                        // optionValue='id'
                                         placeholder={t('BUNDLE.FORM.PLACEHOLDER.SERVICENAME')}
                                         className="w-full"
+                                        // filter
+                                        // filterBy="company.company_name,service_category.category_name"
                                         itemTemplate={(option) => (
                                             <div style={{ display: 'flex', gap: '5px' }}>
                                                 <div>{option.service_category?.category_name}</div>
-                                                <div>{option.company?.company_name}</div>
+                                                <div>- {option.company?.company_name}</div>
                                             </div>
                                         )}
+                                        valueTemplate={(option) => {
+                                            if (!option) return t('BUNDLE.FORM.PLACEHOLDER.SERVICENAME');
+                                            return (
+                                                <div style={{ display: 'flex', gap: '5px' }}>
+                                                    <div>{option.service_category?.category_name}</div>
+                                                    <div>- {option.company?.company_name}</div>
+                                                </div>
+                                            );
+                                        }}
                                     />
-                                    {submitted && !bundle.service && (
+                                    {submitted && !bundle.service_id && (
                                         <small className="p-invalid" style={{ color: 'red' }}>
                                             {t('THIS_FIELD_IS_REQUIRED')}
                                         </small>
                                     )}
                                 </div>
+
                                 <div className="field col">
                                     <label htmlFor="name" style={{ fontWeight: 'bold' }}>
                                         {t('BUNDLE.FORM.INPUT.CURRENCY')}
@@ -872,7 +927,7 @@ const BundlePage = () => {
                                             'p-invalid': submitted && !bundle.amount
                                         })}
                                     />
-                                    {submitted && bundle.bundle_type==='credit' && !bundle.bundle_title && (
+                                    {submitted && bundle.bundle_type === 'credit' && !bundle.bundle_title && (
                                         <small className="p-invalid" style={{ color: 'red' }}>
                                             {t('THIS_FIELD_IS_REQUIRED')}
                                         </small>
@@ -897,7 +952,7 @@ const BundlePage = () => {
                     <Dialog visible={deleteServicesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteServicesDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {bundle && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
+                            {selectedBundles && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')} </span>}
                         </div>
                     </Dialog>
                 </div>

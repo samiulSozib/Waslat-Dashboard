@@ -28,6 +28,8 @@ import { Calendar } from 'primereact/calendar';
 import { companyReducer } from '../../../redux/reducers/companyReducer';
 import serviceReducer from '../../../redux/reducers/serviceReducer';
 import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
+import { generateOrderExcelFile } from '../../utilities/generateExcel';
+import { InputTextarea } from 'primereact/inputtextarea';
 
 const OrderPage = () => {
     const [orderDialog, setOrderDialog] = useState(false);
@@ -46,7 +48,10 @@ const OrderPage = () => {
     const { t } = useTranslation();
     const [searchTag, setSearchTag] = useState('');
     const [statusChangeDialog, setStatusChangeDialog] = useState(false);
-    const [selectedStatus, setSelectedStatus] = useState<number|null>();
+    const [selectedStatus, setSelectedStatus] = useState<number | null>();
+    const [refreshing, setRefreshing] = useState(false);
+    const [rejectReasonDialog, setRejectReasonDialog] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState('');
 
     // Add these state variables near your other state declarations
     const [filterDialogVisible, setFilterDialogVisible] = useState(false);
@@ -54,7 +59,9 @@ const OrderPage = () => {
         filter_status: null as number | null,
         filter_service_category_type: null as string | null,
         filter_company_id: null as number | null,
-        filter_service_id: null as number | null
+        filter_service_id: null as number | null,
+        filter_startdate: null as string | null,
+        filter_enddate: null as string | null
     });
 
     const [activeFilters, setActiveFilters] = useState({});
@@ -73,8 +80,6 @@ const OrderPage = () => {
         dispatch(_fetchCompanies());
         dispatch(_fetchServiceList());
     }, [dispatch, filterDialogVisible]);
-
-
 
     const hideDialog = () => {
         setSubmitted(false);
@@ -99,7 +104,7 @@ const OrderPage = () => {
             console.error('Order ID is undefined.');
             return;
         }
-        dispatch(_deleteOrder(order?.id, toast,t));
+        dispatch(_deleteOrder(order?.id, toast, t));
         setDeleteOrderDialog(false);
     };
 
@@ -135,20 +140,28 @@ const OrderPage = () => {
         setActiveFilters(filters);
     };
 
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await new Promise((res) => setTimeout(res, 1000));
+        dispatch(_fetchOrders(1, searchTag));
+        setRefreshing(false);
+    };
+
     const rightToolbarTemplate = () => {
         return (
             <React.Fragment>
-                <div className="my-2" style={{ display: 'flex', gap: '0.5rem', position: 'relative' }}>
-                    <div ref={filterRef} style={{ position: 'relative' }}>
-                        <Button label={t('ORDER.FILTER.FILTER')} icon="pi pi-filter" className="p-button-info" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
+                <div className="-m-1 my-2 flex flex-wrap gap-1 w-full">
+                    <Button className="flex-1  h-10" label={t('REFRESH')} icon={`pi pi-refresh ${refreshing ? 'pi-spin' : ''}`} severity="secondary" onClick={handleRefresh} disabled={refreshing} />
+                    <div className="flex-1  h-10" ref={filterRef} style={{ position: 'relative' }}>
+                        <Button className="p-button-info w-full" label={t('ORDER.FILTER.FILTER')} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
                         {filterDialogVisible && (
                             <div
                                 className="p-card p-fluid"
                                 style={{
                                     position: 'absolute',
                                     top: '100%',
-                                    left: isRTL() ? 0 : '',
-                                    right: isRTL() ? '' : 0,
+                                    left: isRTL() ? '-100%' : '',
+                                    right: isRTL() ? '' : '-100%',
                                     width: '300px',
                                     zIndex: 1000,
                                     marginTop: '0.5rem',
@@ -231,7 +244,31 @@ const OrderPage = () => {
                                                         <div>- {option.company?.company_name}</div>
                                                     </div>
                                                 )}
+                                                valueTemplate={(option) => {
+                                                    if (!option) return t('BUNDLE.FORM.PLACEHOLDER.SERVICENAME');
+                                                    return (
+                                                        <div style={{ display: 'flex', gap: '5px' }}>
+                                                            <div>{option.service_category?.category_name}</div>
+                                                            <div>- {option.company?.company_name}</div>
+                                                        </div>
+                                                    );
+                                                }}
                                             />
+                                        </div>
+
+                                        {/* Date Range Filters */}
+                                        <div className="col-12">
+                                            <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('ORDER.FILTER.START_DATE')}
+                                            </label>
+                                            <InputText type="date" id="startDateFilter" value={filters.filter_startdate || ''} onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })} style={{ width: '100%' }} />
+                                        </div>
+
+                                        <div className="col-12">
+                                            <label htmlFor="endDateFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('ORDER.FILTER.END_DATE')}
+                                            </label>
+                                            <InputText type="date" id="endDateFilter" value={filters.filter_enddate || ''} onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })} style={{ width: '100%' }} />
                                         </div>
 
                                         {/* Action Buttons */}
@@ -245,7 +282,9 @@ const OrderPage = () => {
                                                         filter_status: null,
                                                         filter_service_category_type: null,
                                                         filter_service_id: null,
-                                                        filter_company_id: null
+                                                        filter_company_id: null,
+                                                        filter_startdate: null,
+                                                        filter_enddate: null
                                                     });
                                                 }}
                                             />
@@ -269,7 +308,7 @@ const OrderPage = () => {
                         )}
                     </div>
 
-                    <Button label={t('APP.GENERAL.DELETE')} icon="pi pi-trash" severity="danger" onClick={confirmDeleteSelected} disabled={!selectedCompanies || !(selectedCompanies as any).length} />
+                    <Button className="flex-1  h-10" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
                 </div>
             </React.Fragment>
         );
@@ -296,10 +335,35 @@ const OrderPage = () => {
     };
 
     const rechargeableAccountBodyTemplate = (rowData: Order) => {
+        const copyOrderDetails = () => {
+            const dataToCopy = `${rowData.rechargeble_account || '-'}`.trim();
+            copyToClipboard(dataToCopy);
+        };
+
         return (
             <>
-                <span className="p-column-title">Account</span>
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{rowData.rechargeble_account}</span>
+                <span className="p-column-title">{t('ORDER.TABLE.COLUMN.RECHARGEABLEACCOUNT')}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '' }}>
+                    <Button
+                        icon="pi pi-copy"
+                        rounded
+                        severity="info"
+                        tooltip={t('COPY_RECHARGEABLE_ACCOUNT')}
+                        tooltipOptions={{
+                            position: 'top',
+                            className: 'custom-tooltip'
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            copyOrderDetails();
+                        }}
+                        className="p-button-sm p-button-text"
+                        pt={{
+                            icon: { className: 'text-sm' }
+                        }}
+                    />
+                    <span style={{ fontSize: '0.8rem', color: '#666' }}>{rowData.rechargeble_account}</span>
+                </div>
             </>
         );
     };
@@ -404,8 +468,7 @@ const OrderPage = () => {
         } else if (status == '2') {
             statusText = t('ORDER.STATUS.REJECTED');
             statusClass = 'bg-red-500 text-white';
-        }
-        else if (status == '3') {
+        } else if (status == '3') {
             statusText = t('ORDER.STATUS.UNDER_PROCESS');
             statusClass = 'bg-gray-500 text-white';
         }
@@ -420,6 +483,60 @@ const OrderPage = () => {
         );
     };
 
+    const copyButtonBodyTemplate = (rowData: Order) => {
+        const copyOrderDetails = () => {
+            const formatDate = (dateString: string) => {
+                const date = new Date(dateString);
+                return date.toLocaleString();
+            };
+
+            const statusText = rowData.status == 0 ? t('ORDER.STATUS.PENDING') : rowData.status == 1 ? t('ORDER.STATUS.CONFIRMED') : rowData.status == 2 ? t('ORDER.STATUS.REJECTED') : t('ORDER.STATUS.UNKNOWN');
+
+            const dataToCopy = `
+📋 ${t('ORDER_DETAILS')}
+----------------
+🔹 ${t('ORDER.TABLE.COLUMN.RECHARGEABLEACCOUNT')}: ${rowData.rechargeble_account || '-'}
+🔹 ${t('ORDER.TABLE.COLUMN.BUNDLETITLE')}: ${rowData.bundle?.bundle_title || '-'}
+🔹 ${t('ORDER.TABLE.COLUMN.COMPANYNAME')}: ${rowData.bundle?.service?.company?.company_name || '-'}
+        `.trim();
+
+            copyToClipboard(dataToCopy);
+        };
+
+        return (
+            <>
+                <span className="p-column-title">Copy</span>
+                <Button
+                    icon="pi pi-copy"
+                    rounded
+                    severity="info"
+                    tooltip={t('COPY_ALL_DETAILS')}
+                    tooltipOptions={{
+                        position: 'top',
+                        className: 'custom-tooltip'
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        copyOrderDetails();
+                    }}
+                    className="p-button-sm p-button-text"
+                    pt={{
+                        icon: { className: 'text-sm' }
+                    }}
+                />
+            </>
+        );
+    };
+
+    const performedByBodyTemplate = (rowData: Order) => {
+        return (
+            <>
+                <span className="p-column-title">Performed By</span>
+                {rowData.performed_by_name}
+            </>
+        );
+    };
+
     // const actionBodyTemplate = (rowData: Order) => {
     //     return (
     //         <>
@@ -430,68 +547,91 @@ const OrderPage = () => {
     // };
 
     const actionBodyTemplate = (rowData: Order) => {
-        //const menuType = rowData.menuType; // Assuming `menuType` is part of your data
+        const status = Number(rowData.status); // in case it's a string
 
-        // Define the dropdown actions
-        const items = [
-            // {
-            //     label: 'Edit',
-            //     icon: 'pi pi-pencil',
-            //     command: () => editReseller(rowData),
-            //     //disabled: menuType === 'guest', // Example condition
-            // },
-            {
-                label: t('APP.GENERAL.DELETE'),
-                icon: 'pi pi-trash',
-                command: () => confirmDeleteOrder(rowData)
-                //disabled: menuType !== 'admin', // Example condition
-            },
-            {
-                label: t('ORDER.STATUS.CONFIRMED'),
-                icon: 'pi pi-check',
-                command: () => confirmChangeStatus(rowData, 1), // 1 for confirmed
-            },
-            {
-                label: t('ORDER.STATUS.UNDER_PROCESS'),
-                icon: 'pi pi-spinner',
-                command: () => confirmChangeStatus(rowData, 3), // 3 for under process
-            },
-            {
-                label: t('ORDER.STATUS.REJECTED'),
-                icon: 'pi pi-times',
-                command: () => confirmChangeStatus(rowData, 2), // 2 for rejected
-            },
-        ];
+        let items: any[] = [];
 
-        return (
-            <SplitButton
-                label=""
-                icon="pi pi-cog"
-                model={items}
-                className="p-button-rounded"
-                severity="info" // Optional: change severity or style
-                dir="ltr"
-            />
-        );
+        if (status === 0) {
+            // Pending
+            items = [
+                {
+                    label: t('ORDER.STATUS.CONFIRMED'),
+                    icon: 'pi pi-check',
+                    command: () => confirmChangeStatus(rowData, 1)
+                },
+                {
+                    label: t('ORDER.STATUS.UNDER_PROCESS'),
+                    icon: 'pi pi-spinner',
+                    command: () => confirmChangeStatus(rowData, 3)
+                },
+                {
+                    label: t('ORDER.STATUS.REJECTED'),
+                    icon: 'pi pi-times',
+                    command: () => confirmChangeStatus(rowData, 2)
+                }
+            ];
+        } else if (status === 2) {
+            // Rejected
+            items = [
+                {
+                    label: t('ORDER.STATUS.CONFIRMED'),
+                    icon: 'pi pi-check',
+                    command: () => confirmChangeStatus(rowData, 1)
+                }
+            ];
+        }
+
+        if (items.length > 0) {
+            return <SplitButton label="" icon="pi pi-cog" model={items} className="p-button-rounded" severity="info" dir="ltr" />;
+        }
+
+        // If status is Confirmed (1), show a placeholder button
+        if (status === 1) {
+            return <SplitButton label="" icon="pi pi-cog" disabled className="p-button-rounded" severity="info" dir="ltr" />;
+        }
+
+        return null;
     };
 
     const confirmChangeStatus = (order: Order, newStatus: number) => {
+        // setOrder(order);
+        // setSelectedStatus(newStatus);
+        // setStatusChangeDialog(true);
         setOrder(order);
         setSelectedStatus(newStatus);
-        setStatusChangeDialog(true);
+
+        if (newStatus === 2) {
+            // If status is rejected (2)
+            setRejectReasonDialog(true); // Show reject reason dialog first
+        } else {
+            setStatusChangeDialog(true); // For other status changes, show normal confirmation
+        }
+    };
+
+    const finalizeRejection = () => {
+        if (!order?.id || selectedStatus === null) {
+            console.error('Order ID or status is undefined.');
+            return;
+        }
+
+        // Dispatch action with rejection reason
+        dispatch(_changeOrderStatus(order.id, selectedStatus as number, toast, t, rejectionReason));
+        setRejectReasonDialog(false);
+        setStatusChangeDialog(false);
+        setRejectionReason(''); // Reset rejection reason
     };
 
     const changeOrderStatus = () => {
-    if (!order?.id || selectedStatus === null) {
-        console.error('Order ID or status is undefined.');
-        return;
-    }
+        if (!order?.id || selectedStatus === null) {
+            console.error('Order ID or status is undefined.');
+            return;
+        }
 
-    // Dispatch an action to update the order status
-    // You'll need to implement this action in your orderActions.ts
-    dispatch(_changeOrderStatus(order.id, selectedStatus as number, toast,t));
-    setStatusChangeDialog(false);
-};
+        // Dispatch an action to update the order status
+        // You'll need to implement this action in your orderActions.ts
+        dispatch(_changeOrderStatus(order.id, selectedStatus as number, toast, t));
+        setStatusChangeDialog(false);
+    };
 
     // const header = (
     //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
@@ -524,7 +664,38 @@ const OrderPage = () => {
 
     const onPageChange = (event: any) => {
         const page = event.page + 1;
-        dispatch(_fetchOrders(page, searchTag));
+        dispatch(_fetchOrders(page, searchTag, activeFilters));
+    };
+
+    const exportToExcel = async () => {
+        await generateOrderExcelFile({
+            orders,
+            t,
+            toast,
+            all: true
+        });
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard
+            .writeText(text)
+            .then(() => {
+                toast.current?.show({
+                    severity: 'success',
+                    summary: t('COPIED'),
+                    detail: t('TEXT_COPIED_TO_CLIPBOARD'),
+                    life: 2000
+                });
+            })
+            .catch((err) => {
+                console.error('Failed to copy text: ', err);
+                toast.current?.show({
+                    severity: 'error',
+                    summary: t('ERROR'),
+                    detail: t('FAILED_TO_COPY_TEXT'),
+                    life: 2000
+                });
+            });
     };
 
     return (
@@ -555,11 +726,14 @@ const OrderPage = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={copyButtonBodyTemplate} headerStyle={{ width: '5rem' }}></Column>
+
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header={t('ORDER.TABLE.COLUMN.RESELLERNAME')} body={resellerNameBodyTemplate}></Column>
+
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="rechargeble_account"
@@ -573,7 +747,9 @@ const OrderPage = () => {
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header={t('ORDER.TABLE.COLUMN.COMPANYNAME')} body={companyNameBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header={t('ORDER.TABLE.COLUMN.CATEGORYNAME')} body={categoryNameNameBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header={t('ORDER.TABLE.COLUMN.ORDEREDDATE')} body={createdAtBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="status" header={t('ORDER.TABLE.COLUMN.STATUS')} sortable body={statusBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header={t('PERFORMED_BY')} body={performedByBodyTemplate}></Column>
+
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="status" header={t('ORDER.TABLE.COLUMN.STATUS')} body={statusBodyTemplate}></Column>
                     </DataTable>
                     <Paginator
                         first={(pagination?.page - 1) * pagination?.items_per_page}
@@ -663,12 +839,45 @@ const OrderPage = () => {
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
                             {order && (
                                 <span>
-                                    {t('ARE_YOU_SURE_YOU_WANT_TO_CHANGE_STATUS')} <b>{order.rechargeble_account}</b> to{' '}
-                                    {selectedStatus === 0 && t('ORDER.STATUS.PENDING')}
+                                    {t('ARE_YOU_SURE_YOU_WANT_TO_CHANGE_STATUS')} <b>{order.rechargeble_account}</b> to {selectedStatus === 0 && t('ORDER.STATUS.PENDING')}
                                     {selectedStatus === 1 && t('ORDER.STATUS.CONFIRMED')}
                                     {selectedStatus === 2 && t('ORDER.STATUS.REJECTED')}?
                                 </span>
                             )}
+                        </div>
+                    </Dialog>
+
+                    {/* reject dialog */}
+                    <Dialog
+                        visible={rejectReasonDialog}
+                        style={{ width: '450px' }}
+                        header={t('ORDER.REJECTION_REASON')}
+                        modal
+                        footer={
+                            <>
+                                <Button
+                                    label={t('APP.GENERAL.CANCEL')}
+                                    icon="pi pi-times"
+                                    severity="danger"
+                                    className={isRTL() ? 'rtl-button' : ''}
+                                    onClick={() => {
+                                        setRejectReasonDialog(false);
+                                        setRejectionReason('');
+                                    }}
+                                />
+                                <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={finalizeRejection} disabled={!rejectionReason.trim()} />
+                            </>
+                        }
+                        onHide={() => {
+                            setRejectReasonDialog(false);
+                            setRejectionReason('');
+                        }}
+                    >
+                        <div className="p-fluid">
+                            <div className="field">
+                                <label htmlFor="rejectionReason">{t('ORDER.REJECTION_REASON')}</label>
+                                <InputTextarea id="rejectionReason" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} rows={3} autoFocus placeholder={t('ORDER.ENTER_REJECTION_REASON')} />
+                            </div>
                         </div>
                     </Dialog>
                 </div>

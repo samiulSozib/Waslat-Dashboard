@@ -17,7 +17,7 @@ import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { District, Province } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
-import { _addDistrict, _deleteDistrict, _editDistrict, _fetchDistricts } from '@/app/redux/actions/districtActions';
+import { _addDistrict, _deleteDistrict, _deleteSelectedDistricts, _editDistrict, _fetchDistricts } from '@/app/redux/actions/districtActions';
 import { provinceReducer } from '../../../redux/reducers/provinceReducer';
 import { _fetchProvinces } from '@/app/redux/actions/provinceActions';
 import withAuth from '../../authGuard';
@@ -41,7 +41,7 @@ const DistrictPage = () => {
     const [deleteDistrictDialog, setDeleteDistrictDialog] = useState(false);
     const [deleteDistrictsDialog, setDeleteDistrictsDialog] = useState(false);
     const [district, setDistrict] = useState<District>(emptyDistrict);
-    const [selectedCompanies, setSelectedDistrict] = useState(null);
+    const [selectedDistricts, setSelectedDistricts] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
@@ -120,11 +120,48 @@ const DistrictPage = () => {
         setDeleteDistrictDialog(false);
     };
 
-    const confirmDeleteSelected = () => {
+            const confirmDeleteSelected = () => {
+        if (!selectedDistricts || (selectedDistricts as any).length === 0) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: t('VALIDATION_WARNING'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
         setDeleteDistrictsDialog(true);
     };
 
+        const deleteSelectedDistricts = async() => {
+            if (!selectedDistricts || (selectedDistricts as any).length === 0) {
+                toast.current?.show({
+                    severity: 'error',
+                    summary: t('VALIDATION_ERROR'),
+                    detail: t('NO_SELECTED_ITEMS_FOUND'),
+                    life: 3000
+                });
+                return;
+            }
+
+            const selectedIds = (selectedDistricts as District[]).map((district) => district.id);
+
+
+            await _deleteSelectedDistricts(selectedIds,toast,t)
+            dispatch(_fetchDistricts())
+
+
+
+
+            setSelectedDistricts(null)
+            setDeleteDistrictsDialog(false)
+        };
+
+
+
     const rightToolbarTemplate = () => {
+        const hasSelectedDistricts = selectedDistricts && (selectedDistricts as any).length > 0;
+
         return (
             <React.Fragment>
                 <div className="flex justify-end items-center space-x-2">
@@ -136,14 +173,8 @@ const DistrictPage = () => {
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
                         onClick={openNew}
                     />
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+
+
                 </div>
             </React.Fragment>
         );
@@ -217,7 +248,7 @@ const DistrictPage = () => {
     const deleteCompaniesDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteDistrictsDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedDistricts}/>
         </>
     );
 
@@ -234,6 +265,11 @@ const DistrictPage = () => {
         }
     }, [district.province_id, provinces]);
 
+
+
+
+
+
     return (
         <div className="grid crud-demo -m-5">
             <div className="col-12">
@@ -245,8 +281,8 @@ const DistrictPage = () => {
                     <DataTable
                         ref={dt}
                         value={districts}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedDistrict(e.value as any)}
+                        selection={selectedDistricts}
+                        onSelectionChange={(e) => setSelectedDistricts(e.value as any)}
                         dataKey="id"
                         paginator
                         rows={10}
@@ -266,7 +302,7 @@ const DistrictPage = () => {
                         // header={header}
                         responsiveLayout="scroll"
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="district_name"
@@ -286,7 +322,7 @@ const DistrictPage = () => {
 
                     <Dialog visible={districtDialog} style={{ width: '700px', padding: '5px' }} header={t('DISTRICT.DETAILS')} modal className="p-fluid" footer={districtDialogFooter} onHide={hideDialog}>
                         <div className="card" style={{ padding: '40px' }}>
-                            <div className="field">
+                            <div className="field col">
                                 <label htmlFor="district_name" style={{ fontWeight: 'bold' }}>
                                     {t('DISTRICT.TABLE.COLUMN.DISTRICTNAME')}
                                 </label>
@@ -329,6 +365,9 @@ const DistrictPage = () => {
                                     }
                                     optionLabel="province_name"
                                     // optionValue='id'
+                                    filter
+                                    filterBy='province_name'
+                                    filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
                                     placeholder={t('DISTRICT.FORM.PLACEHOLDER.PROVINCE')}
                                     className="w-full"
                                 />
@@ -355,7 +394,7 @@ const DistrictPage = () => {
                     <Dialog visible={deleteDistrictsDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteDistrictsDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {district && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
+                            {districts && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
                 </div>

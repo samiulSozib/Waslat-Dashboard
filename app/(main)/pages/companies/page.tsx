@@ -11,63 +11,61 @@ import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { _fetchCompanies,_deleteCompany, _addCompany,_editCompany } from '@/app/redux/actions/companyActions';
+import { _fetchCompanies, _deleteCompany, _addCompany, _editCompany, _deleteSelectedCompanies } from '@/app/redux/actions/companyActions';
 import { useSelector } from 'react-redux';
 import { Dropdown } from 'primereact/dropdown';
 import { _fetchCountries } from '@/app/redux/actions/countriesActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
-import { Company, Country } from '@/types/interface';
+import { Company, Country, CustomField } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
 import { useTranslation } from 'react-i18next';
 import withAuth from '../../authGuard';
 import { customCellStyle, customCellStyleImage } from '../../utilities/customRow';
 import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
+import { Badge } from 'primereact/badge';
+import { CustomFields } from '../../components/CustomFields';
+import { parseInputFormSchema, stringifyInputFormSchema } from '../../utilities/parseInputFormSchema';
 
 const CompanyPage = () => {
-
-    let emptyCompany: Company= {
+    let emptyCompany: Company = {
         id: 0,
         company_name: '',
-        company_logo:  '',
-        country_id:null,
+        company_logo: '',
+        country_id: null,
         telegram_chat_id: null,
-        deleted_at: '' ,
+        deleted_at: '',
         created_at: '',
         updated_at: '',
-        country: null
-
+        country: null,
+        input_form_schema: []
     };
 
     const [companyDialog, setCompanyDialog] = useState(false);
     const [deleteCompanyDialog, setDeleteCompanyDialog] = useState(false);
     const [deleteCompaniesDialog, setDeleteCompaniesDialog] = useState(false);
-    const [company,setCompany]=useState<Company>(emptyCompany)
+    const [company, setCompany] = useState<Company>(emptyCompany);
     const [selectedCompanies, setSelectedCompanies] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
     const dt = useRef<DataTable<any>>(null);
-    const dispatch=useDispatch<AppDispatch>()
-    const {companies,loading}=useSelector((state:any)=>state.companyReducer)
-    const {countries}=useSelector((state:any)=>state.countriesReducer)
-    const {telegramChatIds}=useSelector((state:any)=>state.telegramReducer)
+    const dispatch = useDispatch<AppDispatch>();
+    const { companies, loading } = useSelector((state: any) => state.companyReducer);
+    const { countries } = useSelector((state: any) => state.countriesReducer);
+    const { telegramChatIds } = useSelector((state: any) => state.telegramReducer);
     const { t } = useTranslation();
-    const [searchTag,setSearchTag]=useState("")
+    const [searchTag, setSearchTag] = useState('');
 
-    useEffect(()=>{
-        dispatch(_fetchCompanies(searchTag))
-        dispatch(_fetchCountries())
-        dispatch(_fetchTelegramList())
-    },[dispatch,searchTag])
-
-    useEffect(()=>{
-        //console.log(company)
-    },[company])
+    useEffect(() => {
+        dispatch(_fetchCompanies(searchTag));
+        dispatch(_fetchCountries());
+        dispatch(_fetchTelegramList());
+    }, [dispatch, searchTag]);
 
     const openNew = () => {
-        setCompany(emptyCompany)
+        setCompany(emptyCompany);
         setSubmitted(false);
         setCompanyDialog(true);
     };
@@ -88,39 +86,72 @@ const CompanyPage = () => {
         setCompany(emptyCompany);
     };
 
-
-
     const saveCompany = () => {
         setSubmitted(true);
-        //console.log(company)
-        if (!company.company_name || company.company_name.length === 0 ||
-            !company.country
-            ) {
 
-                toast.current?.show({
-                    severity: 'error',
-                    summary: t('VALIDATION_ERROR'),
-                    detail: t('PLEASE_FILLED_ALL_REQUIRED_FIELDS'),
-                    life: 3000,
-                });
+        if (!company.company_name || company.company_name.length === 0 || !company.country) {
+            toast.current?.show({
+                severity: 'error',
+                summary: t('VALIDATION_ERROR'),
+                detail: t('PLEASE_FILLED_ALL_REQUIRED_FIELDS'),
+                life: 3000
+            });
             return;
         }
-        if (company.id && company.id !== 0) {
-            dispatch(_editCompany(company,toast,t));
 
+        // Validate custom fields
+        const parsedFields = parseInputFormSchema(company.input_form_schema);
+        if (parsedFields && parsedFields.length > 0) {
+            for (let i = 0; i < parsedFields.length; i++) {
+                const field = parsedFields[i];
+                if (!field.name || field.name.trim() === '') {
+                    toast.current?.show({
+                        severity: 'error',
+                        summary: t('VALIDATION_ERROR'),
+                        detail: t('CUSTOM_FIELD_NAME_REQUIRED'),
+                        life: 3000
+                    });
+                    return;
+                }
+
+                if (!field.label.en || field.label.en.trim() === '') {
+                    toast.current?.show({
+                        severity: 'error',
+                        summary: t('VALIDATION_ERROR'),
+                        detail: t('CUSTOM_FIELD_LABEL_REQUIRED'),
+                        life: 3000
+                    });
+                    return;
+                }
+            }
+        }
+
+        // Prepare company data for API
+        const companyData = {
+            ...company,
+            input_form_schema: stringifyInputFormSchema(parsedFields) // Stringify for API
+        };
+
+        if (company.id && company.id !== 0) {
+            dispatch(_editCompany(companyData, toast, t));
         } else {
-            dispatch(_addCompany(company,toast,t));
+            dispatch(_addCompany(companyData, toast, t));
         }
 
         setCompanyDialog(false);
         setCompany(emptyCompany);
-        setSubmitted(false)
+        setSubmitted(false);
     };
 
     const editCompany = (company: Company) => {
-        //console.log(company)
-        setCompany({ ...company,country_id:company.country_id,country:company.country});
-
+        const matching = countries.find((r: any) => r.id === company.country?.id);
+        console.log(company)
+        setCompany({
+            ...company,
+            country_id: company.country_id,
+            country: matching,
+            input_form_schema: parseInputFormSchema(company.input_form_schema)
+        });
         setCompanyDialog(true);
     };
 
@@ -131,40 +162,49 @@ const CompanyPage = () => {
 
     const deleteCompany = () => {
         if (!company?.id) {
-            console.error("Company ID is undefined.");
+            console.error('Company ID is undefined.');
             return;
         }
-        dispatch(_deleteCompany(company?.id,toast,t))
+        dispatch(_deleteCompany(company?.id, toast, t));
         setDeleteCompanyDialog(false);
-
     };
 
-
     const confirmDeleteSelected = () => {
+        if (!selectedCompanies || (selectedCompanies as any).length === 0) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: t('VALIDATION_WARNING'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
         setDeleteCompaniesDialog(true);
     };
 
+    const deleteSelectedCompanies = async () => {
+        if (!selectedCompanies || (selectedCompanies as any).length === 0) {
+            toast.current?.show({
+                severity: 'error',
+                summary: t('VALIDATION_ERROR'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
 
+        const selectedIds = (selectedCompanies as Company[]).map((company) => company.id);
+        await _deleteSelectedCompanies(selectedIds, toast, t);
+        dispatch(_fetchCompanies());
+
+        setSelectedCompanies(null);
+        setDeleteCompaniesDialog(false);
+    };
 
     const rightToolbarTemplate = () => {
         return (
             <div className="flex justify-end items-center space-x-2">
-                <Button
-                    label={t('COMPANY.TABLE.CREATECOMPANY')}
-                    icon="pi pi-plus"
-                    severity="success"
-                    className={isRTL()?"ml-2":"mr-2"}
-                    onClick={openNew}
-                    style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }}
-                />
-                <Button
-                    label={t("APP.GENERAL.DELETE")}
-                    icon="pi pi-trash"
-                    severity="danger"
-                    onClick={confirmDeleteSelected}
-                    disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }}
-                />
+                <Button label={t('COMPANY.TABLE.CREATECOMPANY')} icon="pi pi-plus" severity="success" className={isRTL() ? 'ml-2' : 'mr-2'} onClick={openNew} style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }} />
             </div>
         );
     };
@@ -174,17 +214,11 @@ const CompanyPage = () => {
             <div className="flex items-center">
                 <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
                     <i className="pi pi-search" />
-                    <InputText
-                        type="search"
-                        onInput={(e) => setSearchTag(e.currentTarget.value)}
-                        placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        className="w-full md:w-auto"
-                    />
+                    <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
                 </span>
             </div>
         );
     };
-
 
     const nameBodyTemplate = (rowData: Company) => {
         return (
@@ -199,20 +233,23 @@ const CompanyPage = () => {
         return (
             <>
                 <span className="p-column-title">Image</span>
-                <img src={`${rowData.company_logo}`} alt={rowData.company_name.toString()} className="shadow-2"
-                style={{
-                    padding:'2px',
-                    width: '45px',
-                    height: '45px',
-                    borderRadius: '50%', // Makes the image circular
-                    objectFit: 'cover', // Ensures the image is cropped correctly within the circle
-                }}/>
+                <img
+                    src={`${rowData.company_logo}`}
+                    alt={rowData.company_name.toString()}
+                    className="shadow-2"
+                    style={{
+                        padding: '2px',
+                        width: '45px',
+                        height: '45px',
+                        borderRadius: '50%',
+                        objectFit: 'cover'
+                    }}
+                />
             </>
         );
     };
 
     const countryBodyTemplate = (rowData: Company) => {
-
         return (
             <>
                 <span className="p-column-title">Country</span>
@@ -220,15 +257,6 @@ const CompanyPage = () => {
             </>
         );
     };
-
-    // const chatIdBodyTemplate = (rowData: Company) => {
-    //     return (
-    //         <>
-    //             <span className="p-column-title">Chat ID</span>
-    //             {rowData.telegram_chat_id?.chat_id}
-    //         </>
-    //     );
-    // };
 
     const telegramGroupNameBodyTemplate = (rowData: Company) => {
         return (
@@ -239,68 +267,60 @@ const CompanyPage = () => {
         );
     };
 
-
-
-
+    const customFieldsBodyTemplate = (rowData: Company) => {
+        const fieldCount = parseInputFormSchema(rowData.input_form_schema).length;
+        return (
+            <>
+                <span className="p-column-title">Custom Fields</span>
+                {fieldCount > 0 ? <Badge value={fieldCount} severity="info" /> : <span className="text-color-secondary">{rowData.input_form_schema?.length.toString()}</span>}
+            </>
+        );
+    };
 
     const actionBodyTemplate = (rowData: Company) => {
         return (
             <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"}  onClick={()=>editCompany(rowData)}/>
+                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editCompany(rowData)} />
                 <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteCompany(rowData)} />
             </>
         );
     };
 
-    // const header = (
-    //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-    //         <h5 className="m-0">Manage Products</h5>
-    //         <span className="block mt-2 md:mt-0 p-input-icon-left">
-    //             <i className="pi pi-search" />
-    //             <InputText type="search" onInput={(e) => setGlobalFilter(e.currentTarget.value)} placeholder="Search..." />
-    //         </span>
-    //     </div>
-    // );
-
     const companyDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog}/>
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''} onClick={saveCompany} />
+            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveCompany} />
         </>
     );
     const deleteCompanyDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCompanyDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''} onClick={deleteCompany} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteCompany} />
         </>
     );
     const deleteCompaniesDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCompaniesDialog}/>
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''}  />
+            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCompaniesDialog} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedCompanies} />
         </>
     );
 
     useEffect(() => {
-            if (company.country_id) {
-                const selectedCountry = countries.find((country:Country) => country.id === company.country_id);
-
-                if (selectedCountry) {
-                    setCompany((prev) => ({
-                        ...prev,
-                        country: selectedCountry, // Update with the selected company object
-                    }));
-                }
+        if (company.country_id) {
+            const selectedCountry = countries.find((country: Country) => country.id === company.country_id);
+            if (selectedCountry) {
+                setCompany((prev) => ({
+                    ...prev,
+                    country: selectedCountry
+                }));
             }
-        }, [company.country_id, countries]);
-
-
-
+        }
+    }, [company.country_id, countries]);
 
     return (
         <div className="grid -m-5">
             <div className="col-12">
-                <div className="card p-2" >
+                <div className="card p-2">
                     {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
                     <Toast ref={toast} />
                     <Toolbar className="mb-4 flex flex-col md:flex-row justify-between items-center" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
@@ -315,130 +335,141 @@ const CompanyPage = () => {
                         rows={10}
                         rowsPerPageOptions={[5, 10, 25]}
                         className={`datatable-responsive`}
-
                         paginatorTemplate={
-                            isRTL()
-                            ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink'
-                            : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
                         }
-                        currentPageReportTemplate={
-                            isRTL()
-                            ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`  // localized RTL string
-                            : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
+                        currentPageReportTemplate={isRTL() ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`}
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         responsiveLayout="scroll"
-
-                        >
-
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="company_name" header={t('COMPANY.TABLE.COLUMN.COMPANYNAME')} sortable body={nameBodyTemplate}></Column>
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} header={t('COMPANY.TABLE.COLUMN.COMPANYNAME')} body={imageBodyTemplate}></Column>
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="country_name" header={t('COMPANY.TABLE.COLUMN.COUNTRYNAME')} body={countryBodyTemplate}></Column>
-                        {/* <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="Chat Id" header={t('COMPANY.TABLE.COLUMN.COMPANYNAME')} body={chatIdBodyTemplate} ></Column> */}
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="Group Name" header={t('COMPANY.TABLE.COLUMN.CHATGROUPNAME')} body={telegramGroupNameBodyTemplate} ></Column>
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
+                    >
+                        <Column
+                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="company_name"
+                            header={t('COMPANY.TABLE.COLUMN.COMPANYNAME')}
+                            sortable
+                            body={nameBodyTemplate}
+                        ></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('COMPANY.TABLE.COLUMN.LOGO')} body={imageBodyTemplate}></Column>
+                        <Column
+                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="country_name"
+                            header={t('COMPANY.TABLE.COLUMN.COUNTRYNAME')}
+                            body={countryBodyTemplate}
+                        ></Column>
+                        <Column
+                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="Group Name"
+                            header={t('COMPANY.TABLE.COLUMN.CHATGROUPNAME')}
+                            body={telegramGroupNameBodyTemplate}
+                        ></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TOTAL_CUSTOM_FIELD')} body={customFieldsBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
 
-                    <Dialog visible={companyDialog}  style={{ width: '750px',padding:'5px' }} header={t('COMPANY.DETAILS')} modal className="p-fluid" footer={companyDialogFooter} onHide={hideDialog}>
-                        <div className='card' style={{padding:"40px"}}>
-                        {company.company_logo && (
-                            <img
-                                src={
-                                    company.company_logo instanceof File
-                                        ? URL.createObjectURL(company.company_logo) // Temporary preview for file
-                                        : company.company_logo // Direct URL for existing logo
-                                }
-                                alt="Uploaded Preview"
-                                width="150"
-                                className="mt-0 mx-auto mb-5 block shadow-2"
-                            />
-                        )}
-                        {/* <FileUpload
-                            name="company_logo"
-                            accept="image/*"
-                            customUpload
-                            onSelect={(e) => setCompany((prevCompany) => ({
-                                ...prevCompany,
-                                company_logo: e.files[0],
-                            }))}
-                        /> */}
-                        <FileUpload mode="basic"
-                        accept="image/*"
-                        onSelect={(e) => setCompany((prevCompany) => ({
-                            ...prevCompany,
-                            company_logo: e.files[0],
-                        }))}
-                        style={{textAlign:'center',marginBottom:'10px'}}
-                        />
-
-                        <div className="field">
-                            <label htmlFor="name" style={{ fontWeight: 'bold' }}>{t('COMPANY.FORM.INPUT.COMPANYNAME')}</label>
-                            <InputText
-                                id="company_name"
-                                value={company?.company_name}
-                                onChange={(e) =>
+                    <Dialog visible={companyDialog} style={{ width: '90%', maxWidth: '800px' }} header={t('COMPANY.DETAILS')} modal className="p-fluid" footer={companyDialogFooter} onHide={hideDialog}>
+                        <div className="card" style={{ padding: '20px' }}>
+                            {company.company_logo && (
+                                <img src={company.company_logo instanceof File ? URL.createObjectURL(company.company_logo) : company.company_logo} alt="Uploaded Preview" width="150" className="mt-0 mx-auto mb-5 block shadow-2" />
+                            )}
+                            <FileUpload
+                                mode="basic"
+                                accept="image/*"
+                                onSelect={(e) =>
                                     setCompany((prevCompany) => ({
                                         ...prevCompany,
-                                        company_name: e.target.value,
+                                        company_logo: e.files[0]
                                     }))
                                 }
-                                required
-                                autoFocus
-                                placeholder={t('COMPANY.FORM.PLACEHOLDER.COMPANYNAME')}
-                                className={classNames({
-                                    'p-invalid': submitted && !company.company_name
-                                })}
+                                style={{ textAlign: 'center', marginBottom: '10px' }}
                             />
-                            {submitted && !company.company_name && <small className="p-invalid" style={{ color: 'red' }}>{t('THIS_FIELD_IS_REQUIRED')}</small>}
-                        </div>
 
-                        <div className="formgrid grid">
-                            <div className="field col">
-                                <label htmlFor="country" style={{ fontWeight: 'bold' }}>{t('COMPANY.FORM.INPUT.COUNTRYNAME')}</label>
-                                <Dropdown
-                                    id="country"
-                                    value={company.country}
-                                    options={countries}
-                                    onChange={(e) =>
-                                        setCompany((prevCompany) => ({
-
-                                            ...prevCompany,
-                                            country:e.value
-                                        }))
-                                    }
-                                    optionLabel='country_name'
-                                    placeholder={t('COMPANY.FORM.PLACEHOLDER.COUNTRY')}
-                                    className="w-full"
-                                />
-                                {submitted && !company.country && <small className="p-invalid" style={{ color: 'red' }}>{t('THIS_FIELD_IS_REQUIRED')}</small>}
-                            </div>
-
-                            <div className="field col">
-                                <label htmlFor="telegram_chat_id" style={{ fontWeight: 'bold' }}>{t('COMPANY.FORM.INPUT.TELEGRAMID')}</label>
-                                <Dropdown
-                                    id="telegram_chat_id"
-                                    value={company.telegram_chat_id}
-                                    options={telegramChatIds}
+                            <div className="field">
+                                <label htmlFor="name" style={{ fontWeight: 'bold' }}>
+                                    {t('COMPANY.FORM.INPUT.COMPANYNAME')}
+                                </label>
+                                <InputText
+                                    id="company_name"
+                                    value={company?.company_name}
                                     onChange={(e) =>
                                         setCompany((prevCompany) => ({
                                             ...prevCompany,
-                                            telegram_chat_id: e.value,
+                                            company_name: e.target.value
                                         }))
                                     }
-                                    optionLabel="group_name"
-                                    placeholder={t('COMPANY.FORM.PLACEHOLDER.TELEGRAM_GROUP')}
-                                    className="w-full"
+                                    required
+                                    autoFocus
+                                    placeholder={t('COMPANY.FORM.PLACEHOLDER.COMPANYNAME')}
+                                    className={classNames({
+                                        'p-invalid': submitted && !company.company_name
+                                    })}
                                 />
-                            {/* {submitted && !company.telegram_chat_id && <small className="p-invalid" style={{ color: 'red' }}>{t('THIS_FIELD_IS_REQUIRED')}</small>} */}
+                                {submitted && !company.company_name && (
+                                    <small className="p-invalid" style={{ color: 'red' }}>
+                                        {t('THIS_FIELD_IS_REQUIRED')}
+                                    </small>
+                                )}
                             </div>
 
+                            <div className="formgrid grid">
+                                <div className="field col">
+                                    <label htmlFor="country" style={{ fontWeight: 'bold' }}>
+                                        {t('COMPANY.FORM.INPUT.COUNTRYNAME')}
+                                    </label>
+                                    <Dropdown
+                                        id="country"
+                                        value={company.country}
+                                        options={countries}
+                                        onChange={(e) =>
+                                            setCompany((prevCompany) => ({
+                                                ...prevCompany,
+                                                country: e.value
+                                            }))
+                                        }
+                                        optionLabel="country_name"
+                                        placeholder={t('COMPANY.FORM.PLACEHOLDER.COUNTRY')}
+                                        className="w-full"
+                                    />
+                                    {submitted && !company.country && (
+                                        <small className="p-invalid" style={{ color: 'red' }}>
+                                            {t('THIS_FIELD_IS_REQUIRED')}
+                                        </small>
+                                    )}
+                                </div>
+
+                                <div className="field col">
+                                    <label htmlFor="telegram_chat_id" style={{ fontWeight: 'bold' }}>
+                                        {t('COMPANY.FORM.INPUT.TELEGRAMID')}
+                                    </label>
+                                    <Dropdown
+                                        id="telegram_chat_id"
+                                        value={company.telegram_chat_id}
+                                        options={telegramChatIds}
+                                        onChange={(e) =>
+                                            setCompany((prevCompany) => ({
+                                                ...prevCompany,
+                                                telegram_chat_id: e.value
+                                            }))
+                                        }
+                                        optionLabel="group_name"
+                                        placeholder={t('COMPANY.FORM.PLACEHOLDER.TELEGRAM_GROUP')}
+                                        className="w-full"
+                                    />
+                                </div>
+                            </div>
                         </div>
-                        </div>
+                        <CustomFields
+                            fields={parseInputFormSchema(company.input_form_schema)}
+                            onFieldsChange={(updatedFields) =>
+                                setCompany({
+                                    ...company,
+                                    input_form_schema: updatedFields // Keep as array for local state
+                                })
+                            }
+                            submitted={submitted}
+                        />{' '}
                     </Dialog>
 
                     <Dialog visible={deleteCompanyDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteCompanyDialog}>
@@ -455,7 +486,7 @@ const CompanyPage = () => {
                     <Dialog visible={deleteCompaniesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteCompaniesDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {company && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
+                            {companies && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
                 </div>

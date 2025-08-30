@@ -85,7 +85,10 @@ export const _editHelpArticle = (id: number, data: HelpArticle, toast: React.Ref
 
     try {
         const token = getAuthToken();
-        console.log(data)
+        //console.log(data)
+
+
+
         const response = await axios.post(
             `${process.env.NEXT_PUBLIC_BASE_URL}/help-articles/${id}`,
             data,

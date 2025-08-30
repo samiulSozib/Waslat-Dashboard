@@ -145,14 +145,14 @@ const PurchasedProductPage = () => {
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
                         onClick={openNew}
                     />
-                    <Button
+                    {/* <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                         label={t('APP.GENERAL.DELETE')}
                         icon="pi pi-trash"
                         severity="danger"
                         onClick={confirmDeleteSelected}
                         disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+                    /> */}
                 </div>
             </React.Fragment>
         );
@@ -321,7 +321,7 @@ const PurchasedProductPage = () => {
                         // header={header}
                         responsiveLayout="scroll"
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PURCHASEDPRODUCT.TABLE.COLUMN.SUPPLIER')} body={supplierNameBodyTemplate} sortable></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PURCHASEDPRODUCT.TABLE.COLUMN.PRODUCTNAME')} body={productNameBodyTemplate} sortable></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PURCHASEDPRODUCT.TABLE.COLUMN.QUANTITY')} body={quantityBodyTemplate} sortable></Column>
