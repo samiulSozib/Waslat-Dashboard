@@ -585,6 +585,26 @@ export const _editReseller = (
             formData.append('profile_image_url', resellerData.profile_image_url);
         }
 
+        if (resellerData.reseller_identity_attachment && typeof resellerData.reseller_identity_attachment !== 'string') {
+            formData.append('reseller_identity_attachment', resellerData.reseller_identity_attachment);
+        }
+        if (resellerData.extra_optional_proof && typeof resellerData.extra_optional_proof !== 'string') {
+            formData.append('extra_optional_proof', resellerData.extra_optional_proof);
+        }
+
+        // For boolean fields, convert to 1/0 or 'true'/'false' based on backend expectation
+        formData.append('can_set_commission_group', resellerData.can_set_commission_group ? '1' : '0');
+        formData.append('can_set_selling_price_group', resellerData.can_set_selling_price_group ? '1' : '0');
+        formData.append('can_send_payment_request', resellerData.can_send_payment_request ? '1' : '0');
+        formData.append('can_ask_loan_balance', resellerData.can_ask_loan_balance ? '1' : '0');
+        formData.append('can_see_our_contact', resellerData.can_see_our_contact ? '1' : '0');
+        formData.append('can_see_parent_contact', resellerData.can_see_parent_contact ? '1' : '0');
+        formData.append('can_send_hawala', resellerData.can_send_hawala ? '1' : '0');
+
+        // For numeric fields, ensure they're strings if backend expects strings
+        formData.append('max_loan_balance_request_amount', String(resellerData.max_loan_balance_request_amount || 0));
+        formData.append('min_loan_balance_request_amount', String(resellerData.min_loan_balance_request_amount || 0));
+
         const response = await axios.post(
             `${process.env.NEXT_PUBLIC_BASE_URL}/resellers/${id}`,
             formData,

@@ -18,6 +18,8 @@ import { _fetchPurchasedProducts } from '../redux/actions/purchasedProductsActio
 import withAuth from './authGuard';
 import { useTranslation } from 'react-i18next';
 import { _fetchPaymentTypes } from '../redux/actions/paymentTypeActions';
+import { useRouter } from 'next/navigation';
+
 
 interface CurrencyBreakdown {
     [currency: string]: {
@@ -35,6 +37,8 @@ const Dashboard = () => {
     const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}'); // Default to empty object
     const [lineOptions, setLineOptions] = useState<ChartOptions>({});
     const { t } = useTranslation();
+        const router = useRouter();
+
 
     const dispatch = useDispatch<AppDispatch>();
     useEffect(() => {
@@ -125,11 +129,20 @@ const Dashboard = () => {
         });
     };
 
+    // Navigation handlers
+    const navigateToOrders = (status: string) => {
+        router.push(`/pages/order?status=${status}`);
+    };
+
+    const navigateToPage = (path: string) => {
+        router.push(path);
+    };
+
     return (
         <div className="grid -m-5">
             {/* Today Orders */}
             <div className="col-6 lg:col-6 xl:col-3">
-                <div className="card mb-0 bg-gradient-to-r from-indigo-100 to-purple-200" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #dbeafe, #c7d2fe)' }}>
+                <div onClick={()=>navigateToPage('/pages/order')} className="cursor-pointer card mb-0 bg-gradient-to-r from-indigo-100 to-purple-200" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #dbeafe, #c7d2fe)' }}>
                     <div className="flex justify-content-between mb-3 -mx-4 md:mx-0">
                         <div>
                             <span className="block text-500 text-xs font-medium mb-2">{t('DASHBOARD.TODAYORDER')}</span>
@@ -144,7 +157,7 @@ const Dashboard = () => {
 
             {/* Total Orders */}
             <div className="col-6 lg:col-6 xl:col-3">
-                <div className="card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #f3e8ff, #fbcfe8)' }}>
+                <div onClick={()=>navigateToPage("/pages/order")} className="cursor-pointer card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #f3e8ff, #fbcfe8)' }}>
                     <div className="flex justify-content-between mb-3 -mx-4 md:mx-0">
                         <div>
                             <span className="block text-500 text-xs font-medium mb-2">{t('DASHBOARD.TOTALORDER')}</span>
@@ -159,7 +172,7 @@ const Dashboard = () => {
 
             {/* Pending Orders */}
             <div className="col-6 lg:col-6 xl:col-2">
-                <div className="card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #d1fae5, #99f6e4)' }}>
+                <div onClick={()=>navigateToOrders('pending')} className="cursor-pointer card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #d1fae5, #99f6e4)' }}>
                     <div className="flex justify-content-between mb-3 -mx-4 md:mx-0" style={{ fontSize: '12px' }}>
                         <div>
                             <div className="text-900 font-medium text-lg">{data?.pending_orders ?? 0}</div>
@@ -178,7 +191,7 @@ const Dashboard = () => {
 
             {/* Successful Orders */}
             <div className="col-6 lg:col-6 xl:col-2">
-                <div className="card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #fef9c3, #fed7aa)' }}>
+                <div onClick={()=>navigateToOrders('confirmed')} className="cursor-pointer card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #fef9c3, #fed7aa)' }}>
                     <div className="flex justify-content-between mb-3 -mx-4 md:mx-0" style={{ fontSize: '12px' }}>
                         <div>
                             <div className="text-900 font-medium text-lg">{data?.successful_orders ?? 0}</div>
@@ -197,7 +210,7 @@ const Dashboard = () => {
 
             {/* Rejected Orders */}
             <div className="col-6 lg:col-6 xl:col-2">
-                <div className="card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #fae8ff, #e9d5ff)' }}>
+                <div onClick={()=>navigateToOrders('rejected')} className="cursor-pointer card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #fae8ff, #e9d5ff)' }}>
                     <div className="flex justify-content-between mb-3 -mx-4 md:mx-0" style={{ fontSize: '12px' }}>
                         <div>
                             <div className="text-900 font-medium text-lg">{data?.rejected_orders ?? 0}</div>
@@ -409,7 +422,7 @@ const Dashboard = () => {
 
             {/* Total Reseller */}
             <div className="col-6 lg:col-6 xl:col-3">
-                <div className="card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #fef9c3, #fef08a)' }}>
+                <div onClick={()=>navigateToPage('/pages/reseller')} className="cursor-pointer card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #fef9c3, #fef08a)' }}>
                     <div className="flex justify-content-between mb-3 -mx-4 md:mx-0">
                         <div>
                             <span className="block text-500 text-xs font-medium mb-2">{t('DASHBOARD.TOTALRESELLER')}</span>
@@ -424,7 +437,7 @@ const Dashboard = () => {
 
             {/* Total Company */}
             <div className="col-6 lg:col-6 xl:col-3">
-                <div className="card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #fee2e2, #fbcfe8)' }}>
+                <div onClick={()=>navigateToPage('/pages/companies')} className="cursor-pointer card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #fee2e2, #fbcfe8)' }}>
                     <div className="flex justify-content-between mb-3 -mx-4 md:mx-0">
                         <div>
                             <span className="block text-500 text-xs font-medium mb-2">{t('DASHBOARD.TOTALCOMPANY')}</span>
@@ -439,7 +452,7 @@ const Dashboard = () => {
 
             {/* Total Service */}
             <div className="col-6 lg:col-6 xl:col-3">
-                <div className="card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #cffafe, #99f6e4)' }}>
+                <div onClick={()=>navigateToPage('/pages/services')} className="cursor-pointer card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #cffafe, #99f6e4)' }}>
                     <div className="flex justify-content-between mb-3 -mx-4 md:mx-0">
                         <div>
                             <span className="block text-500 text-xs font-medium mb-2">{t('DASHBOARD.TOTALSERVICE')}</span>
@@ -454,7 +467,7 @@ const Dashboard = () => {
 
             {/* Total Bundle */}
             <div className="col-6 lg:col-6 xl:col-3">
-                <div className="card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #e0f2fe, #bfdbfe)' }}>
+                <div onClick={()=>navigateToPage('/pages/bundle')} className="cursor-pointer card mb-0" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #e0f2fe, #bfdbfe)' }}>
                     <div className="flex justify-content-between mb-3 -mx-4 md:mx-0">
                         <div>
                             <span className="block text-500 text-xs font-medium mb-2">{t('DASHBOARD.TOTALBUNDLE')}</span>

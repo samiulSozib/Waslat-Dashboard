@@ -30,6 +30,7 @@ import serviceReducer from '../../../redux/reducers/serviceReducer';
 import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { generateOrderExcelFile } from '../../utilities/generateExcel';
 import { InputTextarea } from 'primereact/inputtextarea';
+import { useSearchParams } from 'next/navigation';
 
 const OrderPage = () => {
     const [orderDialog, setOrderDialog] = useState(false);
@@ -53,6 +54,10 @@ const OrderPage = () => {
     const [rejectReasonDialog, setRejectReasonDialog] = useState(false);
     const [rejectionReason, setRejectionReason] = useState('');
 
+    // Get search params from URL
+    const searchParams = useSearchParams();
+    const statusParam = searchParams.get('status');
+
     // Add these state variables near your other state declarations
     const [filterDialogVisible, setFilterDialogVisible] = useState(false);
     const [filters, setFilters] = useState({
@@ -67,8 +72,39 @@ const OrderPage = () => {
     const [activeFilters, setActiveFilters] = useState({});
 
     useEffect(() => {
-        dispatch(_fetchOrders(1, searchTag)); // No filters initially
-    }, [dispatch, searchTag]);
+        // Map URL status parameter to filter value
+        let statusFilterValue = null;
+
+        if (statusParam) {
+            switch (statusParam) {
+                case 'pending':
+                    statusFilterValue = 0; // Assuming 0 is the value for pending status
+                    break;
+                case 'confirmed':
+                    statusFilterValue = 1; // Assuming 1 is the value for successful status
+                    break;
+                case 'rejected':
+                    statusFilterValue = 2; // Assuming 2 is the value for rejected status
+                    break;
+                default:
+                    statusFilterValue = null;
+            }
+
+            if (statusFilterValue !== null) {
+                setActiveFilters({
+                    ...activeFilters,
+                    filter_status: statusFilterValue
+                });
+            }
+        } else {
+            // If no status param, fetch all orders without status filter
+            dispatch(_fetchOrders(1, searchTag));
+        }
+    }, [dispatch,statusParam,searchTag]);
+
+    // useEffect(() => {
+    //     dispatch(_fetchOrders(1, searchTag)); // No filters initially
+    // }, [dispatch, searchTag]);
 
     useEffect(() => {
         if (Object.keys(activeFilters).length > 0) {
@@ -551,7 +587,7 @@ const OrderPage = () => {
 
         let items: any[] = [];
 
-        if (status === 0) {
+        if (status === 0 || (rowData.transaction_id===null && status ===1)) {
             // Pending
             items = [
                 {
@@ -577,6 +613,21 @@ const OrderPage = () => {
                     label: t('ORDER.STATUS.CONFIRMED'),
                     icon: 'pi pi-check',
                     command: () => confirmChangeStatus(rowData, 1)
+                }
+            ];
+        }
+        else if(status===3){
+             items = [
+                {
+                    label: t('ORDER.STATUS.CONFIRMED'),
+                    icon: 'pi pi-check',
+                    command: () => confirmChangeStatus(rowData, 1)
+                },
+
+                {
+                    label: t('ORDER.STATUS.REJECTED'),
+                    icon: 'pi pi-times',
+                    command: () => confirmChangeStatus(rowData, 2)
                 }
             ];
         }

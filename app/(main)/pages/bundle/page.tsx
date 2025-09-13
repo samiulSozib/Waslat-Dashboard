@@ -15,18 +15,21 @@ import { useSelector } from 'react-redux';
 import { Dropdown } from 'primereact/dropdown';
 import { _addService, _deleteService, _editService, _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
-import { _addBundle, _deleteBundle, _deleteSelectedBundles, _editBundle, _fetchBundleList } from '@/app/redux/actions/bundleActions';
+import { _addBundle, _deleteBundle, _deleteSelectedBundles, _editBundle, _fetchBundleList, _setProvider, _unsetProvider } from '@/app/redux/actions/bundleActions';
 import { Paginator } from 'primereact/paginator';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import { currenciesReducer } from '../../../redux/reducers/currenciesReducer';
 import { AppDispatch } from '@/app/redux/store';
-import { Bundle, Service } from '@/types/interface';
+import { Bundle, Provider, RawInternet, Service } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
 import { customCellStyle } from '../../utilities/customRow';
 import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
+import { _fetchProviders } from '@/app/redux/actions/providerActions';
+import { _fetchSingleProvider } from '@/app/redux/actions/singleProviderAction';
+import { singleProviderReducer } from '../../../redux/reducers/singleProviderReducer';
 
 const BundlePage = () => {
     let emptyBundle: Bundle = {
@@ -48,8 +51,15 @@ const BundlePage = () => {
         created_at: '',
         updated_at: '',
         service: null,
-        currency: null
+        currency: null,
+        api_provider_id: null,
+        api_provider_bundle_id: null,
+        api_binding: null
     };
+
+    const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+    const [selectedCapability, setSelectedCapability] = useState('');
+    const [selectedProviderBundle, setSelectedProviderBundle] = useState<RawInternet | null>(null);
 
     const [serviceDialog, setServiceDialog] = useState(false);
     const [deleteServiceDialog, setDeleteServiceDialog] = useState(false);
@@ -77,6 +87,13 @@ const BundlePage = () => {
     });
 
     const [activeFilters, setActiveFilters] = useState({});
+    const { providers } = useSelector((state: any) => state.providerReducer);
+    const { rawInternets } = useSelector((state: any) => state.singleProviderReducer);
+
+    const [providerSearchTag, setProviderSearchTag] = useState('');
+
+    const [unsetDialogVisible, setUnsetDialogVisible] = useState(false);
+    const [bundleToUnset, setBundleToUnset] = useState<Bundle | null>(null);
 
     useEffect(() => {
         dispatch(_fetchBundleList(1, searchTag));
@@ -87,14 +104,26 @@ const BundlePage = () => {
     }, [dispatch, searchTag]);
 
     useEffect(() => {
+        const timer = setTimeout(() => {
+            if (providerSearchTag) {
+                dispatch(_fetchProviders(1, providerSearchTag));
+            } else {
+                dispatch(_fetchProviders(1, ''));
+            }
+        }, 300); // Debounce for 300ms
+
+        return () => clearTimeout(timer);
+    }, [providerSearchTag, dispatch]);
+
+    useEffect(() => {
+        if (selectedProvider && selectedCapability) dispatch(_fetchSingleProvider(selectedProvider?.id, selectedProvider?.code, selectedCapability));
+    }, [dispatch, selectedProvider, selectedCapability]);
+
+    useEffect(() => {
         if (Object.keys(activeFilters).length > 0) {
             dispatch(_fetchBundleList(1, searchTag, activeFilters));
         }
     }, [dispatch, activeFilters, searchTag]);
-
-    useEffect(() => {
-        //console.log(bundles)
-    }, [dispatch, bundles]);
 
     const openNew = () => {
         setBundle(emptyBundle);
@@ -106,6 +135,9 @@ const BundlePage = () => {
         setSubmitted(false);
         setServiceDialog(false);
         setBundle(emptyBundle);
+        setSelectedProvider(null);
+        setSelectedCapability('');
+        setSelectedProviderBundle(null);
     };
 
     const hideDeleteServiceDialog = () => {
@@ -130,20 +162,112 @@ const BundlePage = () => {
             return;
         }
 
+
         if (bundle.id && bundle.id !== 0) {
-            dispatch(_editBundle(bundle.id, bundle, toast, t));
+            //dispatch(_editBundle(bundle.id, bundle, toast, t));
+            dispatch(_editBundle(bundle.id,bundle, toast, t))
+                .then((newBundle) => {
+                    if (newBundle && selectedProvider && selectedProviderBundle) {
+                        const providerData = {
+                            api_provider_id: selectedProvider.id,
+                            api_provider_bundle_id: selectedProviderBundle.id,
+                            api_binding: {
+                                product_type: selectedProviderBundle.product_type,
+                                operator: selectedProviderBundle.operator,
+                                internet_type: selectedProviderBundle.internet_type,
+                                sim_type: selectedProviderBundle.sim_type,
+                                product_id: selectedProviderBundle.id,
+                                table_id: selectedProviderBundle.table_id,
+                                name: selectedProviderBundle.name,
+                                days: selectedProviderBundle.days,
+                                volume: selectedProviderBundle.volume,
+                                unit: selectedProviderBundle.unit,
+                                periodicity: selectedProviderBundle.periodicity
+                            }
+                        };
+
+                        dispatch(_setProvider(newBundle.id, providerData, toast, t));
+                    }
+                })
+                .catch((err) => {
+                    console.error('Add bundle failed:', err);
+                });
         } else {
-            dispatch(_addBundle(bundle, toast, t));
+            // dispatch(_addBundle(bundle, toast, t));
+            dispatch(_addBundle(bundle, toast, t))
+                .then((newBundle) => {
+                    if (newBundle && selectedProvider && selectedProviderBundle) {
+                        const providerData = {
+                            api_provider_id: selectedProvider.id,
+                            api_provider_bundle_id: selectedProviderBundle.id,
+                            api_binding: {
+                                product_type: selectedProviderBundle.product_type,
+                                operator: selectedProviderBundle.operator,
+                                internet_type: selectedProviderBundle.internet_type,
+                                sim_type: selectedProviderBundle.sim_type,
+                                product_id: selectedProviderBundle.id,
+                                table_id: selectedProviderBundle.table_id,
+                                name: selectedProviderBundle.name,
+                                days: selectedProviderBundle.days,
+                                volume: selectedProviderBundle.volume,
+                                unit: selectedProviderBundle.unit,
+                                periodicity: selectedProviderBundle.periodicity
+                            }
+                        };
+
+                        dispatch(_setProvider(newBundle.id, providerData, toast, t));
+                    }
+                })
+                .catch((err) => {
+                    console.error('Add bundle failed:', err);
+                });
         }
 
         setServiceDialog(false);
         setBundle(emptyBundle);
         setSubmitted(false);
+        hideDialog();
     };
 
     const editService = (bundle: Bundle) => {
         console.log(bundle);
-        setBundle({ ...bundle, service_id: bundle.service?.id || 0 });
+
+        // Parse api_binding if it's stringified
+        let parsedApiBinding: any = null;
+        if (bundle.api_binding) {
+            try {
+                parsedApiBinding = typeof bundle.api_binding === 'string' ? JSON.parse(bundle.api_binding) : bundle.api_binding;
+            } catch (e) {
+                console.error('Failed to parse api_binding:', e);
+            }
+        }
+
+        setBundle({
+            ...bundle,
+            service_id: bundle.service?.id || 0
+        });
+
+        if (bundle.api_provider_id && parsedApiBinding) {
+            const provider = providers.find((p: any) => p.id == bundle.api_provider_id);
+            if (provider) {
+                setSelectedProvider(provider);
+
+                // Match capability
+                const capability = provider.capabilities.find((cap: any) => cap.toLowerCase().includes(parsedApiBinding.internet_type) || cap.toLowerCase().includes(parsedApiBinding.sim_type)) || provider.capabilities[0];
+
+                setSelectedCapability(capability);
+
+                // ✅ Find the actual provider bundle from rawInternets list
+                const providerBundle = rawInternets.find((b: any) => String(b.table_id) === String(parsedApiBinding.table_id) && String(b.id) === String(parsedApiBinding.product_id));
+
+                if (providerBundle) {
+                    setSelectedProviderBundle(providerBundle);
+                } else {
+                    console.warn('Bundle not found in rawInternets, falling back to parsed object');
+                    setSelectedProviderBundle(parsedApiBinding); // fallback
+                }
+            }
+        }
 
         setServiceDialog(true);
     };
@@ -221,6 +345,24 @@ const BundlePage = () => {
 
         setSelectedBundles(null);
         setDeleteServicesDialog(false);
+
+    };
+
+    const confirmUnsetBundle = (bundle: Bundle) => {
+        setBundleToUnset(bundle);
+        setUnsetDialogVisible(true);
+    };
+
+    // Add this function to actually unset the bundle
+    const unsetBundle = () => {
+        if (bundleToUnset?.id) {
+            dispatch(_unsetProvider(bundleToUnset.id, toast, t));
+            setUnsetDialogVisible(false);
+            setBundleToUnset(null);
+            setSelectedProvider(null);
+            setSelectedCapability('');
+            setSelectedProviderBundle(null);
+            }
     };
 
     const rightToolbarTemplate = () => {
@@ -291,7 +433,9 @@ const BundlePage = () => {
                                                 value={services.find((s: Service) => s.id === filters.filter_service_id) || null}
                                                 options={services}
                                                 // value={filters.filter_service_id}
-                                                onChange={(e) => {console.log(e.value.id),setFilters({ ...filters, filter_service_id: e.value.id })}}
+                                                onChange={(e) => {
+                                                    console.log(e.value.id), setFilters({ ...filters, filter_service_id: e.value.id });
+                                                }}
                                                 optionLabel="company.company_name" // Adjust based on your service object structure
                                                 //  optionValue="id"
                                                 placeholder={t('ORDER.FILTER.SELECT_SERVICE')}
@@ -933,8 +1077,103 @@ const BundlePage = () => {
                                         </small>
                                     )}
                                 </div>
+
                                 {/* )} */}
                             </div>
+
+                            <div className="formgrid grid">
+                                <div className="field col">
+                                    <label htmlFor="provider">{t('BUNDLE_PROVIDER')} *</label>
+                                    <Dropdown
+                                        id="provider"
+                                        value={selectedProvider}
+                                        options={providers}
+                                        onChange={(e) => {
+                                            console.log(e.value);
+                                            setSelectedProvider(e.value);
+                                        }}
+                                        optionLabel="name"
+                                        filter
+                                        filterBy="name"
+                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                                        showFilterClear
+                                        placeholder={t('SEARCH_PROVIDER')}
+                                        className="w-full"
+                                        panelClassName="min-w-[20rem]"
+                                        onFilter={(e) => {
+                                            setProviderSearchTag(e.filter);
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="field col">
+                                    <label htmlFor="reseller">{t('CAPABILITIES')} *</label>
+                                    <Dropdown
+                                        id="reseller"
+                                        value={selectedCapability}
+                                        options={selectedProvider?.capabilities}
+                                        onChange={(e) => {
+                                            console.log(e.value);
+                                            setSelectedCapability(e.value);
+                                        }}
+                                        placeholder={t('SEARCH_CAPABILITIES')}
+                                        className="w-full"
+                                        panelClassName="min-w-[20rem]"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="formgrid grid">
+                                <div className="field col">
+                                    <label htmlFor="provider">{t('BUNDLE')} *</label>
+                                    <Dropdown
+                                        id="provider"
+                                        value={selectedProviderBundle}
+                                        options={rawInternets}
+                                        onChange={(e) => {
+                                            console.log(e.value);
+                                            setSelectedProviderBundle(e.value);
+                                        }}
+                                        optionLabel="name"
+                                        filter
+                                        filterBy="name"
+                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                                        showFilterClear
+                                        placeholder={t('SEARCH_PROVIDER')}
+                                        className="w-full"
+                                        panelClassName="min-w-[20rem]"
+                                        itemTemplate={(option) => (
+                                            <div className="flex flex-col p-2 gap-2 item-center">
+                                                <div className="font-semibold text-sm">{option.name}</div>
+                                                <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">{option.operator}</span>
+                                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                                                        {option.volume} {option.unit}
+                                                    </span>
+                                                    {option.days && <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">{option.days}</span>}
+                                                    <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded">{option.periodicity}</span>
+                                                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded">{option.amount_rial ? `${option.amount_rial}` : `${option.amount}`}</span>
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    {option.internet_type} | {option.sim_type}
+                                                </div>
+                                            </div>
+                                        )}
+                                        valueTemplate={(option) => {
+                                            if (!option) return t('SEARCH_BUNDLE');
+                                            return (
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold text-sm">{option.name}</span>
+                                                    <span className="text-xs text-gray-600">
+                                                        {option.volume} {option.unit} <span className="mx-2"> | </span> {option.amount_rial ? `${option.amount_rial}` : `${option.amount}`}{' '}
+                                                    </span>
+                                                </div>
+                                            );
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="gridcol col">{bundle.api_provider_id && <Button label={t('UNSET_BUNDLE')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={() => confirmUnsetBundle(bundle)} />}</div>
                         </div>
                     </Dialog>
 
@@ -953,6 +1192,29 @@ const BundlePage = () => {
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
                             {selectedBundles && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')} </span>}
+                        </div>
+                    </Dialog>
+
+                    <Dialog
+                        visible={unsetDialogVisible}
+                        style={{ width: '450px' }}
+                        header={t('TABLE.GENERAL.CONFIRM')}
+                        modal
+                        footer={
+                            <>
+                                <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="secondary" className={isRTL() ? 'rtl-button' : ''} onClick={() => setUnsetDialogVisible(false)} />
+                                <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={unsetBundle} />
+                            </>
+                        }
+                        onHide={() => setUnsetDialogVisible(false)}
+                    >
+                        <div className="flex align-items-center justify-content-center">
+                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem', color: 'orange' }} />
+                            {bundleToUnset && (
+                                <span>
+                                    {t('ARE_YOU_SURE_YOU_WANT_TO_UNSET_PROVIDER')} <b>{bundleToUnset.bundle_title}</b>?
+                                </span>
+                            )}
                         </div>
                     </Dialog>
                 </div>

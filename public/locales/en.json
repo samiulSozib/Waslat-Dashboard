@@ -1291,8 +1291,101 @@
     },
     "TOTAL_CUSTOM_FIELD": "Total Custom Field",
     "MENU.SETTINGS": "Settings",
-
-    "CURRENCY.GENERAL.BASE_RATE":"Base Rate",
-    "SETTINGS_UPDATED":"Settings Updated",
-    "SETTINGS_UPDATE_FAILED":"Settings Updated Failed"
+    "CURRENCY.GENERAL.BASE_RATE": "Base Rate",
+    "SETTINGS_UPDATED": "Settings Updated",
+    "SETTINGS_UPDATE_FAILED": "Settings Updated Failed",
+    "DOCUMENTS": "Documents",
+    "MENU.PROVIDERS": "Providers",
+    "PROVIDER": {
+        "CAPABILITIES": {
+            "TITLE": "Capabilities",
+            "TOPUP": "Top-up",
+            "INTERNET": "Internet",
+            "BILL": "Bill",
+            "CREDIT": "Credit",
+            "PRODUCTS": "Products"
+        },
+        "STATUS": "Status",
+        "FILTER": {
+            "SELECT_CAPABILITY": "Select Capability"
+        },
+        "TABLE": {
+            "CREATEPROVIDER": "Create Provider",
+            "COLUMN": {
+                "CODE": "Code",
+                "NAME": "Name",
+                "BASEURL": "Base URL",
+                "CAPABILITIES": "Capabilities",
+                "STATUS": "Status"
+            }
+        },
+        "DETAILS": "Provider Details",
+        "FORM": {
+            "INPUT": {
+                "CODE": "Code",
+                "NAME": "Name",
+                "BASEURL": "Base URL",
+                "FAILOVERPRIORITY": "Failover Priority",
+                "TIMEOUT": "Timeout (seconds)",
+                "CAPABILITIES": "Capabilities",
+                "IPWHITELIST": "IP Whitelist",
+                "STATUS": "Status",
+                "CALLBACK_URL": "Callback URL",
+                "NOTES": "Notes",
+                "TEST_MODE_SUPPORTED": "Test Mode Supported",
+                "PRODUCTS_REQUIRE_PARAMS": "Products Require Parameters"
+            },
+            "PLACEHOLDER": {
+                "CODE": "Enter provider code",
+                "NAME": "Enter provider name",
+                "BASEURL": "Enter base URL",
+                "FAILOVERPRIORITY": "Enter failover priority",
+                "TIMEOUT": "Enter timeout in seconds",
+                "CAPABILITIES": "Select capabilities",
+                "IPWHITELIST": "Enter IP addresses separated by commas",
+                "ENDPOINT_KEY": "Endpoint key",
+                "ENDPOINT_VALUE": "Endpoint value",
+                "METHOD_KEY": "Method key",
+                "METHOD_VALUE": "Method value",
+                "HEADER_KEY": "Header key",
+                "HEADER_VALUE": "Header value",
+                "CREDENTIAL_KEY": "Credential key",
+                "CREDENTIAL_VALUE": "Credential value",
+                "CALLBACK_URL": "Enter callback URL",
+                "NOTES": "Enter notes"
+            },
+            "HELP": {
+                "IPWHITELIST": "Separate multiple IP addresses with commas"
+            },
+            "SECTION": {
+                "ENDPOINTS": "Endpoints",
+                "METHOD_NAMES": "Method Names",
+                "METADATA": "Metadata",
+                "HEADERS": "Headers",
+                "CREDENTIALS": "Credentials"
+            }
+        }
+    },
+    "TABLE": {
+        "GENERAL": {
+            "CONFIRM": "Confirm",
+            "CREATEDAT": "Created At"
+        }
+    },
+    "BUNDLE_PROVIDER": "Provider",
+    "SEARCH_PROVIDER": "Search Provider",
+    "CAPABILITIES": "Capabilities",
+    "SEARCH_CAPABILITIES": "Search Capabilities",
+    "BUNDLE": "Bundle",
+    "SEARCH_BUNDLE": "Search Bundle",
+    "ARE_YOU_SURE_YOU_WANT_TO_UNSET_PROVIDER": "Are you sure you want to unset the provider for",
+    "UNSET_PROVIDER": "Unset Provider",
+    "PROVIDER_UNSET_SUCCESS": "Provider unset successfully",
+    "PROVIDER_UNSET_FAILED": "Failed to unset provider",
+    "PROVIDER_SET_SUCCESS": "Provider set successfully",
+    "PROVIDER_SET_FAILED": "Failed to set provider",
+    "UNSET_BUNDLE": "Unset Bundle",
+    "PROVIDER_TOGGLE_FAILED": "Failed to change provider status",
+    "PROVIDER_DEACTIVATED": "Provider has been deactivated",
+    "PROVIDER_ACTIVATED": "Provider has been activated"
 }

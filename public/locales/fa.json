@@ -1291,7 +1291,101 @@
     },
     "TOTAL_CUSTOM_FIELD": "مجموع فیلدهای سفارشی",
     "MENU.SETTINGS": "تنظیمات",
-     "CURRENCY.GENERAL.BASE_RATE": "نرخ پایه",
-  "SETTINGS_UPDATED": "تنظیمات به‌روزرسانی شد",
-  "SETTINGS_UPDATE_FAILED": "به‌روزرسانی تنظیمات ناکام شد"
+    "CURRENCY.GENERAL.BASE_RATE": "نرخ پایه",
+    "SETTINGS_UPDATED": "تنظیمات به‌روزرسانی شد",
+    "SETTINGS_UPDATE_FAILED": "به‌روزرسانی تنظیمات ناکام شد",
+    "DOCUMENTS": "اسناد",
+    "MENU.PROVIDERS": "تأمین‌کنندگان",
+    "PROVIDER": {
+        "CAPABILITIES": {
+            "TITLE": "قابلیت‌ها",
+            "TOPUP": "شارژ",
+            "INTERNET": "اینترنت",
+            "BILL": "قبض",
+            "CREDIT": "اعتبار",
+            "PRODUCTS": "محصولات"
+        },
+        "STATUS": "وضعیت",
+        "FILTER": {
+            "SELECT_CAPABILITY": "انتخاب قابلیت"
+        },
+        "TABLE": {
+            "CREATEPROVIDER": "ایجاد تأمین‌کننده",
+            "COLUMN": {
+                "CODE": "کد",
+                "NAME": "نام",
+                "BASEURL": "آدرس پایه",
+                "CAPABILITIES": "قابلیت‌ها",
+                "STATUS": "وضعیت"
+            }
+        },
+        "DETAILS": "جزئیات تأمین‌کننده",
+        "FORM": {
+            "INPUT": {
+                "CODE": "کد",
+                "NAME": "نام",
+                "BASEURL": "آدرس پایه",
+                "FAILOVERPRIORITY": "اولویت جایگزین",
+                "TIMEOUT": "زمان انتظار (ثانیه)",
+                "CAPABILITIES": "قابلیت‌ها",
+                "IPWHITELIST": "لیست سفید IP",
+                "STATUS": "وضعیت",
+                "CALLBACK_URL": "آدرس بازگشت",
+                "NOTES": "یادداشت‌ها",
+                "TEST_MODE_SUPPORTED": "حالت آزمایشی پشتیبانی می‌شود",
+                "PRODUCTS_REQUIRE_PARAMS": "محصولات نیاز به پارامتر دارند"
+            },
+            "PLACEHOLDER": {
+                "CODE": "کد تأمین‌کننده را وارد کنید",
+                "NAME": "نام تأمین‌کننده را وارد کنید",
+                "BASEURL": "آدرس پایه را وارد کنید",
+                "FAILOVERPRIORITY": "اولویت جایگزین را وارد کنید",
+                "TIMEOUT": "زمان انتظار به ثانیه را وارد کنید",
+                "CAPABILITIES": "قابلیت‌ها را انتخاب کنید",
+                "IPWHITELIST": "آدرس‌های IP را با کاما جدا کنید",
+                "ENDPOINT_KEY": "کلید نقطه پایان",
+                "ENDPOINT_VALUE": "مقدار نقطه پایان",
+                "METHOD_KEY": "کلید روش",
+                "METHOD_VALUE": "مقدار روش",
+                "HEADER_KEY": "کلید هدر",
+                "HEADER_VALUE": "مقدار هدر",
+                "CREDENTIAL_KEY": "کلید اعتبارنامه",
+                "CREDENTIAL_VALUE": "مقدار اعتبارنامه",
+                "CALLBACK_URL": "آدرس بازگشت را وارد کنید",
+                "NOTES": "یادداشت‌ها را وارد کنید"
+            },
+            "HELP": {
+                "IPWHITELIST": "چندین آدرس IP را با کاما جدا کنید"
+            },
+            "SECTION": {
+                "ENDPOINTS": "نقاط پایان",
+                "METHOD_NAMES": "نام روش‌ها",
+                "METADATA": "فراداده",
+                "HEADERS": "هدرها",
+                "CREDENTIALS": "اعتبارنامه‌ها"
+            }
+        }
+    },
+    "TABLE": {
+        "GENERAL": {
+            "CONFIRM": "تأیید",
+            "CREATEDAT": "تاریخ ایجاد"
+        }
+    },
+    "BUNDLE_PROVIDER": "تأمین‌کننده",
+    "SEARCH_PROVIDER": "جستجوی تأمین‌کننده",
+    "CAPABILITIES": "قابلیت‌ها",
+    "SEARCH_CAPABILITIES": "جستجوی قابلیت‌ها",
+    "BUNDLE": "باندل",
+    "SEARCH_BUNDLE": "جستجوی باندل",
+    "ARE_YOU_SURE_YOU_WANT_TO_UNSET_PROVIDER": "آیا مطمئن هستید که می‌خواهید تأمین‌کننده را حذف کنید؟",
+    "UNSET_PROVIDER": "حذف تأمین‌کننده",
+    "PROVIDER_UNSET_SUCCESS": "تأمین‌کننده با موفقیت حذف شد",
+    "PROVIDER_UNSET_FAILED": "حذف تأمین‌کننده ناموفق بود",
+    "PROVIDER_SET_SUCCESS": "تأمین‌کننده با موفقیت تنظیم شد",
+    "PROVIDER_SET_FAILED": "تنظیم تأمین‌کننده ناموفق بود",
+    "UNSET_BUNDLE": "حذف باندل",
+    "PROVIDER_TOGGLE_FAILED": "تغییر وضعیت تأمین‌کننده ناموفق بود",
+    "PROVIDER_DEACTIVATED": "تأمین‌کننده غیرفعال شد",
+    "PROVIDER_ACTIVATED": "تأمین‌کننده فعال شد"
 }

@@ -18,6 +18,7 @@ i18n
             loadPath: '/locales/{{lng}}.json', // Path to your JSON translation files
             //loadPath:`./public/locales/{{lng}}.json`
         },
+
     });
 
 export default i18n;

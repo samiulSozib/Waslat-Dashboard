@@ -328,7 +328,7 @@ const AppSettingsPage = () => {
                                 </label>
                                 <InputText
                                     id="app_name_en"
-                                    value={settings.app_name_i18n.en}
+                                    value={settings.app_name_i18n?.en}
                                     onChange={(e) => setSettings({
                                         ...settings,
                                         app_name_i18n: { ...settings.app_name_i18n, en: e.target.value }
@@ -342,7 +342,7 @@ const AppSettingsPage = () => {
                                 </label>
                                 <InputText
                                     id="app_name_fa"
-                                    value={settings.app_name_i18n.fa}
+                                    value={settings.app_name_i18n?.fa}
                                     onChange={(e) => setSettings({
                                         ...settings,
                                         app_name_i18n: { ...settings.app_name_i18n, fa: e.target.value }
@@ -356,7 +356,7 @@ const AppSettingsPage = () => {
                                 </label>
                                 <InputText
                                     id="app_name_ps"
-                                    value={settings.app_name_i18n.ps}
+                                    value={settings.app_name_i18n?.ps}
                                     onChange={(e) => setSettings({
                                         ...settings,
                                         app_name_i18n: { ...settings.app_name_i18n, ps: e.target.value }
@@ -372,7 +372,7 @@ const AppSettingsPage = () => {
                                 </label>
                                 <InputText
                                     id="app_slogan_en"
-                                    value={settings.app_slogan_i18n.en}
+                                    value={settings.app_slogan_i18n?.en}
                                     onChange={(e) => setSettings({
                                         ...settings,
                                         app_slogan_i18n: { ...settings.app_slogan_i18n, en: e.target.value }
@@ -386,7 +386,7 @@ const AppSettingsPage = () => {
                                 </label>
                                 <InputText
                                     id="app_slogan_fa"
-                                    value={settings.app_slogan_i18n.fa}
+                                    value={settings.app_slogan_i18n?.fa}
                                     onChange={(e) => setSettings({
                                         ...settings,
                                         app_slogan_i18n: { ...settings.app_slogan_i18n, fa: e.target.value }
@@ -400,7 +400,7 @@ const AppSettingsPage = () => {
                                 </label>
                                 <InputText
                                     id="app_slogan_ps"
-                                    value={settings.app_slogan_i18n.ps}
+                                    value={settings.app_slogan_i18n?.ps}
                                     onChange={(e) => setSettings({
                                         ...settings,
                                         app_slogan_i18n: { ...settings.app_slogan_i18n, ps: e.target.value }
@@ -655,7 +655,7 @@ const AppSettingsPage = () => {
                                 </label>
                                 <InputNumber
                                     id="max_orders"
-                                    value={settings.extra_settings.max_order_per_day}
+                                    value={settings?.extra_settings?.max_order_per_day||0}
                                     onValueChange={(e) => setSettings({
                                         ...settings,
                                         extra_settings: { ...settings.extra_settings, max_order_per_day: e.value || 0 }
@@ -671,7 +671,7 @@ const AppSettingsPage = () => {
                                 </label>
                                 <InputNumber
                                     id="min_topup"
-                                    value={settings.extra_settings.min_topup_amount}
+                                    value={settings?.extra_settings?.min_topup_amount}
                                     onValueChange={(e) => setSettings({
                                         ...settings,
                                         extra_settings: { ...settings.extra_settings, min_topup_amount: e.value || 0 }
@@ -687,7 +687,7 @@ const AppSettingsPage = () => {
                                 </label>
                                 <InputNumber
                                     id="max_topup"
-                                    value={settings.extra_settings.max_topup_amount}
+                                    value={settings?.extra_settings?.max_topup_amount}
                                     onValueChange={(e) => setSettings({
                                         ...settings,
                                         extra_settings: { ...settings.extra_settings, max_topup_amount: e.value || 0 }

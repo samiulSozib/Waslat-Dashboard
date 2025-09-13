@@ -199,7 +199,7 @@ const AdvertisementPage = () => {
                             rowData.status
                         )}`}
                     >
-                        {getStatusText(rowData.status.toString())}
+                        {getStatusText(rowData?.status?.toString())}
                     </span>
                 </>
             );

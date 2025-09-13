@@ -1293,6 +1293,100 @@
     "TOTAL_CUSTOM_FIELD": "ټول سفارشي فیلډونه",
     "MENU.SETTINGS": "تنظیمات",
     "CURRENCY.GENERAL.BASE_RATE": "بنسټیزه کچه",
-  "SETTINGS_UPDATED": "تنظیمات تازه شول",
-  "SETTINGS_UPDATE_FAILED": "د تنظیماتو تازه کول ناکام شول"
+    "SETTINGS_UPDATED": "تنظیمات تازه شول",
+    "SETTINGS_UPDATE_FAILED": "د تنظیماتو تازه کول ناکام شول",
+    "DOCUMENTS": "اسناد",
+    "MENU.PROVIDERS": "چمتو کوونکي",
+    "PROVIDER": {
+        "CAPABILITIES": {
+            "TITLE": "ځواکونه",
+            "TOPUP": "چارج",
+            "INTERNET": "انټرنیټ",
+            "BILL": "بل",
+            "CREDIT": "کریډیټ",
+            "PRODUCTS": "محصولات"
+        },
+        "STATUS": "حالت",
+        "FILTER": {
+            "SELECT_CAPABILITY": "ځواک وټاکئ"
+        },
+        "TABLE": {
+            "CREATEPROVIDER": "چمتو کوونکی جوړ کړئ",
+            "COLUMN": {
+                "CODE": "کوډ",
+                "NAME": "نوم",
+                "BASEURL": "بنسټ URL",
+                "CAPABILITIES": "ځواکونه",
+                "STATUS": "حالت"
+            }
+        },
+        "DETAILS": "د چمتو کوونکي جزئیات",
+        "FORM": {
+            "INPUT": {
+                "CODE": "کوډ",
+                "NAME": "نوم",
+                "BASEURL": "بنسټ URL",
+                "FAILOVERPRIORITY": "د بدیل لومړیتوب",
+                "TIMEOUT": "وخت ختمیدل (ثانیې)",
+                "CAPABILITIES": "ځواکونه",
+                "IPWHITELIST": "د IP سپینه لیست",
+                "STATUS": "حالت",
+                "CALLBACK_URL": "کال بیک URL",
+                "NOTES": "یادداشتونه",
+                "TEST_MODE_SUPPORTED": "د ازموینې حالت ملاتړ شوی",
+                "PRODUCTS_REQUIRE_PARAMS": "محصولات پارامترونو ته اړتیا لري"
+            },
+            "PLACEHOLDER": {
+                "CODE": "د چمتو کوونکي کوډ دننه کړئ",
+                "NAME": "د چمتو کوونکي نوم دننه کړئ",
+                "BASEURL": "بنسټ URL دننه کړئ",
+                "FAILOVERPRIORITY": "د بدیل لومړیتوب دننه کړئ",
+                "TIMEOUT": "وخت په ثانیو کې دننه کړئ",
+                "CAPABILITIES": "ځواکونه وټاکئ",
+                "IPWHITELIST": "د IP پتې د کاما په واسطه جلا کړئ",
+                "ENDPOINT_KEY": "د پای ټکی کلید",
+                "ENDPOINT_VALUE": "د پای ټکی ارزښت",
+                "METHOD_KEY": "د میتود کلید",
+                "METHOD_VALUE": "د میتود ارزښت",
+                "HEADER_KEY": "د هیډر کلید",
+                "HEADER_VALUE": "د هیډر ارزښت",
+                "CREDENTIAL_KEY": "د اعتبار کلید",
+                "CREDENTIAL_VALUE": "د اعتبار ارزښت",
+                "CALLBACK_URL": "کال بیک URL دننه کړئ",
+                "NOTES": "یادداشتونه دننه کړئ"
+            },
+            "HELP": {
+                "IPWHITELIST": "ډېر IP پتې د کاما په واسطه جلا کړئ"
+            },
+            "SECTION": {
+                "ENDPOINTS": "پای ټکي",
+                "METHOD_NAMES": "د میتود نومونه",
+                "METADATA": "میټاډاټا",
+                "HEADERS": "هیډرونه",
+                "CREDENTIALS": "اعتبارونه"
+            }
+        }
+    },
+    "TABLE": {
+        "GENERAL": {
+            "CONFIRM": "تایید",
+            "CREATEDAT": "جوړ شوی په"
+        }
+    },
+    "BUNDLE_PROVIDER": "چمتو کوونکی",
+    "SEARCH_PROVIDER": "چمتو کوونکي لټون",
+    "CAPABILITIES": "ځواکونه",
+    "SEARCH_CAPABILITIES": "ځواکونه لټون",
+    "BUNDLE": "بندل",
+    "SEARCH_BUNDLE": "بندل لټون",
+    "ARE_YOU_SURE_YOU_WANT_TO_UNSET_PROVIDER": "باور لرئ چې غواړئ چمتو کوونکی لغوه کړئ؟",
+    "UNSET_PROVIDER": "چمتو کوونکی لغوه کړئ",
+    "PROVIDER_UNSET_SUCCESS": "چمتو کوونکی په بریالیتوب لغوه شو",
+    "PROVIDER_UNSET_FAILED": "چمتو کوونکی لغوه کول ناکام شول",
+    "PROVIDER_SET_SUCCESS": "چمتو کوونکی په بریالیتوب وټاکل شو",
+    "PROVIDER_SET_FAILED": "چمتو کوونکی ټاکل ناکام شول",
+    "UNSET_BUNDLE": "بندل لغوه کړئ",
+    "PROVIDER_TOGGLE_FAILED": "د چمتو کوونکي حالت بدلول ناکام شول",
+    "PROVIDER_DEACTIVATED": "چمتو کوونکی غیر فعال شو",
+    "PROVIDER_ACTIVATED": "چمتو کوونکی فعال شو"
 }
