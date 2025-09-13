@@ -25,8 +25,6 @@ import { Provider } from '@/types/interface';
 import { InputSwitch } from 'primereact/inputswitch';
 import { MultiSelect } from 'primereact/multiselect';
 import { Accordion, AccordionTab } from 'primereact/accordion';
-import { fetchSingleProvider } from '@/app/redux/actions/singleProviderAction';
-import { singleProviderReducer } from '../../../redux/reducers/singleProviderReducer';
 
 const ProviderPage = () => {
     let emptyProvider: Provider = {
