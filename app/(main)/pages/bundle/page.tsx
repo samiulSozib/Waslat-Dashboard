@@ -20,7 +20,7 @@ import { Paginator } from 'primereact/paginator';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import { currenciesReducer } from '../../../redux/reducers/currenciesReducer';
 import { AppDispatch } from '@/app/redux/store';
-import { Bundle, Provider, RawInternet, Service } from '@/types/interface';
+import { ApiBinding, Bundle, Provider, RawInternet, Service } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
@@ -619,6 +619,40 @@ const BundlePage = () => {
         );
     };
 
+
+
+const providerInfoBodyTemplate = (rowData: Bundle) => {
+    let bindingName = "";
+
+    try {
+        let parsed: ApiBinding;
+
+        if (typeof rowData.api_binding === "string") {
+            // Case 1: stringified JSON
+            parsed = JSON.parse(rowData.api_binding) as ApiBinding;
+        } else {
+            // Case 2: already parsed object
+            parsed = rowData.api_binding as ApiBinding;
+        }
+
+        bindingName = parsed?.name || "N/A";
+    } catch (e) {
+        console.error("Invalid api_binding:", e);
+    }
+
+    return (
+        <>
+            <span className="p-column-title">Provider</span>
+            <span style={{ fontSize: "0.8rem", color: "#666" }}>
+                {bindingName}
+            </span>
+        </>
+    );
+};
+
+
+
+
     const createdAtBodyTemplate = (rowData: Bundle) => {
         const formatDate = (dateString: string) => {
             const date = new Date(dateString);
@@ -771,6 +805,9 @@ const BundlePage = () => {
                             header={t('BUNDLE.TABLE.COLUMN.SERVICECATEGORY')}
                             body={serviceCategoryBodyTemplate}
                         ></Column>
+
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Created" header={t('BUNDLE_PROVIDER')} body={providerInfoBodyTemplate}></Column>
+
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Created" header={t('TABLE.GENERAL.CREATEDAT')} body={createdAtBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>

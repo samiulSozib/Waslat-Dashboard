@@ -65,7 +65,7 @@ export interface Bundle {
     currency: Currency | null;
     api_provider_id?:number|string|null,
     api_provider_bundle_id?:number|string|null,
-    api_binding?:ApiBinding|null
+    api_binding?:ApiBinding|null|string
 }
 
 export interface ApiBinding {
