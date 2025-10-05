@@ -18,10 +18,17 @@ import {
     SET_PROVIDER_FAIL,
     UNSET_PROVIDER_REQUEST,
     UNSET_PROVIDER_SUCCESS,
-    UNSET_PROVIDER_FAIL
+    UNSET_PROVIDER_FAIL,
+    BUNDLE_PRICE_ADJUSTMENT_PREVIEW_REQUEST,
+    BUNDLE_PRICE_ADJUSTMENT_PREVIEW_SUCCESS,
+    BUNDLE_PRICE_ADJUSTMENT_PREVIEW_FAIL,
+    BUNDLE_PRICE_ADJUSTMENT_UPDATE_REQUEST,
+    BUNDLE_PRICE_ADJUSTMENT_UPDATE_SUCCESS,
+    BUNDLE_PRICE_ADJUSTMENT_UPDATE_FAIL,
+    CLEAR_PRICE_ADJUSTMENT_PREVIEW
 } from '../constants/bundleConstants';
 import { Toast } from 'primereact/toast';
-import { ApiBinding, Bundle } from '@/types/interface';
+import { ApiBinding, Bundle, PriceAdjustmentPayload } from '@/types/interface';
 
 const getAuthToken = () => {
     return localStorage.getItem('api_token') || ''; // Get the token or return an empty string if not found
@@ -313,4 +320,115 @@ export const _unsetProvider = (bundleId: number, toast: React.RefObject<Toast>, 
             life: 3000
         });
     }
+};
+
+
+
+// Bundle Price Adjustment Preview
+export const _bundlePriceAdjustmentPreview = 
+    (payload: PriceAdjustmentPayload, toast: React.RefObject<Toast>, t: (key: string) => string) => 
+    async (dispatch: Dispatch) => {
+        dispatch({ type: BUNDLE_PRICE_ADJUSTMENT_PREVIEW_REQUEST });
+        try {
+            const token = getAuthToken();
+            
+            // Remove confirmation for preview
+            const previewPayload = { ...payload };
+            delete previewPayload.confirmation;
+
+            const response = await axios.post(
+                `${process.env.NEXT_PUBLIC_BASE_URL}/bundles/bulk-update-prices`,
+                previewPayload,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            dispatch({
+                type: BUNDLE_PRICE_ADJUSTMENT_PREVIEW_SUCCESS,
+                payload: response.data.data.preview
+            });
+
+            toast.current?.show({
+                severity: 'success',
+                summary: t('SUCCESS'),
+                detail: t('PREVIEW_GENERATED_SUCCESSFULLY'),
+                life: 3000
+            });
+
+            return response.data.data.preview;
+        } catch (error: any) {
+            dispatch({
+                type: BUNDLE_PRICE_ADJUSTMENT_PREVIEW_FAIL,
+                payload: error.response?.data?.message || error.message
+            });
+
+            toast.current?.show({
+                severity: 'error',
+                summary: t('ERROR'),
+                detail: error.response?.data?.message || t('PREVIEW_GENERATION_FAILED'),
+                life: 3000
+            });
+        }
+    };
+
+// Bundle Price Adjustment Update
+export const _bundlePriceAdjustmentUpdate = 
+    (payload: PriceAdjustmentPayload, toast: React.RefObject<Toast>, t: (key: string) => string) => 
+    async (dispatch: Dispatch) => {
+        dispatch({ type: BUNDLE_PRICE_ADJUSTMENT_UPDATE_REQUEST });
+        try {
+            const token = getAuthToken();
+
+            const response = await axios.post(
+                `${process.env.NEXT_PUBLIC_BASE_URL}/bundles/bulk-update-prices`,
+                {
+                    ...payload,
+                    confirmation: true
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            dispatch({
+                type: BUNDLE_PRICE_ADJUSTMENT_UPDATE_SUCCESS,
+                payload: response.data.data.updated_bundles
+            });
+
+            // Refresh the bundle list to get updated prices
+            //dispatch(_fetchBundleList(1, ''));
+
+            toast.current?.show({
+                severity: 'success',
+                summary: t('SUCCESS'),
+                detail: t('PRICES_UPDATED_SUCCESSFULLY'),
+                life: 5000
+            });
+
+            return response.data.data.updated_bundles;
+        } catch (error: any) {
+            dispatch({
+                type: BUNDLE_PRICE_ADJUSTMENT_UPDATE_FAIL,
+                payload: error.response?.data?.message || error.message
+            });
+
+            toast.current?.show({
+                severity: 'error',
+                summary: t('ERROR'),
+                detail: error.response?.data?.message || t('PRICE_UPDATE_FAILED'),
+                life: 3000
+            });
+        }
+    };
+
+// Clear Price Adjustment Preview
+export const _clearPriceAdjustmentPreview = () => (dispatch: Dispatch) => {
+    dispatch({ type: CLEAR_PRICE_ADJUSTMENT_PREVIEW });
 };

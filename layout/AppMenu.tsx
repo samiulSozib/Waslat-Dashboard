@@ -61,6 +61,11 @@ const AppMenu = () => {
                             label: t('MENU.BUNDLE'),
                             icon: 'pi pi-fw pi-layer-group', // Better bundle icon
                             to: '/pages/bundle'
+                        },
+                        {
+                            label: t('MENU.BUNDLE_PRICING'),
+                            icon: 'pi pi-fw pi-layer-group', // Better bundle icon
+                            to: '/pages/bundle-pricing'
                         }
                     ]
                 },

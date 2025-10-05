@@ -270,6 +270,7 @@ const BundlePage = () => {
         }
 
         setServiceDialog(true);
+        
     };
 
     const confirmDeleteService = (bundle: Bundle) => {

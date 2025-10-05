@@ -855,3 +855,23 @@ export interface SingleProviderResponse {
 }
 
 
+export interface PriceAdjustmentPayload {
+    adjustment_type: 'percentage' | 'fixed';
+    adjustment_value: number;
+    base_price?: 'admin_buying_price' | 'buying_price';
+    service_ids?: number[];
+    confirmation?: boolean;
+}
+
+export interface PriceAdjustmentPreview {
+    bundle_id: number;
+    bundle_title: string;
+    current_admin_buying_price: string;
+    current_buying_price: string;
+    current_selling_price: string;
+    new_buying_price: string;
+    new_selling_price: string;
+    price_change: string;
+    service_name: string;
+    company_name: string;
+}

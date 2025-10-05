@@ -1,4 +1,4 @@
-import { Bundle, Pagination } from '@/types/interface';
+import { Bundle, Pagination, PriceAdjustmentPreview } from '@/types/interface';
 import {
     FETCH_BUNDLE_LIST_REQUEST,
     FETCH_BUNDLE_LIST_SUCCESS,
@@ -17,7 +17,14 @@ import {
     SET_PROVIDER_FAIL,
     UNSET_PROVIDER_REQUEST,
     UNSET_PROVIDER_SUCCESS,
-    UNSET_PROVIDER_FAIL
+    UNSET_PROVIDER_FAIL,
+    BUNDLE_PRICE_ADJUSTMENT_PREVIEW_REQUEST,
+    BUNDLE_PRICE_ADJUSTMENT_PREVIEW_SUCCESS,
+    BUNDLE_PRICE_ADJUSTMENT_PREVIEW_FAIL,
+    BUNDLE_PRICE_ADJUSTMENT_UPDATE_REQUEST,
+    BUNDLE_PRICE_ADJUSTMENT_UPDATE_SUCCESS,
+    BUNDLE_PRICE_ADJUSTMENT_UPDATE_FAIL,
+    CLEAR_PRICE_ADJUSTMENT_PREVIEW
 } from '../constants/bundleConstants';
 
 interface BundleState {
@@ -25,13 +32,27 @@ interface BundleState {
     loading: boolean;
     error: string | null;
     pagination: Pagination | null;
+    priceAdjustment: {
+        previewLoading: boolean;
+        updateLoading: boolean;
+        previewData: PriceAdjustmentPreview[] | null;
+        previewError: string | null;
+        updateError: string | null;
+    };
 }
 
 const initialState: BundleState = {
     bundles: [],
     loading: false,
     error: null,
-    pagination: null
+    pagination: null,
+    priceAdjustment: {
+        previewLoading: false,
+        updateLoading: false,
+        previewData: null,
+        previewError: null,
+        updateError: null
+    }
 };
 
 const bundleReducer = (state = initialState, action: any): BundleState => {
@@ -129,6 +150,80 @@ const bundleReducer = (state = initialState, action: any): BundleState => {
                 ...state,
                 loading: false,
                 error: action.payload
+            };
+
+            case BUNDLE_PRICE_ADJUSTMENT_PREVIEW_REQUEST:
+            return {
+                ...state,
+                priceAdjustment: {
+                    ...state.priceAdjustment,
+                    previewLoading: true,
+                    previewError: null
+                }
+            };
+        
+        case BUNDLE_PRICE_ADJUSTMENT_PREVIEW_SUCCESS:
+            return {
+                ...state,
+                priceAdjustment: {
+                    ...state.priceAdjustment,
+                    previewLoading: false,
+                    previewData: action.payload,
+                    previewError: null
+                }
+            };
+        
+        case BUNDLE_PRICE_ADJUSTMENT_PREVIEW_FAIL:
+            return {
+                ...state,
+                priceAdjustment: {
+                    ...state.priceAdjustment,
+                    previewLoading: false,
+                    previewError: action.payload
+                }
+            };
+
+        // Price Adjustment Update Cases
+        case BUNDLE_PRICE_ADJUSTMENT_UPDATE_REQUEST:
+            return {
+                ...state,
+                priceAdjustment: {
+                    ...state.priceAdjustment,
+                    updateLoading: true,
+                    updateError: null
+                }
+            };
+        
+        case BUNDLE_PRICE_ADJUSTMENT_UPDATE_SUCCESS:
+            return {
+                ...state,
+                priceAdjustment: {
+                    ...state.priceAdjustment,
+                    updateLoading: false,
+                    previewData: null, // Clear preview after successful update
+                    updateError: null
+                }
+            };
+        
+        case BUNDLE_PRICE_ADJUSTMENT_UPDATE_FAIL:
+            return {
+                ...state,
+                priceAdjustment: {
+                    ...state.priceAdjustment,
+                    updateLoading: false,
+                    updateError: action.payload
+                }
+            };
+
+        case CLEAR_PRICE_ADJUSTMENT_PREVIEW:
+            return {
+                ...state,
+                priceAdjustment: {
+                    ...state.priceAdjustment,
+                    previewData: null,
+                    previewError: null,
+                    updateError: null
+                }
             };
 
         default:
