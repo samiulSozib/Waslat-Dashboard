@@ -1454,5 +1454,21 @@
     "CHANGES_ARE_PERMANENT": "تغییرات دائمی هستند و قابل برگشت نیستند",
     "GENERATING_PREVIEW": "در حال ایجاد پیش‌نمایش...",
     "AUTO_PREVIEW_MESSAGE": "پیش‌نمایش به طور خودکار با تغییر مقادیر به‌روز می‌شود",
-    "PREVIEW_AUTO_GENERATED": "پیش‌نمایش به طور خودکار هنگام تغییر مقادیر ایجاد می‌شود"
+    "PREVIEW_AUTO_GENERATED": "پیش‌نمایش به طور خودکار هنگام تغییر مقادیر ایجاد می‌شود",
+    "ORDER_TIME": "زمان",
+    "VALIDITY": "اعتبار",
+    "WEEKLY": "هفتگی",
+    "MONTHLY": "ماهانه",
+    "DAILY": "روزانه",
+    "DAYS": "روزها",
+    "ORDER_ID": "شماره سفارش",
+    "HAWALA_DETAILS": "جزئیات حواله",
+    "DOWNLOAD": "دانلود",
+    "CONFIRM_HAWALA": "تأیید حواله",
+    "HAWALA_NUMBER": "شماره حواله",
+    "ENTER_HAWALA_NUMBER": "شماره حواله را وارد کنید",
+    "HAWALA_NUMBER_REQUIRED": "وارد کردن شماره حواله الزامی است",
+    "ARE_YOU_SURE_YOU_WANT_TO_CONFIRM_HAWALA": "آیا مطمئن هستید که می‌خواهید حواله را تأیید کنید؟",
+    "HAWALA_STATUS_UPDATED": "وضعیت حواله با موفقیت به‌روزرسانی شد",
+    "FAILED_TO_UPDATE_HAWALA_STATUS": "خطا در به‌روزرسانی وضعیت حواله"
 }

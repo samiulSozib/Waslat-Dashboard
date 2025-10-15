@@ -9,7 +9,7 @@ const getAuthToken = () => {
 };
 
 // Fetch hawala List
-export const _fetchHawalaList = (page: number = 1,search:string='') => async (dispatch: Dispatch) => {
+export const _fetchHawalaList = (page: number = 1, search: string = '') => async (dispatch: Dispatch) => {
   dispatch({ type: FETCH_HAWALA_LIST_REQUEST });
   try {
     const token = getAuthToken();
@@ -22,9 +22,9 @@ export const _fetchHawalaList = (page: number = 1,search:string='') => async (di
     dispatch({
       type: FETCH_HAWALA_LIST_SUCCESS,
       payload: {
-        data:response.data.data.hawalas,
+        data: response.data.data.hawalas,
         pagination: response.data.payload.pagination,
-    },
+      },
     });
     //console.log(response)
   } catch (error: any) {
@@ -41,17 +41,17 @@ export const _fetchHawalaList = (page: number = 1,search:string='') => async (di
 export const _addHawala = (newData: any, toast: React.RefObject<Toast>) => async (dispatch: Dispatch) => {
   dispatch({ type: ADD_HAWALA_REQUEST });
   try {
-        const formData = new FormData();
+    const formData = new FormData();
 
-        // Append each property of the `body` object to the `FormData` instance
-        formData.append("name", newData.name);
-        formData.append("email", newData.email);
-        formData.append("password", newData.password);
-        formData.append("address", newData.address);
-        formData.append("phone_number", newData.phone_number);
-        formData.append("commission_type", newData.commission_type);
-        formData.append("amount", newData.amount);
-        formData.append("status", newData.status);
+    // Append each property of the `body` object to the `FormData` instance
+    formData.append("name", newData.name);
+    formData.append("email", newData.email);
+    formData.append("password", newData.password);
+    formData.append("address", newData.address);
+    formData.append("phone_number", newData.phone_number);
+    formData.append("commission_type", newData.commission_type);
+    formData.append("amount", newData.amount);
+    formData.append("status", newData.status);
     const token = getAuthToken();
     const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/hawala-orders`, formData, {
       headers: {
@@ -73,31 +73,31 @@ export const _addHawala = (newData: any, toast: React.RefObject<Toast>) => async
     });
   } catch (error: any) {
     dispatch({
-        type: ADD_HAWALA_FAIL,
-        payload: error.message,
+      type: ADD_HAWALA_FAIL,
+      payload: error.message,
     });
 
     let errorMessage = "Failed to update Hawala"; // Default message
 
     // Check if it's a validation error (422 status)
     if (error.response?.status === 422 && error.response.data?.errors) {
-        // Get all error messages and join them
-        const errorMessages = Object.values(error.response.data.errors)
-            .flat() // Flatten array of arrays
-            .join(', '); // Join with commas
+      // Get all error messages and join them
+      const errorMessages = Object.values(error.response.data.errors)
+        .flat() // Flatten array of arrays
+        .join(', '); // Join with commas
 
-        errorMessage = errorMessages || "Validation failed";
+      errorMessage = errorMessages || "Validation failed";
     }
     // Check for other API error formats
     else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+      errorMessage = error.response.data.message;
     }
 
     toast.current?.show({
-        severity: "error",
-        summary: "Error",
-        detail: errorMessage,
-        life: 3000,
+      severity: "error",
+      summary: "Error",
+      detail: errorMessage,
+      life: 3000,
     });
 
   }
@@ -109,17 +109,17 @@ export const _editHawala = (hawalaId: number, updatedData: any, toast: React.Ref
   try {
 
     const token = getAuthToken();
-        const formData = new FormData();
+    const formData = new FormData();
 
-        // Append each property of the `body` object to the `FormData` instance
-        formData.append("name", updatedData.name);
-        formData.append("email", updatedData.email);
-        formData.append("password", updatedData.password);
-        formData.append("address", updatedData.address);
-        formData.append("phone_number", updatedData.phone_number);
-        formData.append("commission_type", updatedData.commission_type);
-        formData.append("amount", updatedData.amount);
-        formData.append("status", updatedData.status);
+    // Append each property of the `body` object to the `FormData` instance
+    formData.append("name", updatedData.name);
+    formData.append("email", updatedData.email);
+    formData.append("password", updatedData.password);
+    formData.append("address", updatedData.address);
+    formData.append("phone_number", updatedData.phone_number);
+    formData.append("commission_type", updatedData.commission_type);
+    formData.append("amount", updatedData.amount);
+    formData.append("status", updatedData.status);
     const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/hawala-orders/${hawalaId}`, formData, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -151,7 +151,7 @@ export const _editHawala = (hawalaId: number, updatedData: any, toast: React.Ref
 };
 
 // Delete Hawala Branch
-export const _deleteHawala = (hawalaId: number, toast: React.RefObject<Toast>,t: (key: string) => string) => async (dispatch: Dispatch) => {
+export const _deleteHawala = (hawalaId: number, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
   dispatch({ type: DELETE_HAWALA_REQUEST });
   try {
     const token = getAuthToken();
@@ -188,6 +188,7 @@ export const _deleteHawala = (hawalaId: number, toast: React.RefObject<Toast>,t:
 export const _changeHawalaStatus = (
   hawalaId: number,
   status: number,
+  hawalaNumberInput: string,
   toast: React.RefObject<Toast>,
   t: (key: string) => string
 ) => {
@@ -207,10 +208,17 @@ export const _changeHawalaStatus = (
             headers: { Authorization: `Bearer ${token}` },
           });
           break;
-        case 1:
-          response = await axios.get(`${baseURL}/confirm-order/${hawalaId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+        case 1: // Confirm
+          if (!hawalaNumberInput || !hawalaNumberInput.trim()) {
+            throw new Error(t('HAWALA_NUMBER_REQUIRED'));
+          }
+
+          response = await axios.get(
+            `${baseURL}/confirm-order/${hawalaId}?hawala_custom_number=${encodeURIComponent(hawalaNumberInput.trim())}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
           break;
         case 2:
           response = await axios.get(`${baseURL}/reject-order/${hawalaId}`, {
@@ -225,7 +233,7 @@ export const _changeHawalaStatus = (
         toast.current?.show({
           severity: 'success',
           summary: t('SUCCESS'),
-          detail:  t('HAWALA_STATUS_CHANGED'),
+          detail: t('HAWALA_STATUS_CHANGED'),
           life: 3000,
         });
 
@@ -235,10 +243,10 @@ export const _changeHawalaStatus = (
         });
 
       } else {
-        throw new Error(response.data.message ||  t('HAWALA_STATUS_CHANGED_FAILED'),);
+        throw new Error(response.data.message || t('HAWALA_STATUS_CHANGED_FAILED'),);
       }
     } catch (error: any) {
-        //console.log(error)
+      //console.log(error)
       toast.current?.show({
         severity: 'error',
         summary: t('ERROR'),

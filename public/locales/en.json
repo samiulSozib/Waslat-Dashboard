@@ -1388,8 +1388,6 @@
     "PROVIDER_TOGGLE_FAILED": "Failed to change provider status",
     "PROVIDER_DEACTIVATED": "Provider has been deactivated",
     "PROVIDER_ACTIVATED": "Provider has been activated",
-
-
     "MENU.BUNDLE_PRICING": "Bundle Pricing",
     "BUNDLE_PRICING_ADJUSTMENT": "Bundle Pricing Adjustment",
     "PREVIEW": "Preview",
@@ -1456,5 +1454,21 @@
     "CHANGES_ARE_PERMANENT": "Changes are permanent and cannot be undone",
     "GENERATING_PREVIEW": "Generating preview...",
     "AUTO_PREVIEW_MESSAGE": "Preview updates automatically as you change values",
-    "PREVIEW_AUTO_GENERATED": "Preview is automatically generated when you change values"
+    "PREVIEW_AUTO_GENERATED": "Preview is automatically generated when you change values",
+    "ORDER_TIME": "Time",
+    "VALIDITY": "Validity",
+    "WEEKLY": "Weekly",
+    "MONTHLY": "Monthly",
+    "DAILY": "Daily",
+    "DAYS": "Days",
+    "ORDER_ID": "Order Id",
+    "HAWALA_DETAILS": "Hawala Details",
+    "DOWNLOAD": "Download",
+    "CONFIRM_HAWALA": "Confirm Hawala",
+    "HAWALA_NUMBER": "Hawala Number",
+    "ENTER_HAWALA_NUMBER": "Enter hawala number",
+    "HAWALA_NUMBER_REQUIRED": "Hawala number is required",
+    "ARE_YOU_SURE_YOU_WANT_TO_CONFIRM_HAWALA": "Are you sure you want to confirm hawala",
+    "HAWALA_STATUS_UPDATED": "Hawala status updated successfully",
+    "FAILED_TO_UPDATE_HAWALA_STATUS": "Failed to update hawala status"
 }

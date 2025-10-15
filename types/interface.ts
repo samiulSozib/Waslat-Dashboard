@@ -540,8 +540,8 @@ export interface Hawala {
   transaction_id?: string | number | null;
   bundle?: Bundle | null;
 
-  created_at?: Date | string;
-  updated_at?: Date | string;
+  created_at?: Date | string|null;
+  updated_at?: Date | string|null;
 }
 
 

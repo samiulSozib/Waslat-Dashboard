@@ -18,6 +18,7 @@
     "axios": "^1.7.9",
     "chart.js": "4.2.1",
     "encoding": "^0.1.13",
+    "html2canvas": "^1.4.1",
     "i18next": "^24.2.0",
     "i18next-browser-languagedetector": "^8.0.2",
     "i18next-http-backend": "^3.0.1",
