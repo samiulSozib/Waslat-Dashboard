@@ -1470,5 +1470,47 @@
     "HAWALA_NUMBER_REQUIRED": "وارد کردن شماره حواله الزامی است",
     "ARE_YOU_SURE_YOU_WANT_TO_CONFIRM_HAWALA": "آیا مطمئن هستید که می‌خواهید حواله را تأیید کنید؟",
     "HAWALA_STATUS_UPDATED": "وضعیت حواله با موفقیت به‌روزرسانی شد",
-    "FAILED_TO_UPDATE_HAWALA_STATUS": "خطا در به‌روزرسانی وضعیت حواله"
+    "FAILED_TO_UPDATE_HAWALA_STATUS": "خطا در به‌روزرسانی وضعیت حواله",
+    "login_fail": "ورود ناموفق",
+    "no_permission": "شما مجوز دسترسی به این برنامه را ندارید.",
+    "HAWALA_ADDED": "حواله با موفقیت افزوده شد",
+    "HAWALA_ADD_FAILED": "افزودن حواله ناموفق بود",
+    "HAWALA_UPDATED": "حواله با موفقیت به روز شد",
+    "HAWALA_UPDATE_FAILED": "به روزرسانی حواله ناموفق بود",
+    "MENU.HAWALA_NUMBER_SERIES": "سریال شماره حواله",
+    "HAWALA_NUMBER_SERIES_ADDED": "سریال شماره حواله با موفقیت افزوده شد",
+    "HAWALA_NUMBER_SERIES_ADD_FAILED": "افزودن سریال شماره حواله ناموفق بود",
+    "HAWALA_NUMBER_SERIES_UPDATED": "سریال شماره حواله با موفقیت به روز شد",
+    "HAWALA_NUMBER_SERIES_UPDATE_FAILED": "به روزرسانی سریال شماره حواله ناموفق بود",
+    "HAWALA_NUMBER_SERIES_DELETED": "سریال شماره حواله با موفقیت حذف شد",
+    "HAWALA_NUMBER_SERIES_DELETE_FAILED": "حذف سریال شماره حواله ناموفق بود",
+    "HAWALA_NUMBER_SERIES_STATUS_CHANGED": "وضعیت سریال شماره حواله با موفقیت تغییر کرد",
+    "HAWALA_NUMBER_SERIES_STATUS_CHANGE_FAILED": "تغییر وضعیت سریال شماره حواله ناموفق بود",
+    "NEXT_HAWALA_NUMBER_FETCHED": "شماره حواله بعدی با موفقیت بازیابی شد",
+    "NEXT_HAWALA_NUMBER_FETCH_FAILED": "بازیابی شماره حواله بعدی ناموفق بود",
+    "HAWALA_SERIES": {
+        "CREATE_NEW": "ایجاد سری جدید",
+        "DETAILS": "جزئیات سری",
+        "NEXT_NUMBER_AVAILABLE": "شماره بعدی موجود",
+        "FETCH_NEXT_NUMBER": "دریافت شماره بعدی",
+        "TABLE": {
+            "BRANCH": "شعبه",
+            "PREFIX": "پیشوند",
+            "CURRENT_NUMBER": "شماره جاری",
+            "NEXT_NUMBER": "شماره بعدی",
+            "RESET_DAILY": "بازنشانی روزانه",
+            "STATUS": "وضعیت"
+        },
+        "FORM": {
+            "BRANCH": "شعبه",
+            "SELECT_BRANCH": "انتخاب شعبه",
+            "PREFIX": "پیشوند",
+            "PREFIX_PLACEHOLDER": "پیشوند را وارد کنید (مثال: DXB)",
+            "CURRENT_NUMBER": "شماره جاری",
+            "CURRENT_NUMBER_PLACEHOLDER": "شماره جاری را وارد کنید",
+            "RESET_DAILY": "بازنشانی شمارنده روزانه",
+            "ACTIVE": "فعال"
+        }
+    },
+    "HAWALA.TABLE.COLUMN.HAWALA_CUSTOM_NUMBER": "شماره سفارشی"
 }

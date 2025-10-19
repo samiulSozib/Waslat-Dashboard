@@ -542,6 +542,7 @@ export interface Hawala {
 
   created_at?: Date | string|null;
   updated_at?: Date | string|null;
+  hawala_custom_number?:string|null
 }
 
 

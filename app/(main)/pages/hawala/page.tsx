@@ -45,7 +45,7 @@ const HawalaPage = () => {
     const [selectedStatus, setSelectedStatus] = useState<number | null>();
     const [viewHawalaDialog, setViewHawalaDialog] = useState(false);
     const [selectedHawala, setSelectedHawala] = useState<Hawala | null>(null);
-    
+
     // New state variables for confirmation dialog
     const [confirmationDialog, setConfirmationDialog] = useState(false);
     const [hawalaNumberInput, setHawalaNumberInput] = useState('');
@@ -210,44 +210,44 @@ const HawalaPage = () => {
     };
 
     const createdAtBodyTemplate = (rowData: Hawala) => {
-    const formatDate = (dateString: string | null | undefined) => {
-        if (!dateString) {
-            return { formattedDate: '-', formattedTime: '-' };
-        }
-        
-        const date = new Date(dateString);
-        
-        if (isNaN(date.getTime())) {
-            return { formattedDate: '-', formattedTime: '-' };
-        }
-        
-        const optionsDate: Intl.DateTimeFormatOptions = {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        };
-        const optionsTime: Intl.DateTimeFormatOptions = {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        };
-        const formattedDate = date.toLocaleDateString('en-US', optionsDate);
-        const formattedTime = date.toLocaleTimeString('en-US', optionsTime);
+        const formatDate = (dateString: string | null | undefined) => {
+            if (!dateString) {
+                return { formattedDate: '-', formattedTime: '-' };
+            }
 
-        return { formattedDate, formattedTime };
+            const date = new Date(dateString);
+
+            if (isNaN(date.getTime())) {
+                return { formattedDate: '-', formattedTime: '-' };
+            }
+
+            const optionsDate: Intl.DateTimeFormatOptions = {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            };
+            const optionsTime: Intl.DateTimeFormatOptions = {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            };
+            const formattedDate = date.toLocaleDateString('en-US', optionsDate);
+            const formattedTime = date.toLocaleTimeString('en-US', optionsTime);
+
+            return { formattedDate, formattedTime };
+        };
+
+        const { formattedDate, formattedTime } = formatDate(rowData?.created_at?.toString());
+
+        return (
+            <>
+                <span className="p-column-title">Created At</span>
+                <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedDate}</span>
+                <br />
+                <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedTime}</span>
+            </>
+        );
     };
-
-    const { formattedDate, formattedTime } = formatDate(rowData?.created_at?.toString());
-
-    return (
-        <>
-            <span className="p-column-title">Created At</span>
-            <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedDate}</span>
-            <br />
-            <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedTime}</span>
-        </>
-    );
-};
 
     const statusBodyTemplate = (rowData: Hawala) => {
         const status = rowData.status;
@@ -285,7 +285,7 @@ const HawalaPage = () => {
     const confirmChangeStatus = (hawala: Hawala, newStatus: number) => {
         setSelectedHawalaForAction(hawala);
         setSelectedStatus(newStatus);
-        
+
         if (newStatus === 1) { // Confirmed status
             setConfirmationDialog(true); // Show confirmation with hawala number input
         } else {
@@ -318,13 +318,13 @@ const HawalaPage = () => {
 
         // Dispatch action with hawala number
         dispatch(_changeHawalaStatus(
-            selectedHawalaForAction.id as number, 
-            selectedStatus as number, 
+            selectedHawalaForAction.id as number,
+            selectedStatus as number,
             hawalaNumberInput,
-            toast, 
+            toast,
             t
         ));
-        
+
         setConfirmationDialog(false);
         setHawalaNumberInput('');
         setSelectedHawalaForAction(null);
@@ -332,7 +332,7 @@ const HawalaPage = () => {
 
     const actionBodyTemplate = (rowData: Hawala) => {
         const status = rowData.status;
-        
+
         let items: any[] = [];
 
         if (status === 'pending' || status === 'under_process') {
@@ -608,7 +608,7 @@ const HawalaPage = () => {
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
                             {selectedHawalaForAction && (
                                 <span>
-                                    {t('ARE_YOU_SURE_YOU_WANT_TO_CHANGE_STATUS')} <b>#{selectedHawalaForAction.hawala_number}</b> to 
+                                    {t('ARE_YOU_SURE_YOU_WANT_TO_CHANGE_STATUS')} <b>#{selectedHawalaForAction.hawala_number}</b> to
                                     {selectedStatus === 2 && t('ORDER.STATUS.REJECTED')}?
                                 </span>
                             )}
@@ -623,21 +623,21 @@ const HawalaPage = () => {
                         modal
                         footer={
                             <>
-                                <Button 
-                                    label={t('APP.GENERAL.CANCEL')} 
-                                    icon="pi pi-times" 
-                                    severity="danger" 
-                                    className={isRTL() ? 'rtl-button' : ''} 
+                                <Button
+                                    label={t('APP.GENERAL.CANCEL')}
+                                    icon="pi pi-times"
+                                    severity="danger"
+                                    className={isRTL() ? 'rtl-button' : ''}
                                     onClick={() => {
                                         setConfirmationDialog(false);
                                         setHawalaNumberInput('');
-                                    }} 
+                                    }}
                                 />
-                                <Button 
-                                    label={t('FORM.GENERAL.SUBMIT')} 
-                                    icon="pi pi-check" 
-                                    severity="success" 
-                                    className={isRTL() ? 'rtl-button' : ''} 
+                                <Button
+                                    label={t('FORM.GENERAL.SUBMIT')}
+                                    icon="pi pi-check"
+                                    severity="success"
+                                    className={isRTL() ? 'rtl-button' : ''}
                                     onClick={finalizeHawalaConfirmation}
                                     disabled={!hawalaNumberInput.trim()}
                                 />
@@ -651,9 +651,9 @@ const HawalaPage = () => {
                         <div className="p-fluid">
                             <div className="field">
                                 <label htmlFor="hawalaNumber">{t('HAWALA_NUMBER')}</label>
-                                <InputText 
+                                <InputText
                                     id="hawalaNumber"
-                                    value={hawalaNumberInput} 
+                                    value={hawalaNumberInput}
                                     onChange={(e) => setHawalaNumberInput(e.target.value)}
                                     placeholder={t('ENTER_HAWALA_NUMBER')}
                                     autoFocus
@@ -723,10 +723,26 @@ const HawalaPage = () => {
 
                                     {/* Content */}
                                     <div style={{ padding: '1.5rem 1rem' }}>
+
+                                        {/* Hawala branch */}
+                                        {selectedHawala?.branch?.name && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
+                                                <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('MENU.HAWALA_BRANCH')}</span>
+                                                <span style={{ fontSize: '1.125rem', color: '#1f2937', fontWeight: '700', letterSpacing: '1px' }}>{selectedHawala?.branch?.name}</span>
+                                            </div>
+                                        )}
+
+
                                         {/* Hawala Number */}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
                                             <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('HAWALA.TABLE.COLUMN.HAWALA_NUMBER')}</span>
                                             <span style={{ fontSize: '1.125rem', color: '#1f2937', fontWeight: '700', letterSpacing: '1px' }}>{selectedHawala.hawala_number}</span>
+                                        </div>
+
+                                        {/* Hawala Number */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('HAWALA.TABLE.COLUMN.HAWALA_CUSTOM_NUMBER')}</span>
+                                            <span style={{ fontSize: '1.125rem', color: '#1f2937', fontWeight: '700', letterSpacing: '1px' }}>{selectedHawala?.hawala_custom_number}</span>
                                         </div>
 
                                         {/* Sender Name */}

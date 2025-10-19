@@ -1471,5 +1471,47 @@
     "HAWALA_NUMBER_REQUIRED": "د حوالې شمېره داخلول اړين دي",
     "ARE_YOU_SURE_YOU_WANT_TO_CONFIRM_HAWALA": "ايا تاسو ډاډه ياست چې غواړئ حواله تائيد کړئ؟",
     "HAWALA_STATUS_UPDATED": "د حوالې حالت په برياليتوب سره نوي شو",
-    "FAILED_TO_UPDATE_HAWALA_STATUS": "د حوالې حالت نوي کولو کې ناکامي"
+    "FAILED_TO_UPDATE_HAWALA_STATUS": "د حوالې حالت نوي کولو کې ناکامي",
+    "login_fail": "ننوتل ناکام شول",
+    "no_permission": "تاسو د دې اپلیکیشن د لاسرسي اجازه نلرئ.",
+    "HAWALA_ADDED": "حواله په بریالیتوب سره زیاته شوه",
+    "HAWALA_ADD_FAILED": "د حوالې زیاتول ناکام شول",
+    "HAWALA_UPDATED": "حواله په بریالیتوب سره تازه شوه",
+    "HAWALA_UPDATE_FAILED": "د حوالې تازه کول ناکام شول",
+    "MENU.HAWALA_NUMBER_SERIES": "د حوالې د شمارې لړۍ",
+    "HAWALA_NUMBER_SERIES_ADDED": "د حوالې د شمارې لړۍ په بریالیتوب سره زیاته شوه",
+    "HAWALA_NUMBER_SERIES_ADD_FAILED": "د حوالې د شمارې لړۍ زیاتول ناکام شول",
+    "HAWALA_NUMBER_SERIES_UPDATED": "د حوالې د شمارې لړۍ په بریالیتوب سره تازه شوه",
+    "HAWALA_NUMBER_SERIES_UPDATE_FAILED": "د حوالې د شمارې لړۍ تازه کول ناکام شول",
+    "HAWALA_NUMBER_SERIES_DELETED": "د حوالې د شمارې لړۍ په بریالیتوب سره ړنگه شوه",
+    "HAWALA_NUMBER_SERIES_DELETE_FAILED": "د حوالې د شمارې لړۍ ړنگول ناکام شول",
+    "HAWALA_NUMBER_SERIES_STATUS_CHANGED": "د حوالې د شمارې لړۍ حالت په بریالیتوب سره بدل شو",
+    "HAWALA_NUMBER_SERIES_STATUS_CHANGE_FAILED": "د حوالې د شمارې لړۍ د حالت بدلول ناکام شول",
+    "NEXT_HAWALA_NUMBER_FETCHED": "د حوالې راتلونکی شماره په بریالیتوب سره راواخیستل شوه",
+    "NEXT_HAWALA_NUMBER_FETCH_FAILED": "د حوالې راتلونکې شمارې رااخیستل ناکام شول",
+    "HAWALA_SERIES": {
+        "CREATE_NEW": "نوې لړۍ جوړه کړئ",
+        "DETAILS": "د لړۍ جزئیات",
+        "NEXT_NUMBER_AVAILABLE": "راتلونکې شمېره شتون لري",
+        "FETCH_NEXT_NUMBER": "راتلونکې شماره رااخلیستل",
+        "TABLE": {
+            "BRANCH": "څانګه",
+            "PREFIX": "مخکینی",
+            "CURRENT_NUMBER": "اوسنۍ شماره",
+            "NEXT_NUMBER": "راتلونکې شماره",
+            "RESET_DAILY": "هره ورځ بیاځلي تنظیمول",
+            "STATUS": "حالت"
+        },
+        "FORM": {
+            "BRANCH": "څانګه",
+            "SELECT_BRANCH": "څانګه وټاکئ",
+            "PREFIX": "مخکینی",
+            "PREFIX_PLACEHOLDER": "مخکینی دننه کړئ (لکه: DXB)",
+            "CURRENT_NUMBER": "اوسنۍ شماره",
+            "CURRENT_NUMBER_PLACEHOLDER": "اوسنۍ شماره دننه کړئ",
+            "RESET_DAILY": "شمارنده هروره بیاځلي تنظیم کړئ",
+            "ACTIVE": "فعال"
+        }
+    },
+    "HAWALA.TABLE.COLUMN.HAWALA_CUSTOM_NUMBER": "د سفارشي شمېره"
 }
