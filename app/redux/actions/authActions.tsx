@@ -17,6 +17,9 @@ export const _login = (username: string, password: string,toast: React.RefObject
         //console.log(response)
         localStorage.setItem('api_token', response.data.data.api_token);
         localStorage.setItem('user_info', JSON.stringify(response.data.data.user_info));
+
+        
+
         dispatch({ type: LOGIN_SUCCESS, payload: response.data.data });
 
         return { success: true }; // Explicitly indicate success

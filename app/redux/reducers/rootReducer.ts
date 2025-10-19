@@ -38,6 +38,7 @@ import { paymentTypesReducer } from './paymentTypeReducer';
 import {appSettingsReducer} from './appSettingsReducer'
 import { providerReducer } from './providerReducer';
 import {singleProviderReducer} from './singleProviderReducer'
+import {hawalaNumberSeriesReducer} from './hawalaSeriesReducer'
 
 const rootReducer=combineReducers({
     currenciesReducer:currenciesReducer,
@@ -78,7 +79,8 @@ const rootReducer=combineReducers({
     paymentTypesReducer:paymentTypesReducer,
     appSettingsReducer:appSettingsReducer,
     providerReducer:providerReducer,
-    singleProviderReducer:singleProviderReducer
+    singleProviderReducer:singleProviderReducer,
+    hawalaNumberSeriesReducer:hawalaNumberSeriesReducer
 })
 
 

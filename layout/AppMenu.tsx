@@ -174,6 +174,11 @@ const AppMenu = () => {
                             to: '/pages/hawala'
                         },
                         {
+                            label: t('MENU.HAWALA_NUMBER_SERIES'),
+                            icon: 'pi pi-fw pi-transfer', // Better transfer icon
+                            to: '/pages/hawala-number-series'
+                        },
+                        {
                             label: t('MENU.HAWALA.CURRENCY'),
                             icon: 'pi pi-fw pi-bitcoin', // Better hawala currency icon
                             to: '/pages/howala-currencies'

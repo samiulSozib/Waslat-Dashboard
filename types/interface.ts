@@ -875,3 +875,14 @@ export interface PriceAdjustmentPreview {
     service_name: string;
     company_name: string;
 }
+
+
+export interface HawalaNumberSeries {
+  id: number;
+  branch_id: number;
+  branch?:HawalaBranch|null;
+  prefix: string;
+  current_number: number;
+  reset_daily: boolean;
+  is_active: boolean;
+}

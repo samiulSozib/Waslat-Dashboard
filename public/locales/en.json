@@ -1470,5 +1470,58 @@
     "HAWALA_NUMBER_REQUIRED": "Hawala number is required",
     "ARE_YOU_SURE_YOU_WANT_TO_CONFIRM_HAWALA": "Are you sure you want to confirm hawala",
     "HAWALA_STATUS_UPDATED": "Hawala status updated successfully",
-    "FAILED_TO_UPDATE_HAWALA_STATUS": "Failed to update hawala status"
+    "FAILED_TO_UPDATE_HAWALA_STATUS": "Failed to update hawala status",
+
+  
+  
+    "login_fail": "Login Failed",
+    "no_permission": "You do not have permission to access this application.",
+    
+
+   
+    "HAWALA_ADDED": "Hawala added successfully",
+    "HAWALA_ADD_FAILED": "Failed to add Hawala",
+    "HAWALA_UPDATED": "Hawala updated successfully",
+    "HAWALA_UPDATE_FAILED": "Failed to update Hawala",
+    
+    "MENU.HAWALA_NUMBER_SERIES":"Hawala No. Series",
+    "HAWALA_NUMBER_SERIES_ADDED": "Hawala Number Series added successfully",
+    "HAWALA_NUMBER_SERIES_ADD_FAILED": "Failed to add Hawala Number Series",
+    "HAWALA_NUMBER_SERIES_UPDATED": "Hawala Number Series updated successfully",
+    "HAWALA_NUMBER_SERIES_UPDATE_FAILED": "Failed to update Hawala Number Series",
+    "HAWALA_NUMBER_SERIES_DELETED": "Hawala Number Series deleted successfully",
+    "HAWALA_NUMBER_SERIES_DELETE_FAILED": "Failed to delete Hawala Number Series",
+    "HAWALA_NUMBER_SERIES_STATUS_CHANGED": "Hawala Number Series status changed successfully",
+    "HAWALA_NUMBER_SERIES_STATUS_CHANGE_FAILED": "Failed to change Hawala Number Series status",
+    "NEXT_HAWALA_NUMBER_FETCHED": "Next Hawala number fetched successfully",
+    "NEXT_HAWALA_NUMBER_FETCH_FAILED": "Failed to fetch next Hawala number",
+    
+    "HAWALA_SERIES": {
+        "CREATE_NEW": "Create New Series",
+        "DETAILS": "Series Details",
+        "NEXT_NUMBER_AVAILABLE": "Next Available Number",
+        "FETCH_NEXT_NUMBER": "Fetch Next Number",
+        "TABLE": {
+        "BRANCH": "Branch",
+        "PREFIX": "Prefix",
+        "CURRENT_NUMBER": "Current Number",
+        "NEXT_NUMBER": "Next Number",
+        "RESET_DAILY": "Reset Daily",
+        "STATUS": "Status"
+        },
+        "FORM": {
+        "BRANCH": "Branch",
+        "SELECT_BRANCH": "Select Branch",
+        "PREFIX": "Prefix",
+        "PREFIX_PLACEHOLDER": "Enter prefix (e.g., DXB)",
+        "CURRENT_NUMBER": "Current Number",
+        "CURRENT_NUMBER_PLACEHOLDER": "Enter current number",
+        "RESET_DAILY": "Reset counter daily",
+        "ACTIVE": "Active"
+        }
+    }
+
+
+  
+
 }

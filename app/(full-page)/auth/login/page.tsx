@@ -32,8 +32,8 @@ const LoginPage = () => {
         title = process.env.NEXT_PUBLIC_PROJECT_WELCOME_NAME_FARSI;
     } else if (language === 'ps') {
         title = process.env.NEXT_PUBLIC_PROJECT_WELCOME_NAME_PASHTO;
-    }else{
-        title="Welcome to the application"
+    } else {
+        title = "Welcome to the application"
     }
 
     const { layoutConfig } = useContext(LayoutContext);
@@ -61,6 +61,27 @@ const LoginPage = () => {
         try {
             const result = await dispatch<any>(_login(email, password, toast));
             if (result.success) {
+
+                const userInfo = result?.payload?.user_info || JSON.parse(localStorage.getItem('user_info') || '{}');
+
+                // 🚫 Check user type
+                if (userInfo.user_type != 1) {
+                    // Remove token and user info if unauthorized
+                    localStorage.removeItem('api_token');
+                    localStorage.removeItem('user_info');
+
+                    Swal.fire({
+                        title: t('login.login_fail'),
+                        text: t('login.no_permission'),
+                        icon: 'error',
+                        draggable: true
+                    });
+
+                    setError(t('login.no_permission'));
+                    setLoading(false);
+                    return;
+                }
+
                 if (checked) {
                     localStorage.setItem('rememberedEmail', email);
                     localStorage.setItem('rememberedPassword', password);
