@@ -38,68 +38,86 @@ export const _fetchHawalaList = (page: number = 1, search: string = '') => async
 };
 
 // Add hawala
-export const _addHawala = (newData: any, toast: React.RefObject<Toast>) => async (dispatch: Dispatch) => {
+// Add hawala order
+export const _addHawala = (hawalaData: any, toast: React.RefObject<Toast>, t: any) => async (dispatch: Dispatch) => {
   dispatch({ type: ADD_HAWALA_REQUEST });
   try {
-    const formData = new FormData();
-
-    // Append each property of the `body` object to the `FormData` instance
-    formData.append("name", newData.name);
-    formData.append("email", newData.email);
-    formData.append("password", newData.password);
-    formData.append("address", newData.address);
-    formData.append("phone_number", newData.phone_number);
-    formData.append("commission_type", newData.commission_type);
-    formData.append("amount", newData.amount);
-    formData.append("status", newData.status);
     const token = getAuthToken();
-    const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/hawala-orders`, formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    //console.log(response)
-    //const newData = { ...newUserData, id: response.data.data.user.id };
+    
+    // Prepare the data in JSON format (not FormData)
+    const requestData = {
+      reseller_id: hawalaData.reseller_id,
+      hawala_branch_id: hawalaData.hawala_branch_id,
+      sender_name: hawalaData.sender_name,
+      receiver_name: hawalaData.receiver_name,
+      receiver_father_name: hawalaData.receiver_father_name,
+      receiver_id_card_number: hawalaData.receiver_id_card_number,
+      hawala_amount: hawalaData.hawala_amount,
+      hawala_amount_currency_id: hawalaData.hawala_amount_currency_id,
+      commission_amount: hawalaData.commission_amount || 0,
+      commission_paid_by_sender: hawalaData.commission_paid_by_sender,
+      commission_paid_by_receiver: hawalaData.commission_paid_by_receiver,
+      custom_hawala_number: hawalaData.custom_hawala_number || null,
+      admin_note: hawalaData.admin_note || null
+    };
+
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/hawala-orders/send-hawala`, 
+      requestData, 
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
     dispatch({
       type: ADD_HAWALA_SUCCESS,
       payload: response.data.data.hawala,
     });
+
     toast.current?.show({
       severity: "success",
-      summary: "Successful",
-      detail: "Hawala added successfully",
+      summary: t('SUCCESS'),
+      detail: t('HAWALA_ADDED_SUCCESSFULLY'),
       life: 3000,
     });
+
+    return response.data;
+
   } catch (error: any) {
     dispatch({
       type: ADD_HAWALA_FAIL,
       payload: error.message,
     });
 
-    let errorMessage = "Failed to update Hawala"; // Default message
+    let errorMessage = t('FAILED_TO_ADD_HAWALA'); // Default message
 
     // Check if it's a validation error (422 status)
     if (error.response?.status === 422 && error.response.data?.errors) {
       // Get all error messages and join them
       const errorMessages = Object.values(error.response.data.errors)
-        .flat() // Flatten array of arrays
-        .join(', '); // Join with commas
-
-      errorMessage = errorMessages || "Validation failed";
+        .flat()
+        .join(', ');
+      errorMessage = errorMessages || t('VALIDATION_FAILED');
     }
     // Check for other API error formats
     else if (error.response?.data?.message) {
       errorMessage = error.response.data.message;
     }
+    else if (error.message) {
+      errorMessage = error.message;
+    }
 
     toast.current?.show({
       severity: "error",
-      summary: "Error",
+      summary: t('ERROR'),
       detail: errorMessage,
       life: 3000,
     });
 
+    throw error; // Re-throw the error for handling in the component if needed
   }
 };
 

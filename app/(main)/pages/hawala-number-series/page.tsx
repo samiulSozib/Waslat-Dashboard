@@ -187,11 +187,11 @@ const HawalaNumberSeriesPage = () => {
     };
 
     const branchBodyTemplate = (rowData: HawalaNumberSeries) => {
-        const branch = hawalaBranches.find((b: HawalaBranch) => b.id === rowData.branch_id);
+        //const branch = hawalaBranches.find((b: HawalaBranch) => b.id === rowData.branch_id);
         return (
             <>
                 <span className="p-column-title">{t('HAWALA_SERIES.TABLE.BRANCH')}</span>
-                {branch?.name || `Branch ${rowData.branch_id}`}
+                {rowData?.branch?.name}
             </>
         );
     };
@@ -356,7 +356,7 @@ const HawalaNumberSeriesPage = () => {
                     <Toast ref={toast} />
                     
                     {/* Next Number Display */}
-                    {nextNumber && (
+                    {/* {nextNumber && (
                         <div className="mb-4 p-3 border-round bg-blue-50 border-1 border-blue-200">
                             <div className="flex align-items-center gap-2">
                                 <i className="pi pi-info-circle text-blue-500"></i>
@@ -365,7 +365,7 @@ const HawalaNumberSeriesPage = () => {
                                 </span>
                             </div>
                         </div>
-                    )}
+                    )} */}
 
                     <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
 
