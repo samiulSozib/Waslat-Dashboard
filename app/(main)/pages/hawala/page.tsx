@@ -246,7 +246,7 @@ const HawalaPage = () => {
             admin_note: formData.adminNote || undefined
         };
 
-        console.log('Submitting Hawala Data:', hawalaData);
+        //console.log('Submitting Hawala Data:', hawalaData);
 
         // Dispatch action to add hawala
         dispatch(_addHawala(hawalaData, toast, t));
