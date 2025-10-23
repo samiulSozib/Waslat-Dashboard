@@ -1561,5 +1561,9 @@
     "CUSTOM_HAWALA_NUMBER": "Custom Hawala Number",
     "ADMIN_NOTE": "Admin Note",
     "ADMIN_NOTE_PLACEHOLDER": "Admin Note Placeholder",
-    "FAILED_TO_ADD_HAWALA": "Failed to add Hawala"
+    "FAILED_TO_ADD_HAWALA": "Failed to add Hawala",
+    "FETCHING_HAWALA_NUMBER": "Fetching hawala number...",
+    "HAWALA_NUMBER_AUTO_GENERATED": "Hawala number auto-generated",
+    "GENERATING_HAWALA_NUMBER": "Generating hawala number...",
+    "REGENERATE_NUMBER": "Regenerate number"
 }

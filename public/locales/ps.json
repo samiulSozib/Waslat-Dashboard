@@ -1562,6 +1562,9 @@
     "CUSTOM_HAWALA_NUMBER": "دودیز د حوالې شمېره",
     "ADMIN_NOTE": "د ادارې یادښت",
     "ADMIN_NOTE_PLACEHOLDER": "د ادارې یادښت ځای",
-      "FAILED_TO_ADD_HAWALA": "د حوالې اضافه کولو کې پاتې راغلی"
-
+    "FAILED_TO_ADD_HAWALA": "د حوالې اضافه کولو کې پاتې راغلی",
+    "FETCHING_HAWALA_NUMBER": "د حوالې شمیره ترلاسه کیږي...",
+    "HAWALA_NUMBER_AUTO_GENERATED": "د حوالې شمیره په اوتومات ډول جوړه شوه",
+    "GENERATING_HAWALA_NUMBER": "د حوالې شمیره جوړیږي...",
+    "REGENERATE_NUMBER": "شمیره بیا جوړه کړه"
 }

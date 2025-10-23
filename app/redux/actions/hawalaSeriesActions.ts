@@ -55,7 +55,7 @@ export const _fetchHawalaNumberSeriesList =
 
   // ✅ Fetch Next Hawala Number for a Branch
 export const _fetchHawalaNextNumber =
-  (branchId: number, toast: React.RefObject<Toast>, t: (key: string) => string) =>
+  (branchId: number|string|null|undefined, toast: React.RefObject<Toast>, t: (key: string) => string) =>
   async (dispatch: Dispatch) => {
     dispatch({ type: FETCH_HAWALA_NUMBER_SERIES_NEXT_REQUEST });
     try {
@@ -83,6 +83,8 @@ export const _fetchHawalaNextNumber =
           detail: t("NEXT_HAWALA_NUMBER_FETCHED"),
           life: 3000,
         });
+                return response.data.data; // Return the data for await
+
       } else {
         throw new Error(response.data.message || "Failed to fetch next number");
       }

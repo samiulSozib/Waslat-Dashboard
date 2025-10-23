@@ -1561,5 +1561,9 @@
     "CUSTOM_HAWALA_NUMBER": "شماره حواله سفارشی",
     "ADMIN_NOTE": "یادداشت ادمین",
     "ADMIN_NOTE_PLACEHOLDER": "متن یادداشت ادمین",
-    "FAILED_TO_ADD_HAWALA": "افزودن حواله ناموفق بود"
+    "FAILED_TO_ADD_HAWALA": "افزودن حواله ناموفق بود",
+    "FETCHING_HAWALA_NUMBER": "در حال دریافت شماره حواله...",
+    "HAWALA_NUMBER_AUTO_GENERATED": "شماره حواله به طور خودکار ایجاد شد",
+    "GENERATING_HAWALA_NUMBER": "در حال ایجاد شماره حواله...",
+    "REGENERATE_NUMBER": "تولید مجدد شماره"
 }

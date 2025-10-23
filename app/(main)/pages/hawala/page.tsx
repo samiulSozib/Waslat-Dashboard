@@ -134,7 +134,7 @@ const HawalaPage = () => {
 
     // Currency Calculation
     useEffect(() => {
-        const currencyCode = formData?.reseller?.code || 'TMN';
+        const currencyCode = formData?.reseller?.code || '';
         const selectedCurrency = currencies.find((currency: Currency) => currency.code === currencyCode);
 
         if (selectedCurrency) {
@@ -168,12 +168,44 @@ const HawalaPage = () => {
     }, [formData.hawalaAmount, formData.currencyCodeId, filteredCurrencies]);
 
     // Auto-fill hawala number when nextNumber changes
+    // Auto-fill hawala number when nextNumber changes
     useEffect(() => {
         if (nextNumber && confirmationDialog) {
+            console.log('Auto-filling hawala number:', nextNumber);
             setHawalaNumberInput(nextNumber);
         }
     }, [nextNumber, confirmationDialog]);
 
+
+
+    // Auto-fetch next hawala number when branch is selected in add dialog
+    useEffect(() => {
+        if (addHawalaDialog && formData.branchId) {
+            const fetchBranchHawalaNumber = async () => {
+                try {
+                    setFetchingNextNumber(true);
+                    await dispatch(_fetchHawalaNextNumber(formData.branchId, toast, t));
+                } catch (error) {
+                    console.error('Error fetching next hawala number for branch:', error);
+                } finally {
+                    setFetchingNextNumber(false);
+                }
+            };
+
+            fetchBranchHawalaNumber();
+        }
+    }, [formData.branchId, addHawalaDialog, dispatch, t]);
+
+    // Auto-fill custom hawala number when nextNumber changes and add dialog is open
+    useEffect(() => {
+        if (nextNumber && addHawalaDialog && formData.branchId) {
+            console.log('Auto-filling custom hawala number in add dialog:', nextNumber);
+            setFormData(prev => ({
+                ...prev,
+                customHawalaNumber: nextNumber
+            }));
+        }
+    }, [nextNumber, addHawalaDialog, formData.branchId]);
     // Get unique to_currencies from filtered rates
     const availableToCurrencies = filteredCurrencies.reduce((acc: any, rate: any) => {
         if (!acc.some((currency: Currency) => currency.id === rate.to_currency.id)) {
@@ -272,7 +304,8 @@ const HawalaPage = () => {
         dispatch(_fetchHawalaList(1, searchTag));
     };
 
-    const fetchNextHawalaNumber = async (branchId: number) => {
+    const fetchNextHawalaNumber = async (branchId: number | string) => {
+        console.log(branchId)
         if (!branchId) {
             toast.current?.show({
                 severity: 'error',
@@ -300,13 +333,14 @@ const HawalaPage = () => {
     };
 
     const confirmChangeStatus = (hawala: Hawala, newStatus: number) => {
+        console.log(hawala)
         setSelectedHawalaForAction(hawala);
         setSelectedStatus(newStatus);
 
         if (newStatus === 1) { // Confirmed status
             setHawalaNumberInput('');
-            if (hawala.branch?.id) {
-                fetchNextHawalaNumber(hawala.branch.id);
+            if (hawala?.hawala_branch_id) {
+                fetchNextHawalaNumber(hawala?.hawala_branch_id);
             }
             setConfirmationDialog(true);
         } else {
@@ -438,6 +472,15 @@ const HawalaPage = () => {
             <>
                 <span className="p-column-title">Hawala Number</span>
                 <span className="text-sm text-gray-700 font-medium">{rowData.hawala_number}</span>
+            </>
+        );
+    };
+
+    const hawalaCustomNumberBodyTemplate = (rowData: Hawala) => {
+        return (
+            <>
+                <span className="p-column-title">Cusotm Number</span>
+                <span className="text-sm text-gray-700 font-medium">{rowData.hawala_custom_number}</span>
             </>
         );
     };
@@ -613,7 +656,7 @@ const HawalaPage = () => {
                 {
                     label: t('ORDER.STATUS.CONFIRMED'),
                     icon: 'pi pi-check',
-                    command: () => confirmChangeStatus(rowData, 1)
+                    command: () => handleConfirmStatus(rowData, 1) // Use handleConfirmStatus instead of confirmChangeStatus
                 },
                 {
                     label: t('ORDER.STATUS.REJECTED'),
@@ -626,7 +669,7 @@ const HawalaPage = () => {
                 {
                     label: t('ORDER.STATUS.CONFIRMED'),
                     icon: 'pi pi-check',
-                    command: () => confirmChangeStatus(rowData, 1)
+                    command: () => handleConfirmStatus(rowData, 1) // Use handleConfirmStatus here too
                 }
             ];
         }
@@ -640,6 +683,45 @@ const HawalaPage = () => {
         }
 
         return null;
+    };
+
+    const handleConfirmStatus = async (rowData: Hawala, statusCode: number) => {
+        try {
+            console.log('Starting confirmation process for hawala:', rowData);
+
+            // First, fetch the next hawala number
+            if (rowData?.hawala_branch_id) {
+
+                // Dispatch the action to fetch next number and wait for it to complete
+                await dispatch(_fetchHawalaNextNumber(rowData?.hawala_branch_id, toast, t));
+
+                // Wait a moment for the state to update
+                setTimeout(() => {
+                    console.log('Next number fetched:', nextNumber);
+                    // Then show the confirmation dialog
+                    setSelectedHawalaForAction(rowData);
+                    setSelectedStatus(statusCode);
+                    setConfirmationDialog(true);
+                }, 500);
+
+            } else {
+                console.error('No branch ID found');
+                toast.current?.show({
+                    severity: 'error',
+                    summary: t('ERROR'),
+                    detail: t('BRANCH_ID_REQUIRED'),
+                    life: 3000
+                });
+            }
+        } catch (error) {
+            console.error('Error in handleConfirmStatus:', error);
+            toast.current?.show({
+                severity: 'error',
+                summary: t('ERROR'),
+                detail: t('FAILED_TO_PROCESS_CONFIRMATION'),
+                life: 3000
+            });
+        }
     };
 
     // Dialog Footers
@@ -705,6 +787,14 @@ const HawalaPage = () => {
                             field="hawala_number"
                             header={t('HAWALA.TABLE.COLUMN.HAWALA_NUMBER')}
                             body={hawalaNumberBodyTemplate}
+                            sortable
+                        />
+
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="hawala_number"
+                            header={t('HAWALA.TABLE.COLUMN.HAWALA_CUSTOM_NUMBER')}
+                            body={hawalaCustomNumberBodyTemplate}
                             sortable
                         />
 
@@ -1016,16 +1106,22 @@ const HawalaPage = () => {
                                         )}
 
                                         {/* Hawala Number */}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
-                                            <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('HAWALA.TABLE.COLUMN.HAWALA_NUMBER')}</span>
-                                            <span style={{ fontSize: '1.125rem', color: '#1f2937', fontWeight: '700', letterSpacing: '1px' }}>{selectedHawala.hawala_number}</span>
-                                        </div>
+                                        {!selectedHawala?.hawala_custom_number && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
+                                                <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('HAWALA.TABLE.COLUMN.HAWALA_NUMBER')}</span>
+                                                <span style={{ fontSize: '1.125rem', color: '#1f2937', fontWeight: '700', letterSpacing: '1px' }}>{selectedHawala.hawala_number}</span>
+                                            </div>
+                                        )}
+
 
                                         {/* Hawala Custom Number */}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
-                                            <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('HAWALA.TABLE.COLUMN.HAWALA_CUSTOM_NUMBER')}</span>
-                                            <span style={{ fontSize: '1.125rem', color: '#1f2937', fontWeight: '700', letterSpacing: '1px' }}>{selectedHawala?.hawala_custom_number}</span>
-                                        </div>
+                                        {selectedHawala?.hawala_custom_number && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
+                                                <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('HAWALA.TABLE.COLUMN.HAWALA_CUSTOM_NUMBER')}</span>
+                                                <span style={{ fontSize: '1.125rem', color: '#1f2937', fontWeight: '700', letterSpacing: '1px' }}>{selectedHawala?.hawala_custom_number}</span>
+                                            </div>
+                                        )}
+
 
                                         {/* Sender Name */}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
@@ -1209,19 +1305,7 @@ const HawalaPage = () => {
                                             )}
                                         </div>
 
-                                        {/* Custom Hawala Number */}
-                                        <div className="field col-12 md:col-6">
-                                            <label htmlFor="customHawalaNumber" className="font-medium block mb-2">
-                                                {t("CUSTOM_HAWALA_NUMBER")}
-                                            </label>
-                                            <InputText
-                                                id="customHawalaNumber"
-                                                name="customHawalaNumber"
-                                                value={formData.customHawalaNumber}
-                                                onChange={handleInputChange}
-                                                placeholder={t("CUSTOM_HAWALA_NUMBER")}
-                                            />
-                                        </div>
+
 
                                         {/* Sender Information */}
                                         <div className="field col-12 md:col-6">
@@ -1362,55 +1446,7 @@ const HawalaPage = () => {
                                             )}
                                         </div>
 
-                                        {/* Conversion Details */}
-                                        <div className="col-12 mb-4">
-                                            <Card className="bg-blue-50 border-1 border-blue-200">
-                                                <div className="grid">
-                                                    <div className="col-12 md:col-4 text-center">
-                                                        <div className="text-sm text-blue-600 font-medium">{t("EXCHANGE_RATE")}</div>
-                                                        <div className="text-lg font-bold text-blue-800">
-                                                            {exchangeRate > 0 ? `1 ${resellerCurrencyPreferenceCode} = ${exchangeRate.toFixed(4)}` : t("N/A")}
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-12 md:col-4 text-center">
-                                                        <div className="text-sm text-blue-600 font-medium">{t("FINAL_AMOUNT")}</div>
-                                                        <div className="text-lg font-bold text-blue-800">
-                                                            {finalAmount > 0 ? `${finalAmount.toFixed(2)} ${resellerCurrencyPreferenceCode}` : t("N/A")}
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-12 md:col-4 text-center">
-                                                        <div className="text-sm text-blue-600 font-medium">{t("SOURCE_CURRENCY")}</div>
-                                                        <div className="text-lg font-bold text-blue-800">{resellerCurrencyPreferenceCode}</div>
-                                                    </div>
-                                                </div>
-                                            </Card>
-                                        </div>
-
-                                        {/* Branch and Commission */}
-                                        <div className="field col-12 md:col-6">
-                                            <label htmlFor="branchId" className="font-medium block mb-2">
-                                                {t("HAWALA_BRANCH")} *
-                                            </label>
-                                            <Dropdown
-                                                id="branchId"
-                                                name="branchId"
-                                                value={formData.branchId}
-                                                onChange={handleInputChange}
-                                                options={hawalaBranches}
-                                                optionLabel="name"
-                                                optionValue="id"
-                                                placeholder={t("SELECT_BRANCH")}
-                                                className={classNames('w-full', {
-                                                    'p-invalid': submitted && !formData.branchId
-                                                })}
-                                            />
-                                            {submitted && !formData.branchId && (
-                                                <small className="p-invalid" style={{ color: 'red' }}>
-                                                    {t('THIS_FIELD_IS_REQUIRED')}
-                                                </small>
-                                            )}
-                                        </div>
-
+                                        {/* COMMISSION PAID BY */}
                                         <div className="field col-12 md:col-6">
                                             <label className="font-medium block mb-2">
                                                 {t("COMMISSION_PAID_BY")} *
@@ -1442,6 +1478,120 @@ const HawalaPage = () => {
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* Conversion Details */}
+                                        <div className="col-12 mb-4">
+                                            <Card className="bg-blue-50 border-1 border-blue-200">
+                                                <div className="grid">
+                                                    <div className="col-12 md:col-4 text-center">
+                                                        <div className="text-sm text-blue-600 font-medium">{t("EXCHANGE_RATE")}</div>
+                                                        <div className="text-lg font-bold text-blue-800">
+                                                            {exchangeRate > 0 ? `1 ${resellerCurrencyPreferenceCode} = ${exchangeRate.toFixed(4)}` : t("N/A")}
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-12 md:col-4 text-center">
+                                                        <div className="text-sm text-blue-600 font-medium">{t("FINAL_AMOUNT")}</div>
+                                                        <div className="text-lg font-bold text-blue-800">
+                                                            {finalAmount > 0 ? `${finalAmount.toFixed(2)} ${resellerCurrencyPreferenceCode}` : t("N/A")}
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-12 md:col-4 text-center">
+                                                        <div className="text-sm text-blue-600 font-medium">{t("SOURCE_CURRENCY")}</div>
+                                                        <div className="text-lg font-bold text-blue-800">{resellerCurrencyPreferenceCode}</div>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        </div>
+
+                                        {/* Branch and Commission */}
+                                        {/* Branch and Commission */}
+                                        <div className="field col-12 md:col-6">
+                                            <label htmlFor="branchId" className="font-medium block mb-2">
+                                                {t("HAWALA_BRANCH")} *
+                                                {fetchingNextNumber && formData.branchId && (
+                                                    <i className="pi pi-spin pi-spinner ml-2" style={{ fontSize: '1rem' }} />
+                                                )}
+                                            </label>
+                                            <Dropdown
+                                                id="branchId"
+                                                name="branchId"
+                                                value={formData.branchId}
+                                                onChange={(e) => {
+                                                    handleInputChange(e);
+                                                    // Reset custom hawala number when branch changes
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        customHawalaNumber: ""
+                                                    }));
+                                                }}
+                                                options={hawalaBranches}
+                                                optionLabel="name"
+                                                optionValue="id"
+                                                placeholder={t("SELECT_BRANCH")}
+                                                className={classNames('w-full mb-2', {
+                                                    'p-invalid': submitted && !formData.branchId
+                                                })}
+                                                disabled={fetchingNextNumber}
+                                            />
+                                            {submitted && !formData.branchId && (
+                                                <small className="p-invalid" style={{ color: 'red' }}>
+                                                    {t('THIS_FIELD_IS_REQUIRED')}
+                                                </small>
+                                            )}
+                                            {formData.branchId && (
+                                                <small className="text-blue-600">
+                                                    {fetchingNextNumber ? t('FETCHING_HAWALA_NUMBER') : t('HAWALA_NUMBER_AUTO_GENERATED')}
+                                                </small>
+                                            )}
+                                        </div>
+
+                                        {/* Custom Hawala Number */}
+                                        {/* Custom Hawala Number */}
+                                        <div className="field col-12 md:col-6">
+                                            <label htmlFor="customHawalaNumber" className="font-medium block mb-2">
+                                                {t("CUSTOM_HAWALA_NUMBER")}
+                                                {fetchingNextNumber && (
+                                                    <i className="pi pi-spin pi-spinner ml-2" style={{ fontSize: '1rem' }} />
+                                                )}
+                                            </label>
+                                            <div className="p-inputgroup mb-2">
+                                                <InputText
+                                                    id="customHawalaNumber"
+                                                    name="customHawalaNumber"
+                                                    value={formData.customHawalaNumber}
+                                                    onChange={handleInputChange}
+                                                    placeholder={fetchingNextNumber ? t('GENERATING_HAWALA_NUMBER') : t("CUSTOM_HAWALA_NUMBER")}
+                                                    disabled={fetchingNextNumber}
+                                                    readOnly={!!formData.customHawalaNumber && !!formData.branchId} // Make it read-only when auto-filled
+                                                    className={classNames({
+                                                        'bg-blue-50 border-blue-200': !!formData.customHawalaNumber && !!formData.branchId
+                                                    })}
+                                                />
+                                                {formData.customHawalaNumber && formData.branchId && (
+                                                    <Button
+                                                        icon="pi pi-refresh"
+                                                        className="p-button-outlined p-button-secondary"
+                                                        tooltip={t('REGENERATE_NUMBER')}
+                                                        tooltipOptions={{ position: 'top' }}
+                                                        onClick={() => {
+                                                            // Manually refetch the next number
+                                                            if (formData.branchId) {
+                                                                fetchNextHawalaNumber(formData.branchId);
+                                                            }
+                                                        }}
+                                                        disabled={fetchingNextNumber}
+                                                    />
+                                                )}
+                                            </div>
+                                            {formData.customHawalaNumber && formData.branchId && (
+                                                <small className="text-green-600">
+                                                    <i className="pi pi-check-circle mr-1"></i>
+                                                    {t('HAWALA_NUMBER_AUTO_GENERATED')}
+                                                </small>
+                                            )}
+                                        </div>
+
+
 
                                         {/* Admin Note */}
                                         <div className="field col-12">
