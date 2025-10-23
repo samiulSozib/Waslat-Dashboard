@@ -1531,7 +1531,6 @@ const HawalaPage = () => {
                                                 className={classNames('w-full mb-2', {
                                                     'p-invalid': submitted && !formData.branchId
                                                 })}
-                                                disabled={fetchingNextNumber}
                                             />
                                             {submitted && !formData.branchId && (
                                                 <small className="p-invalid" style={{ color: 'red' }}>
@@ -1561,8 +1560,6 @@ const HawalaPage = () => {
                                                     value={formData.customHawalaNumber}
                                                     onChange={handleInputChange}
                                                     placeholder={fetchingNextNumber ? t('GENERATING_HAWALA_NUMBER') : t("CUSTOM_HAWALA_NUMBER")}
-                                                    disabled={fetchingNextNumber}
-                                                    readOnly={!!formData.customHawalaNumber && !!formData.branchId} // Make it read-only when auto-filled
                                                     className={classNames({
                                                         'bg-blue-50 border-blue-200': !!formData.customHawalaNumber && !!formData.branchId
                                                     })}
@@ -1579,7 +1576,6 @@ const HawalaPage = () => {
                                                                 fetchNextHawalaNumber(formData.branchId);
                                                             }
                                                         }}
-                                                        disabled={fetchingNextNumber}
                                                     />
                                                 )}
                                             </div>
