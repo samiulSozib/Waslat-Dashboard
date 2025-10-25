@@ -171,7 +171,7 @@ const ResellerPage = () => {
 
     const saveReseller = () => {
         setSubmitted(true);
-        console.log(reseller);
+        //console.log(reseller);
         //return;
         if (
             !reseller.reseller_name ||
@@ -183,7 +183,6 @@ const ResellerPage = () => {
             !reseller.province_id ||
             !reseller.districts_id ||
             !reseller.code ||
-            !reseller.reseller_group_id ||
             !reseller.sub_reseller_limit
         ) {
             toast.current?.show({
