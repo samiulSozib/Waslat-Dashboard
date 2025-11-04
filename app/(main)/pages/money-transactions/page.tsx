@@ -196,7 +196,7 @@ const TransactionPage = () => {
             <React.Fragment>
                 <div className="my-2 flex items-center gap-2">
                     <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
-                        <Button style={{gap:'8px'}} className="p-button-info" label={t('FILTER')} style={{gap:'8px'}} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
+                        <Button style={{gap:'8px'}} className="p-button-info" label={t('FILTER')} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
                         {filterDialogVisible && (
                             <div
                                 className="p-card p-fluid"
@@ -321,7 +321,7 @@ const TransactionPage = () => {
                     onClick={confirmDeleteSelected}
                     disabled={!selectedTransactions || !(selectedTransactions as any).length}
                 /> */}
-                    <Button style={{gap:'8px'}} className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{gap:'8px'}} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+                    <Button style={{gap:'8px'}} className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
                         {/* <Button
                             style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                             label={t('APP.GENERAL.DELETE')}
