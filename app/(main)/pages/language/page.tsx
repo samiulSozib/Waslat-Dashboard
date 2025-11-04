@@ -367,7 +367,7 @@ const LanguagePage = () => {
 
                     <Dialog visible={deleteLanguageDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteLanguageDialogFooter} onHide={hideDeleteLanguageDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {language && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{language.language_name}</b>
@@ -378,7 +378,7 @@ const LanguagePage = () => {
 
                     <Dialog visible={deleteLanguagesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteLanguagesDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {language && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>

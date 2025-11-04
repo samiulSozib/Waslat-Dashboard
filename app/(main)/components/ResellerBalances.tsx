@@ -166,7 +166,7 @@ const ResellerBalances = ({ resellerId }: ResellerBalancesProps) => {
                     <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
                     <Button
                         className="p-button-info w-full"
-                        label={t('FILTER')}
+                        label={t('FILTER')} style={{gap:'8px'}}
                         icon="pi pi-filter"
                         onClick={() => setFilterDialogVisible(!filterDialogVisible)}
                     />
@@ -260,7 +260,7 @@ const ResellerBalances = ({ resellerId }: ResellerBalancesProps) => {
                         </div>
                     )}
                 </div>
-                <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+                <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{gap:'8px'}} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
 
                 </div>
             </React.Fragment>
@@ -797,7 +797,7 @@ const handleSubmitFilter = (filters: any) => {
 
                     <Dialog visible={deleteBalanceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteBalanceDialogFooter} onHide={hideDeleteBalanceDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {balance && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b></b>
@@ -808,7 +808,7 @@ const handleSubmitFilter = (filters: any) => {
 
                     <Dialog visible={deleteBalancesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteBalancesDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {balance && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>

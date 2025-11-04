@@ -290,15 +290,15 @@ const EarningBalanceRequest = () => {
                         /> */}
                         <Column body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
 
-                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.RESELLER')} body={resellerBodyTemplate} sortable style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
-                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.AMOUNT')} body={amountBodyTemplate} sortable style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
+                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.RESELLER')} body={resellerBodyTemplate}  style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
+                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.AMOUNT')} body={amountBodyTemplate}  style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
 
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="hawala_number"
                             header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.REVIEWED_BY')}
                             body={reviewedByBodyTemplate}
-                            sortable
+                            
                         ></Column>
 
                         <Column
@@ -306,7 +306,7 @@ const EarningBalanceRequest = () => {
                             field="hawala_number"
                             header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.REVIEWED_AT')}
                             body={reviewedAtBodyTemplate}
-                            sortable
+                            
                         ></Column>
 
                         <Column
@@ -314,9 +314,9 @@ const EarningBalanceRequest = () => {
                             field="hawala_number"
                             header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.NOTES')}
                             body={adminNotesBodyTemplate}
-                            sortable
+                            
                         ></Column>
-                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.STATUS')} body={statusBodyTemplate} sortable style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
+                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.STATUS')} body={statusBodyTemplate}  style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
                     </DataTable>
 
                     {/* Add Earning Balance Dialog */}
@@ -392,7 +392,7 @@ const EarningBalanceRequest = () => {
                     {/* Status Change Dialog */}
                     <Dialog visible={statusChangeDialog} style={{ width: '450px' }} header={t('EARNING_BALANCE_REQUEST.STATUS_DIALOG.TITLE')} modal footer={statusChangeDialogFooter} onHide={() => setStatusChangeDialog(false)}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {selectedRequest && (
                                 <span>
                                     {t('EARNING_BALANCE_REQUEST.STATUS_DIALOG.CONFIRMATION')}
@@ -426,7 +426,7 @@ const EarningBalanceRequest = () => {
                         onHide={hideDeleteDialog}
                     >
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {selectedRequest && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the request for <b>{selectedRequest.amount}</b> {t('FOR')} {selectedRequest.reseller?.reseller_name}?

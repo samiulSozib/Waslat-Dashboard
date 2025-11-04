@@ -271,7 +271,7 @@ const BundlePricingPage = () => {
                                         checked={formData.confirmation}
                                         onChange={(e) => handleInputChange('confirmation', e.checked)}
                                     />
-                                    <label htmlFor="confirmation" className="ml-2" style={{ fontWeight: 'bold', color: 'var(--red-500)' }}>
+                                    <label htmlFor="confirmation" className="mx-2" style={{ fontWeight: 'bold', color: 'var(--red-500)' }}>
                                         {t('CONFIRM_PRICE_UPDATE')}
                                     </label>
                                 </div>

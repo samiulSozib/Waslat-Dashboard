@@ -1047,7 +1047,7 @@ const statusBodyTemplate = (rowData: Provider) => {
 
                     <Dialog visible={deleteProviderDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteProviderDialogFooter} onHide={hideDeleteProviderDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {provider && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{provider.name}</b>
@@ -1058,7 +1058,7 @@ const statusBodyTemplate = (rowData: Provider) => {
 
                     <Dialog visible={deleteProvidersDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteProvidersDialogFooter} onHide={hideDeleteProvidersDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {selectedProviders && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')} </span>}
                         </div>
                     </Dialog>

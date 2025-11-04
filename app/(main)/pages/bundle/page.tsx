@@ -30,6 +30,7 @@ import { isRTL } from '../../utilities/rtlUtil';
 import { _fetchProviders } from '@/app/redux/actions/providerActions';
 import { _fetchSingleProvider } from '@/app/redux/actions/singleProviderAction';
 import { singleProviderReducer } from '../../../redux/reducers/singleProviderReducer';
+import BundleForm from '../../components/Form/BundleForm';
 
 const BundlePage = () => {
     let emptyBundle: Bundle = {
@@ -94,6 +95,8 @@ const BundlePage = () => {
 
     const [unsetDialogVisible, setUnsetDialogVisible] = useState(false);
     const [bundleToUnset, setBundleToUnset] = useState<Bundle | null>(null);
+    const [editingRows, setEditingRows] = useState({});
+
 
     useEffect(() => {
         dispatch(_fetchBundleList(1, searchTag));
@@ -150,6 +153,42 @@ const BundlePage = () => {
         setBundle(emptyBundle);
     };
 
+    const priceEditor = (options: any) => {
+
+        return (
+            <InputText
+                value={options.value}
+                onChange={(e) => options.editorCallback(e.target.value)}
+                className="w-full"
+            />
+        );
+    };
+
+
+
+    const onRowEditChange = (e: any) => {
+
+        setEditingRows(e.data);
+    };
+
+    const onCellEditComplete = (e: any) => {
+        const { newRowData
+            , index } = e;
+        //console.log(newRowData)
+
+        // Update the bundle with new price values
+        if (newRowData
+            .admin_buying_price !== bundles[index]?.admin_buying_price ||
+            newRowData
+                .buying_price !== bundles[index]?.buying_price ||
+            newRowData
+                .selling_price !== bundles[index]?.selling_price) {
+
+
+            dispatch(_editBundle(newRowData.id, newRowData, toast, t))
+        }
+    };
+
     const saveService = () => {
         setSubmitted(true);
         if (!bundle.bundle_title || !bundle.bundle_description || !bundle.admin_buying_price || !bundle.buying_price || !bundle.selling_price || !bundle.validity_type || !bundle.service || !bundle.currency) {
@@ -165,7 +204,7 @@ const BundlePage = () => {
 
         if (bundle.id && bundle.id !== 0) {
             //dispatch(_editBundle(bundle.id, bundle, toast, t));
-            dispatch(_editBundle(bundle.id,bundle, toast, t))
+            dispatch(_editBundle(bundle.id, bundle, toast, t))
                 .then((newBundle) => {
                     if (newBundle && selectedProvider && selectedProviderBundle) {
                         const providerData = {
@@ -270,7 +309,7 @@ const BundlePage = () => {
         }
 
         setServiceDialog(true);
-        
+
     };
 
     const confirmDeleteService = (bundle: Bundle) => {
@@ -363,7 +402,7 @@ const BundlePage = () => {
             setSelectedProvider(null);
             setSelectedCapability('');
             setSelectedProviderBundle(null);
-            }
+        }
     };
 
     const rightToolbarTemplate = () => {
@@ -372,7 +411,7 @@ const BundlePage = () => {
             <React.Fragment>
                 <div className="my-2" style={{ display: 'flex', gap: '0.5rem', position: 'relative' }}>
                     <div ref={filterRef} style={{ position: 'relative' }}>
-                        <Button label={t('ORDER.FILTER.FILTER')} icon="pi pi-filter" className="p-button-info" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
+                        <Button style={{ gap: '8px' }} label={t('ORDER.FILTER.FILTER')} icon="pi pi-filter" className="p-button-info" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
                         {filterDialogVisible && (
                             <div
                                 className="p-card p-fluid"
@@ -622,34 +661,34 @@ const BundlePage = () => {
 
 
 
-const providerInfoBodyTemplate = (rowData: Bundle) => {
-    let bindingName = "";
+    const providerInfoBodyTemplate = (rowData: Bundle) => {
+        let bindingName = "";
 
-    try {
-        let parsed: ApiBinding;
+        try {
+            let parsed: ApiBinding;
 
-        if (typeof rowData.api_binding === "string") {
-            // Case 1: stringified JSON
-            parsed = JSON.parse(rowData.api_binding) as ApiBinding;
-        } else {
-            // Case 2: already parsed object
-            parsed = rowData.api_binding as ApiBinding;
+            if (typeof rowData.api_binding === "string") {
+                // Case 1: stringified JSON
+                parsed = JSON.parse(rowData.api_binding) as ApiBinding;
+            } else {
+                // Case 2: already parsed object
+                parsed = rowData.api_binding as ApiBinding;
+            }
+
+            bindingName = parsed?.name || "N/A";
+        } catch (e) {
+            console.error("Invalid api_binding:", e);
         }
 
-        bindingName = parsed?.name || "N/A";
-    } catch (e) {
-        console.error("Invalid api_binding:", e);
-    }
-
-    return (
-        <>
-            <span className="p-column-title">Provider</span>
-            <span style={{ fontSize: "0.8rem", color: "#666" }}>
-                {bindingName}
-            </span>
-        </>
-    );
-};
+        return (
+            <>
+                <span className="p-column-title">Provider</span>
+                <span style={{ fontSize: "0.8rem", color: "#666" }}>
+                    {bindingName}
+                </span>
+            </>
+        );
+    };
 
 
 
@@ -761,6 +800,8 @@ const providerInfoBodyTemplate = (rowData: Bundle) => {
                         dir={isRTL() ? 'rtl' : 'ltr'}
                         style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         // header={header}
+                        scrollHeight='flex'
+                        scrollable
                         responsiveLayout="scroll"
                         paginator={false} // Disable PrimeReact's built-in paginator
                         rows={pagination?.items_per_page}
@@ -770,47 +811,70 @@ const providerInfoBodyTemplate = (rowData: Bundle) => {
                                 ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
                                 : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
                         }
+                        editMode="cell"
+
+
                     >
                         {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Bundle Title" header={t('BUNDLE.TABLE.COLUMN.BUNDLENAME')} body={bundleTitleBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }} ></Column>
+
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Bundle Title" header={t('BUNDLE.TABLE.COLUMN.BUNDLENAME')} body={bundleTitleBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '120px' }}></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="Description"
                             header={t('BUNDLE.TABLE.COLUMN.BUNDLEDESCRIPTION')}
                             body={descriptionBodyTemplate}
+                            headerStyle={{ whiteSpace: 'nowrap', minWidth: '120px' }}
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="Validity Type"
                             header={t('BUNDLE.TABLE.COLUMN.VALIDITYTYPE')}
                             body={validityTypeBodyTemplate}
+                            headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="Admin Buying"
+                            field="admin_buying_price"
                             header={t('BUNDLE.TABLE.COLUMN.ADMINBUYINGPRICE')}
                             body={adminBuyingPriceBodyTemplate}
+                            headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}
+                            editor={(options) => priceEditor(options)}
+                            onCellEditComplete={onCellEditComplete}
                         ></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Buying Price" header={t('BUNDLE.TABLE.COLUMN.BUYINGPRICE')} body={buyingPriceBodyTemplate}></Column>
+
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="Selling Price"
+                            field="buying_price"
+                            header={t('BUNDLE.TABLE.COLUMN.BUYINGPRICE')}
+                            body={buyingPriceBodyTemplate}
+                            headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}
+                            editor={(options) => priceEditor(options)}
+                            onCellEditComplete={onCellEditComplete}
+                        ></Column>
+
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="selling_price"
                             header={t('BUNDLE.TABLE.COLUMN.SELLINGPRICE')}
                             body={sellingPriceBodyTemplate}
+                            headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}
+                            editor={(options) => priceEditor(options)}
+                            onCellEditComplete={onCellEditComplete}
                         ></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Currency" header={t('BUNDLE.TABLE.COLUMN.CURRENCYNAME')} body={currencyBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Service" header={t('BUNDLE.TABLE.FILTER.SERVICE')} body={serviceNameBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Currency" header={t('BUNDLE.TABLE.COLUMN.CURRENCYNAME')} body={currencyBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}></Column>
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Service" header={t('BUNDLE.TABLE.FILTER.SERVICE')} body={serviceNameBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="Category"
                             header={t('BUNDLE.TABLE.COLUMN.SERVICECATEGORY')}
                             body={serviceCategoryBodyTemplate}
+                            headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}
                         ></Column>
 
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Created" header={t('BUNDLE_PROVIDER')} body={providerInfoBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Created" header={t('BUNDLE_PROVIDER')} body={providerInfoBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}></Column>
 
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Created" header={t('TABLE.GENERAL.CREATEDAT')} body={createdAtBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Created" header={t('TABLE.GENERAL.CREATEDAT')} body={createdAtBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}></Column>
                     </DataTable>
                     <Paginator
                         first={(pagination?.page - 1) * pagination?.items_per_page}
@@ -1215,9 +1279,11 @@ const providerInfoBodyTemplate = (rowData: Bundle) => {
                         </div>
                     </Dialog>
 
+
+
                     <Dialog visible={deleteServiceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteServiceDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {bundle && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{bundle.bundle_title}</b>
@@ -1228,7 +1294,7 @@ const providerInfoBodyTemplate = (rowData: Bundle) => {
 
                     <Dialog visible={deleteServicesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteServicesDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {selectedBundles && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')} </span>}
                         </div>
                     </Dialog>

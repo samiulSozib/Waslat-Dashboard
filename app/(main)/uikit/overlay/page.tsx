@@ -160,7 +160,7 @@ const OverlayDemo = () => {
                         <Button label={t("APP.GENERAL.DELETE")} icon="pi pi-trash" severity="danger" onClick={() => setDisplayConfirmation(true)} />
                         <Dialog header="Confirmation" visible={displayConfirmation} onHide={() => setDisplayConfirmation(false)} style={{ width: '350px' }} modal footer={confirmationDialogFooter}>
                             <div className="flex align-items-center justify-content-center">
-                                <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                                <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                                 <span>Are you sure you want to proceed?</span>
                             </div>
                         </Dialog>

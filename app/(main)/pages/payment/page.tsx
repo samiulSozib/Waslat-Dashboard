@@ -284,10 +284,11 @@ const PaymentPage = () => {
         return (
             <React.Fragment>
                 <div className="flex justify-end items-center gap-2">
+                    <Button label={t('ADD_PAYMENT')} icon="pi pi-plus" severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={openNew} />
                     {' '}
                     {/* Added gap-2 here */}
                     <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
-                        <Button className="p-button-info" label={t('FILTER')} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
+                        <Button className="p-button-info" label={t('FILTER')} style={{gap:'8px'}} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
                         {filterDialogVisible && (
                             <div
                                 className="p-card p-fluid"
@@ -385,8 +386,8 @@ const PaymentPage = () => {
                             </div>
                         )}
                     </div>
-                    <Button label="Add Payment" icon="pi pi-plus" severity="success" onClick={openNew} />
-                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+                    
+                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{gap:'8px'}} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
                 </div>
             </React.Fragment>
         );
@@ -547,7 +548,7 @@ const PaymentPage = () => {
 
         // Always include Delete
         items.push({
-            label: t('Delete'),
+            label: t('DELETE'),
             icon: 'pi pi-trash',
             command: () => confirmDeletePayment(rowData),
             disabled: isRollbacked // Disabled only if rollbacked
@@ -560,7 +561,7 @@ const PaymentPage = () => {
 
         if (isCompleted) {
             items.push({
-                label: t('Rollback'),
+                label: t('ROLLBACK'),
                 icon: 'pi pi-replay',
                 command: () => confirmRollbackPayment(rowData)
             });
@@ -583,12 +584,12 @@ const PaymentPage = () => {
                     command: () => confirmVerifyAndSendPayment(rowData)
                 },
                 {
-                    label: t('Rollback'),
+                    label: t('ROLLBACK'),
                     icon: 'pi pi-replay',
                     command: () => confirmRollbackPayment(rowData)
                 },
                 {
-                    label: t('Edit'),
+                    label: t('EDIT'),
                     icon: 'pi pi-pencil',
                     command: () => editPayment(rowData)
                 }
@@ -904,7 +905,7 @@ const PaymentPage = () => {
 
                     <Dialog visible={deletePaymentDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deletePaymentDialogFooter} onHide={hideDeletePaymentDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {payment && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b></b>
@@ -915,7 +916,7 @@ const PaymentPage = () => {
 
                     <Dialog visible={deletePaymentsDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeletePaymentsDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {payment && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>

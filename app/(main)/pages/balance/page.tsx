@@ -248,7 +248,7 @@ const BalancePage = () => {
                         onClick={openNew}
                     />
                     <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
-                        <Button className="p-button-info w-full" label={t('FILTER')} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
+                        <Button className="p-button-info w-full" label={t('FILTER')} style={{gap:'8px'}} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
                         {filterDialogVisible && (
                             <div
                                 className="p-card p-fluid"
@@ -327,7 +327,7 @@ const BalancePage = () => {
                             </div>
                         )}
                     </div>
-                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{gap:'8px'}} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
                 </div>
             </React.Fragment>
         );
@@ -392,7 +392,7 @@ const BalancePage = () => {
                 case 'rejected':
                     return 'bg-red-100 text-red-800';
                 default:
-                    return 'bg-gray-100 text-gray-800';
+                    return 'bg-gray-300 text-gray-800';
             }
         };
 
@@ -401,7 +401,8 @@ const BalancePage = () => {
         return (
             <>
                 <span className="p-column-title">Status</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusClass(status)}`}>{displayStatus}</span>
+                <span className={`px-2 py-1  rounded-full text-xs font-semibold ${getStatusClass(status)}`}>{displayStatus}</span>
+                
             </>
         );
     };
@@ -678,7 +679,7 @@ const BalancePage = () => {
                         responsiveLayout="scroll"
                     >
                         {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.RESELLER')} body={resellerNameBodyTemplate}></Column>
+                        <Column headerStyle={{ whiteSpace: 'nowrap', minWidth: '120px' }} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.RESELLER')} body={resellerNameBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.AMOUNT')} body={amountBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.CURRENCY')} body={currencyBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.REMAINING_BALANCE')} body={remainingBalanceBodyTemplate}></Column>
@@ -976,7 +977,7 @@ const BalancePage = () => {
 
                     <Dialog visible={deleteBalanceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteBalanceDialogFooter} onHide={hideDeleteBalanceDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {balance && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b></b>
@@ -987,7 +988,7 @@ const BalancePage = () => {
 
                     <Dialog visible={deleteBalancesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteBalancesDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {balance && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>

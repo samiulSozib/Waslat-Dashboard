@@ -173,7 +173,7 @@ const ResellerTransactions = ({ resellerId }: ResellerBalancesProps) => {
                 <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
                     <Button
                         className="p-button-info"
-                        label={t('FILTER')}
+                        label={t('FILTER')} style={{gap:'8px'}}
                         icon="pi pi-filter"
                         onClick={() => setFilterDialogVisible(!filterDialogVisible)}
                     />
@@ -313,7 +313,7 @@ const ResellerTransactions = ({ resellerId }: ResellerBalancesProps) => {
                     onClick={confirmDeleteSelected}
                     disabled={!selectedCompanies || !(selectedCompanies as any).length}
                 /> */}
-            <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+            <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{gap:'8px'}} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
 
             </div>
         </React.Fragment>

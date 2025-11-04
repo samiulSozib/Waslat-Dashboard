@@ -305,14 +305,14 @@ const ProvincePage = () => {
                             field="province_name"
                             header={t('PROVINCE.TABLE.COLUMN.PROVINCENAME')}
                             body={provinceNameBodyTemplate}
-                            sortable
+                            
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="country_name"
                             header={t('PROVINCE.TABLE.COLUMN.COUNTRY')}
                             body={countryNameBodyTemplate}
-                            sortable
+                            
                         ></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate}></Column>
                     </DataTable>
@@ -376,7 +376,7 @@ const ProvincePage = () => {
 
                     <Dialog visible={deleteProvinceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteProvinceDialogFooter} onHide={hideDeleteProvinceDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {province && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{province.province_name}</b>
@@ -387,7 +387,7 @@ const ProvincePage = () => {
 
                     <Dialog visible={deleteProvincesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteProvincesDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {selectedProvinces && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>

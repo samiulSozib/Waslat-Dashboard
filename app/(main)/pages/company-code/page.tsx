@@ -326,28 +326,29 @@ const CompanyCodePage = () => {
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="reserved_digit"
                             header={t('COMPANYCODE.TABLE.COLUMN.RESERVEDDIGIT')}
-                            sortable
+                            
                             body={reservedDigitBodyTemplate}
+                            
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="company.country.country_name"
                             header={t('COMPANYCODE.TABLE.COLUMN.COUNTRYNAME')}
                             body={countryNameBodyTemplate}
-                            sortable
+                            
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="company.company_name"
                             header={t('COMPANYCODE.TABLE.COLUMN.COMPANYNAME')}
-                            sortable
+                            
                             body={companyNameBodyTemplate}
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="company.country.country_telecom_code"
                             header={t('COMPANYCODE.TABLE.COLUMN.COUNTRYCODE')}
-                            sortable
+                            
                             body={countryCodeBodyTemplate}
                         ></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
@@ -413,7 +414,7 @@ const CompanyCodePage = () => {
 
                     <Dialog visible={deleteCompanyCodeDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteCompanyCodeDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {companyCode && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{companyCode.reserved_digit}</b>
@@ -424,7 +425,7 @@ const CompanyCodePage = () => {
 
                     <Dialog visible={deleteCompanyCodesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteCompanyCodesDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {companyCodes && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>

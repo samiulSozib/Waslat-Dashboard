@@ -1565,5 +1565,9 @@
     "FETCHING_HAWALA_NUMBER": "Fetching hawala number...",
     "HAWALA_NUMBER_AUTO_GENERATED": "Hawala number auto-generated",
     "GENERATING_HAWALA_NUMBER": "Generating hawala number...",
-    "REGENERATE_NUMBER": "Regenerate number"
+    "REGENERATE_NUMBER": "Regenerate number",
+
+
+    "COMPANY.TABLE.COLUMN.LOGO":"Logo",
+    "ADD_PAYMENT":"Add Payment"
 }

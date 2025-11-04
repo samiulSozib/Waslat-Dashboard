@@ -501,14 +501,14 @@ const HawalaBranchPage = () => {
 
                     <Dialog visible={deleteHawalaBranchDialog} style={{ width: '450px' }} header={t('APP.GENERAL.CONFIRM')} modal footer={deleteHawalaBranchDialogFooter} onHide={hideDeleteHawalaBranchDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {hawalaBranch && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE', { name: hawalaBranch.name })}</span>}
                         </div>
                     </Dialog>
 
                     <Dialog visible={deleteHawalaBranchesDialog} style={{ width: '450px' }} header={t('APP.GENERAL.CONFIRM')} modal footer={deleteHawalaBranchesDialogFooter} onHide={hideDeleteHawalaBranchesDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {hawalaBranch && <span>{t('APP.DELETE_SELECTED_CONFIRMATION')}</span>}
                         </div>
                     </Dialog>

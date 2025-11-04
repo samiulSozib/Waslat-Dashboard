@@ -598,7 +598,7 @@ const HawalaNumberSeriesPage = () => {
                         onHide={hideDeleteHawalaSeriesDialog}
                     >
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {hawalaSeries && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE', { 
@@ -619,7 +619,7 @@ const HawalaNumberSeriesPage = () => {
                         onHide={hideDeleteHawalaSeriesBulkDialog}
                     >
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             <span>{t('APP.DELETE_SELECTED_CONFIRMATION')}</span>
                         </div>
                     </Dialog>

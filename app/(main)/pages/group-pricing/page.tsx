@@ -453,7 +453,7 @@ const GroupPricingPage = () => {
 
                     <Dialog visible={deleteGroupPricingDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteGroupPricingDialogFooter} onHide={hideDeleteGroupPricingDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {groupPricing && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{groupPricing.reseller_group?.name}</b>
@@ -464,7 +464,7 @@ const GroupPricingPage = () => {
 
                     <Dialog visible={deleteGroupPricingsDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteGroupPricingsDialogFooter} onHide={hideDeleteGroupPricingsDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {groupPricing && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected group pricings?</span>}
                         </div>
                     </Dialog>

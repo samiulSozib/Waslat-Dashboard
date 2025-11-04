@@ -10,6 +10,7 @@ import { Badge } from 'primereact/badge';
 import { classNames } from 'primereact/utils';
 import { useTranslation } from 'react-i18next';
 import { CustomField } from '@/types/interface';
+import { isRTL } from '../utilities/rtlUtil';
 
 interface CustomFieldsProps {
   fields: CustomField[];
@@ -223,7 +224,7 @@ export const CustomFields: React.FC<CustomFieldsProps> = ({
                             validators: { ...field.validators, required: e.value }
                           })}
                         />
-                        <label className="ml-2">{t('CUSTOM.FIELDS.REQUIRED')}</label>
+                        <label className={`${isRTL()?'mr-2':'ml-2'}`}>{t('CUSTOM.FIELDS.REQUIRED')}</label>
                       </div>
                     </div>
                   </div>

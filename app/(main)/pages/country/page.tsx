@@ -297,12 +297,12 @@ const CountryPage = () => {
                         responsiveLayout="scroll"
                     >
                         {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
-                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header="" sortable body={imageBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header=""  body={imageBodyTemplate}></Column>
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="name"
                             header={t('COUNTRY.TABLE.COLUMN.COUNTRYTELECOMCODE')}
-                            sortable
+                            
                             body={countryNameBodyTemplate}
                         ></Column>
                         <Column
@@ -310,21 +310,21 @@ const CountryPage = () => {
                             field="country_code"
                             header={t('COUNTRY.TABLE.COLUMN.COUNTRYTELECOMCODE')}
                             body={countryCodeBodyTemplate}
-                            sortable
+                            
                         ></Column>
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="currency"
                             header={t('COUNTRY.TABLE.COLUMN.CURRENCY')}
                             body={currencyBodyTemplate}
-                            sortable
+                            
                         ></Column>
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="language"
                             header={t('COUNTRY.TABLE.COLUMN.LANGUAGE')}
                             body={languageBodyTemplate}
-                            sortable
+                            
                         ></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
@@ -493,7 +493,7 @@ const CountryPage = () => {
 
                     <Dialog visible={deleteCountryDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCountryDialogFooter} onHide={hideDeleteCountryDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {country && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{country.country_name}</b>
@@ -504,7 +504,7 @@ const CountryPage = () => {
 
                     <Dialog visible={deleteCountrysDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteCountrysDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
                             {country && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected countries?</span>}
                         </div>
                     </Dialog>
