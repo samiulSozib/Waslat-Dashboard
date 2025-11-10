@@ -489,6 +489,32 @@ const PaymentPage = () => {
         );
     };
 
+const operationTypeBodyTemplate = (rowData: Payment) => {
+    const getOperationLabel = (type?: string | null): string => {
+        switch (type) {
+            case "credit":
+                return "Credit";
+            case "debit":
+                return "Debit";
+            case "credit_full":
+                return "Credit Full";
+            case "debit_full":
+                return "Debit Full";
+            default:
+                return type ?? "—";
+        }
+    };
+
+    return (
+        <>
+            <span className="p-column-title">Operation Type</span>
+            {getOperationLabel(rowData?.operation_type)}
+        </>
+    );
+};
+
+
+
     const performedByBodyTemplate = (rowData: Payment) => {
         return (
             <>
@@ -545,15 +571,15 @@ const PaymentPage = () => {
         const isCompleted = rowData.status === 'completed';
         const isPending = rowData.status === 'pending';
 
-        const items = [];
+        const items:any = [];
 
         // Always include Delete
-        items.push({
-            label: t('DELETE'),
-            icon: 'pi pi-trash',
-            command: () => confirmDeletePayment(rowData),
-            disabled: isRollbacked // Disabled only if rollbacked
-        });
+        // items.push({
+        //     label: t('DELETE'),
+        //     icon: 'pi pi-trash',
+        //     command: () => confirmDeletePayment(rowData),
+        //     disabled: isRollbacked // Disabled only if rollbacked
+        // });
 
         if (isRollbacked) {
             // All other actions are disabled (only Delete is shown but disabled above)
@@ -714,6 +740,7 @@ const PaymentPage = () => {
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.PAYMENTMETHOD')} body={paymentMethodBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.AMOUNT')} body={amountBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.CURRENCY')} body={currencyBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.FORM.INPUT.OPRATIONTYPE')} body={operationTypeBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.REMAININGPAYMENTAMOUNT')} body={remainingPaymentBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.STATUS')} body={statusBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.NOTES')} body={noteBodyTemplate}></Column>

@@ -491,11 +491,11 @@ const BalancePage = () => {
 
     const actionBodyTemplate = (rowData: Balance) => {
         const items = [
-            {
-                label: t('DELETE'),
-                icon: 'pi pi-trash',
-                command: () => confirmDeleteBalance(rowData)
-            },
+            // {
+            //     label: t('DELETE'),
+            //     icon: 'pi pi-trash',
+            //     command: () => confirmDeleteBalance(rowData)
+            // },
 
             {
                 label: t('VERIFY'),
