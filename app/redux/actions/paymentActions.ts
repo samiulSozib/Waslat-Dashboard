@@ -232,8 +232,10 @@ export const _addPayment = (
         currency_id: paymentData.currency?.id,
         amount: paymentData.amount,
         notes: paymentData.notes,
-        payment_date: paymentData.payment_date
+        payment_date: paymentData.payment_date,
+        opration_type:paymentData.operation_type
     };
+    
 
     try {
         const token = getAuthToken();
@@ -293,7 +295,8 @@ export const _editPayment = (
             ...paymentData,
             reseller_id: paymentData.reseller?.id,
             payment_method_id: paymentData.payment_method?.id,
-            currency_id: paymentData.currency?.id
+            currency_id: paymentData.currency?.id,
+            opration_type:paymentData.operation_type
         };
 
         const response = await axios.post(

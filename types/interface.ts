@@ -437,7 +437,8 @@ export interface Payment{
     reseller:Reseller|null,
     payment_method:PaymentMethod|null,
     currency:Currency|null,
-    performed_by_name?:string|null
+    performed_by_name?:string|null,
+    operation_type?:string|null
 }
 
 export interface Roles{

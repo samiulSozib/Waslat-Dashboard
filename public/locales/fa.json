@@ -1565,5 +1565,10 @@
     "FETCHING_HAWALA_NUMBER": "در حال دریافت شماره حواله...",
     "HAWALA_NUMBER_AUTO_GENERATED": "شماره حواله به طور خودکار ایجاد شد",
     "GENERATING_HAWALA_NUMBER": "در حال ایجاد شماره حواله...",
-    "REGENERATE_NUMBER": "تولید مجدد شماره"
+    "REGENERATE_NUMBER": "تولید مجدد شماره",
+    "COMPANY.TABLE.COLUMN.LOGO": "لوگو",
+  "ADD_PAYMENT": "افزودن پرداخت",
+  
+  "PAYMENT.FORM.INPUT.OPRATIONTYPE": "نوع عملیات",
+  "PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER": "نوع عملیات را انتخاب کنید"
 }

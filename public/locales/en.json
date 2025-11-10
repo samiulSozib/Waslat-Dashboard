@@ -1569,5 +1569,8 @@
 
 
     "COMPANY.TABLE.COLUMN.LOGO":"Logo",
-    "ADD_PAYMENT":"Add Payment"
+    "ADD_PAYMENT":"Add Payment",
+
+    "PAYMENT.FORM.INPUT.OPRATIONTYPE":"Operation Type",
+    "PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER":"Select Operation Type"
 }

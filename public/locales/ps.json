@@ -1566,5 +1566,10 @@
     "FETCHING_HAWALA_NUMBER": "د حوالې شمیره ترلاسه کیږي...",
     "HAWALA_NUMBER_AUTO_GENERATED": "د حوالې شمیره په اوتومات ډول جوړه شوه",
     "GENERATING_HAWALA_NUMBER": "د حوالې شمیره جوړیږي...",
-    "REGENERATE_NUMBER": "شمیره بیا جوړه کړه"
+    "REGENERATE_NUMBER": "شمیره بیا جوړه کړه",
+    "COMPANY.TABLE.COLUMN.LOGO": "لوګو",
+  "ADD_PAYMENT": "تادیه اضافه کړئ",
+  
+  "PAYMENT.FORM.INPUT.OPRATIONTYPE": "د عملیات ډول",
+  "PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER": "د عملیات ډول وټاکئ"
 }
