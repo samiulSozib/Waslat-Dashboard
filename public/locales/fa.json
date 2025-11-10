@@ -1570,5 +1570,9 @@
   "ADD_PAYMENT": "افزودن پرداخت",
   
   "PAYMENT.FORM.INPUT.OPRATIONTYPE": "نوع عملیات",
-  "PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER": "نوع عملیات را انتخاب کنید"
+  "PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER": "نوع عملیات را انتخاب کنید",
+  "DASHBOARD.PAYMENT": "مجموع پرداخت‌ها",
+  "DASHBOARD.PAYMENT.HINT": "مجموع پرداخت‌های نمایندگان فروش در ارزهای مختلف در اینجا نمایش داده شده است",
+  "DASHBOARD.UNPAID": "مجموع پرداخت‌نشده‌ها",
+  "DASHBOARD.UNPAID.HINT": "مجموع مبالغ پرداخت‌نشده در ارزهای مختلف در اینجا نمایش داده شده است"
 }

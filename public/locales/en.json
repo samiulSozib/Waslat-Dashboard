@@ -1572,5 +1572,9 @@
     "ADD_PAYMENT":"Add Payment",
 
     "PAYMENT.FORM.INPUT.OPRATIONTYPE":"Operation Type",
-    "PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER":"Select Operation Type"
+    "PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER":"Select Operation Type",
+    "DASHBOARD.PAYMENT":"Totals of the payments",
+    "DASHBOARD.PAYMENT.HINT":"The Total Resellers Payment from Different Currencies shown here",
+    "DASHBOARD.UNPAID":"Totals of unpaid",
+    "DASHBOARD.UNPAID.HINT":"The Total Unpaid from Different Currencies shown here"
 }

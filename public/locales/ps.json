@@ -1571,5 +1571,9 @@
   "ADD_PAYMENT": "تادیه اضافه کړئ",
   
   "PAYMENT.FORM.INPUT.OPRATIONTYPE": "د عملیات ډول",
-  "PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER": "د عملیات ډول وټاکئ"
+  "PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER": "د عملیات ډول وټاکئ",
+  "DASHBOARD.PAYMENT": "د تادیاتو مجموعه",
+  "DASHBOARD.PAYMENT.HINT": "د مختلفو اسعارو څخه د پلورونکو ټول تادیات دلته ښودل شوي دي",
+  "DASHBOARD.UNPAID": "د نه تادیه شویو مجموعه",
+  "DASHBOARD.UNPAID.HINT": "د مختلفو اسعارو څخه ټول نه تادیه شوي مبلغونه دلته ښودل شوي دي"
 }
