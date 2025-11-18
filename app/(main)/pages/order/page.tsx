@@ -623,7 +623,7 @@ const OrderPage = () => {
 
         let items: any[] = [];
 
-        if (status === 0 || (rowData.transaction_id === null && status === 1)) {
+        if (status == 0 || (rowData.transaction_id === null && status == 1)) {
             // Pending
             items = [
                 {
@@ -642,17 +642,36 @@ const OrderPage = () => {
                     command: () => confirmChangeStatus(rowData, 2)
                 }
             ];
-        } else if (status === 2) {
+        } else if (rowData.transaction_id !== null && status == 1) {
+            items = [
+                {
+                    label: t('ORDER.STATUS.UNDER_PROCESS'),
+                    icon: 'pi pi-spinner',
+                    command: () => confirmChangeStatus(rowData, 3)
+                },
+                {
+                    label: t('ORDER.STATUS.REJECTED'),
+                    icon: 'pi pi-times',
+                    command: () => confirmChangeStatus(rowData, 2)
+                }
+            ]
+        }
+        else if (status === 2) {
             // Rejected
             items = [
                 {
                     label: t('ORDER.STATUS.CONFIRMED'),
                     icon: 'pi pi-check',
                     command: () => confirmChangeStatus(rowData, 1)
-                }
+                },
+                {
+                    label: t('ORDER.STATUS.UNDER_PROCESS'),
+                    icon: 'pi pi-spinner',
+                    command: () => confirmChangeStatus(rowData, 3)
+                },
             ];
         }
-        else if (status === 3) {
+        else if (status == 3) {
             items = [
                 {
                     label: t('ORDER.STATUS.CONFIRMED'),
