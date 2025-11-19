@@ -1576,5 +1576,10 @@
     "DASHBOARD.PAYMENT":"Totals of the payments",
     "DASHBOARD.PAYMENT.HINT":"The Total Resellers Payment from Different Currencies shown here",
     "DASHBOARD.UNPAID":"Totals of unpaid",
-    "DASHBOARD.UNPAID.HINT":"The Total Unpaid from Different Currencies shown here"
+    "DASHBOARD.UNPAID.HINT":"The Total Unpaid from Different Currencies shown here",
+
+    "SERVICE_PROVIDER":"Service Provider",
+    "PHONE_NUMBER":"Phone Number",
+    
+    "ADDRESS":"Address"
 }
