@@ -462,7 +462,7 @@ const TransactionPage = () => {
         // Function to capitalize the first letter
         const capitalizeFirstLetter = (text: string | null) => {
             if (!text) return ''; // Handle null or empty string
-            if (text == 'App\\Models\\User') return 'Reseller';
+            //if (text == 'App\\Models\\User') return 'Reseller';
             return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
         };
 
