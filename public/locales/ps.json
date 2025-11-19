@@ -1521,7 +1521,7 @@
     "HAWALA.TABLE.COLUMN.HAWALA_NUMBER": "د حوالې شمېره",
     "HAWALA.TABLE.COLUMN.SENDER_NAME": "د لیږونکی نوم",
     "HAWALA.TABLE.COLUMN.RECEIVER_NAME": "د ترلاسه کوونکی نوم",
-    "HAWALA.TABLE.COLUMN.AMOUNT": "مقدار",
+    "HAWALA.TABLE.COLUMN.AMOUNT": "مقدار پول",
     "HAWALA.TABLE.COLUMN.CURRENCY": "اسعار",
     "HAWALA.TABLE.COLUMN.CONVERTED_AMOUNT": "تبدیل شوی مقدار",
     "HAWALA.TABLE.COLUMN.RESELLER_CURRENCY": "د پلورونکی اسعار",
