@@ -1579,5 +1579,6 @@
 
   "SERVICE_PROVIDER":"نماینده خدمات",
   "PHONE_NUMBER": "د تلیفون شمیره",
-    "ADDRESS": "پته"
+    "ADDRESS": "پته",
+    "AMOUNT":"مقدار پول"
 }

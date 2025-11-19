@@ -1581,5 +1581,6 @@
     "SERVICE_PROVIDER":"Service Provider",
     "PHONE_NUMBER":"Phone Number",
     
-    "ADDRESS":"Address"
+    "ADDRESS":"Address",
+    "AMOUNT":"Amount"
 }

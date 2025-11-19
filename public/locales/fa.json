@@ -1578,5 +1578,6 @@
 
   "SERVICE_PROVIDER":"نماینده خدمات",
    "PHONE_NUMBER": "شماره تماس",
-    "ADDRESS": "آدرس"
+    "ADDRESS": "آدرس",
+    "AMOUNT":"مقدار پول"
 }

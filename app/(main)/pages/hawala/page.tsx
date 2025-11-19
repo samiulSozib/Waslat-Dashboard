@@ -1139,7 +1139,7 @@ const HawalaPage = () => {
 
                                         {/* Hawala Amount */}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
-                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('HAWALA.TABLE.COLUMN.AMOUNT')}</span>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('AMOUNT')}</span>
                                             <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>
                                                 {selectedHawala.hawala_amount} {selectedHawala.hawala_amount_currency_code}
                                             </span>
