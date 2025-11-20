@@ -1582,5 +1582,12 @@
     "PHONE_NUMBER":"Phone Number",
     
     "ADDRESS":"Address",
-    "AMOUNT":"Amount"
+    "AMOUNT":"Amount",
+
+
+    "BALANCE.TABLE.COLUMN.BALANCE_STATUS":"Balance Status",
+    "VERIFIED_BY":"Verified By",
+    "VERIFIED_OR_PERFORMED":"Verified or Performed",
+    "RESELLER_NAME":"Reseller Name",
+    "PAYMENT_DETAILS":"Payment Details"
 }

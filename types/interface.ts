@@ -418,7 +418,8 @@ export interface Balance{
     payment_notes?:string,
     payment_date?:string,
     performed_by_name?:string|null,
-    status?:string|null
+    status?:string|null,
+    is_reseller_loan_request?:string|null
 }
 
 export interface Payment{
@@ -438,7 +439,10 @@ export interface Payment{
     payment_method:PaymentMethod|null,
     currency:Currency|null,
     performed_by_name?:string|null,
-    operation_type?:string|null
+    operation_type?:string|null,
+    payment_image?:string|null,
+    extra_image_1?:string|null,
+    extra_image_2?:string|null
 }
 
 export interface Roles{

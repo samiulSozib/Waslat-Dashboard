@@ -244,7 +244,7 @@ const OrderPage = () => {
                                     <div className="grid">
                                         {/* Status Filter */}
                                         <div className="col-12">
-                                            <label htmlFor="statusFilter" style={{ fontSize: '0.875rem' }}>
+                                            <label htmlFor="statusFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.STATUS')}
                                             </label>
                                             <Dropdown
@@ -263,7 +263,7 @@ const OrderPage = () => {
 
                                         {/* Bundle Type Filter */}
                                         <div className="col-12">
-                                            <label htmlFor="bundleTypeFilter" style={{ fontSize: '0.875rem' }}>
+                                            <label htmlFor="bundleTypeFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.BUNDLE_TYPE')}
                                             </label>
                                             <Dropdown
@@ -281,7 +281,7 @@ const OrderPage = () => {
 
                                         {/* Company Filter */}
                                         <div className="col-12">
-                                            <label htmlFor="companyFilter" style={{ fontSize: '0.875rem' }}>
+                                            <label htmlFor="companyFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.COMPANY')}
                                             </label>
                                             <Dropdown
@@ -298,7 +298,7 @@ const OrderPage = () => {
 
                                         {/* Service Filter */}
                                         <div className="col-12">
-                                            <label htmlFor="serviceFilter" style={{ fontSize: '0.875rem' }}>
+                                            <label htmlFor="serviceFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.SERVICE')}
                                             </label>
                                             <Dropdown
@@ -330,14 +330,14 @@ const OrderPage = () => {
 
                                         {/* Date Range Filters */}
                                         <div className="col-12">
-                                            <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
+                                            <label htmlFor="startDateFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.START_DATE')}
                                             </label>
                                             <InputText type="date" id="startDateFilter" value={filters.filter_startdate || ''} onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })} style={{ width: '100%' }} />
                                         </div>
 
                                         <div className="col-12">
-                                            <label htmlFor="endDateFilter" style={{ fontSize: '0.875rem' }}>
+                                            <label htmlFor="endDateFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.END_DATE')}
                                             </label>
                                             <InputText type="date" id="endDateFilter" value={filters.filter_enddate || ''} onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })} style={{ width: '100%' }} />
@@ -1006,12 +1006,12 @@ const OrderPage = () => {
                                     {/* Header */}
                                     <div style={{
                                         textAlign: 'center',
-                                        padding: '1rem 0.5rem',
+                                        padding: '0.5rem 0.5rem',
                                         borderBottom: '2px dashed #e5e7eb',
                                         background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
                                     }}>
                                         <div>
-                                            <img src={process.env.NEXT_PUBLIC_PROJECT_LOGO} alt="" className='h-4 w-4' />
+                                            <img src={process.env.NEXT_PUBLIC_PROJECT_LOGO} alt="" className='h-2 w-2' />
                                         </div>
                                         <div style={{
                                             fontSize: '1.25rem',
@@ -1042,19 +1042,19 @@ const OrderPage = () => {
                                     {/* Content */}
                                     <div style={{ padding: '1.5rem 1rem' }}>
                                         {/* Key-Value Rows */}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
-                                            <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER.TABLE.COLUMN.BUNDLETITLE')}</span>
-                                            <span style={{ fontSize: '1rem', color: '#1f2937', fontWeight: '600', textAlign: 'right' }}>{selectedOrder.bundle?.bundle_title || '-'}</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER.TABLE.COLUMN.BUNDLETITLE')}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600', textAlign: 'right' }}>{selectedOrder.bundle?.bundle_title || '-'}</span>
                                         </div>
 
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
-                                            <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER.TABLE.COLUMN.RECHARGEABLEACCOUNT')}</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER.TABLE.COLUMN.RECHARGEABLEACCOUNT')}</span>
                                             <span style={{ fontSize: '1.125rem', color: '#1f2937', fontWeight: '700', letterSpacing: '1px' }}>{selectedOrder.rechargeble_account}</span>
                                         </div>
 
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
-                                            <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('VALIDITY')}</span>
-                                            <span style={{ fontSize: '1rem', color: '#1f2937', fontWeight: '600', textTransform: 'uppercase' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('VALIDITY')}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600', textTransform: 'uppercase' }}>
                                                 {selectedOrder.bundle?.validity_type === 'weekly' ? t('WEEKLY') :
                                                     selectedOrder.bundle?.validity_type === 'monthly' ? t('MONTHLY') :
                                                         selectedOrder.bundle?.validity_type === 'daily' ? t('DAILY') :
@@ -1062,27 +1062,27 @@ const OrderPage = () => {
                                             </span>
                                         </div>
 
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
-                                            <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER.TABLE.COLUMN.COMPANYNAME')}</span>
-                                            <span style={{ fontSize: '1rem', color: '#1f2937', fontWeight: '600' }}>{selectedOrder.bundle?.service?.company?.company_name || '-'}</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER.TABLE.COLUMN.COMPANYNAME')}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>{selectedOrder.bundle?.service?.company?.company_name || '-'}</span>
                                         </div>
 
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
-                                            <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER_ID')}</span>
-                                            <span style={{ fontSize: '1rem', color: '#1f2937', fontWeight: '600' }}>#{selectedOrder.id}</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER_ID')}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>#{selectedOrder.id}</span>
                                         </div>
 
                                         {/* Date and Time Row */}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
-                                            <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER.TABLE.COLUMN.ORDEREDDATE')}</span>
-                                            <span style={{ fontSize: '1rem', color: '#1f2937', fontWeight: '600' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER.TABLE.COLUMN.ORDEREDDATE')}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>
                                                 {new Date(selectedOrder.created_at).toLocaleDateString('en-GB')}
                                             </span>
                                         </div>
 
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '0.5rem', borderBottom: '2px dashed #e5e7eb' }}>
-                                            <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER_TIME')}</span>
-                                            <span style={{ fontSize: '1rem', color: '#1f2937', fontWeight: '600' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '2px dashed #e5e7eb' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER_TIME')}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>
                                                 {new Date(selectedOrder.created_at).toLocaleTimeString('en-GB', {
                                                     hour: '2-digit',
                                                     minute: '2-digit',
@@ -1093,8 +1093,8 @@ const OrderPage = () => {
 
                                         {/* Amount */}
                                         {selectedOrder.bundle?.buying_price && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                                <span style={{ fontSize: '1rem', color: '#6b7280', fontWeight: '600' }}>{t('ORDER.TABLE.COLUMN.PAYABLEAMOUNT')}</span>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1px' }}>
+                                                <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: '600' }}>{t('ORDER.TABLE.COLUMN.PAYABLEAMOUNT')}</span>
                                                 <span style={{ fontSize: '1.25rem', color: '#059669', fontWeight: '700' }}>
                                                     {selectedOrder.bundle.buying_price}
                                                 </span>
@@ -1111,8 +1111,8 @@ const OrderPage = () => {
                                                 border: '1px solid #fecaca'
                                             }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                                    <span style={{ fontSize: '0.875rem', color: '#dc2626', fontWeight: '600' }}>{t('ORDER.TABLE.COLUMN.REJECTREASON')}</span>
-                                                    <span style={{ fontSize: '0.875rem', color: '#dc2626', fontWeight: '500', textAlign: 'right', flex: 1, marginLeft: '1rem' }}>
+                                                    <span style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: '600' }}>{t('ORDER.TABLE.COLUMN.REJECTREASON')}</span>
+                                                    <span style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: '500', textAlign: 'right', flex: 1, marginLeft: '1rem' }}>
                                                         {selectedOrder.reject_reason}
                                                     </span>
                                                 </div>

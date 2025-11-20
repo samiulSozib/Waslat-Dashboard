@@ -55,14 +55,14 @@ const PaymentPage = () => {
         reseller: null,
         payment_method: null,
         currency: null,
-        operation_type:'credit'
+        operation_type: 'credit'
     };
 
     const [paymentDialog, setPaymentDialog] = useState(false);
     const [deletePaymentDialog, setDeletePaymentDialog] = useState(false);
     const [deletePaymentsDialog, setDeletePaymentsDialog] = useState(false);
     const [payment, setPayment] = useState<Payment>(emptyPayment);
-    const [selectedCompanies, setSelectedPayment] = useState(null);
+    const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
@@ -93,6 +93,8 @@ const PaymentPage = () => {
     const [verificationNotes, setVerificationNotes] = useState('');
     const [showVerifyNotes, setShowVerifyNotes] = useState(false);
     const [showVerifyAndSendNotes, setShowVerifyAndSendNotes] = useState(false);
+    const [viewPaymentDialog, setViewPaymentDialog] = useState(false);
+
 
     useEffect(() => {
         dispatch(_fetchPayments(1, searchTag, activeFilters));
@@ -144,6 +146,30 @@ const PaymentPage = () => {
 
     const hideDeletePaymentsDialog = () => {
         setDeletePaymentsDialog(false);
+    };
+
+    const viewPayment = (payment: Payment) => {
+        setSelectedPayment(payment);
+        setViewPaymentDialog(true);
+    };
+
+    const downloadPaymentAsImage = () => {
+        const modalElement = document.getElementById('hawala-view-modal');
+        if (!modalElement) return;
+
+        import('html2canvas').then((html2canvas) => {
+            html2canvas.default(modalElement, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                useCORS: true,
+                logging: false
+            }).then((canvas) => {
+                const link = document.createElement('a');
+                link.download = `hawala-${selectedPayment?.id}-${new Date().toISOString().split('T')[0]}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        });
     };
 
     const savePayment = () => {
@@ -475,7 +501,7 @@ const PaymentPage = () => {
         return (
             <>
                 <span className="p-column-title">Status</span>
-                <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getStatusClass(rowData.status)}`}>{displayStatus}</span>
+                <span className={`px-2 py-1 border-round-xl text-xs font-semibold ${getStatusClass(rowData.status)} w-5rem inline-block text-center`}>{displayStatus}</span>
             </>
         );
     };
@@ -489,29 +515,34 @@ const PaymentPage = () => {
         );
     };
 
-const operationTypeBodyTemplate = (rowData: Payment) => {
-    const getOperationLabel = (type?: string | null): string => {
-        switch (type) {
-            case "credit":
-                return "Credit";
-            case "debit":
-                return "Debit";
-            case "credit_full":
-                return "Credit Full";
-            case "debit_full":
-                return "Debit Full";
-            default:
-                return type ?? "—";
-        }
-    };
+    const operationTypeBodyTemplate = (rowData: Payment) => {
+        const type = rowData.operation_type?.toLowerCase() || 'unknown';
 
-    return (
-        <>
-            <span className="p-column-title">Operation Type</span>
-            {getOperationLabel(rowData?.operation_type)}
-        </>
-    );
-};
+        const getTypeClass = (type: string) => {
+            switch (type) {
+                case 'debit':
+                    return 'bg-red-100 text-red-800';
+                case 'debit_full':
+                    return 'bg-red-200 text-red-800';
+                case 'credit':
+                    return 'bg-blue-100 text-blue-800';
+                case 'credit_full':
+                    return 'bg-blue-200 text-blue-800';
+                default:
+
+                    return 'bg-gray-100 text-gray-800';
+            }
+        };
+
+        const displayType = type !== 'unknown' ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown';
+
+        return (
+            <>
+                <span className="p-column-title">Type</span>
+                <span className={`px-2 py-1 text-xs font-semibold border-round-xl ${getTypeClass(type)} w-5rem inline-block text-center`}>{displayType}</span>
+            </>
+        );
+    };
 
 
 
@@ -571,7 +602,7 @@ const operationTypeBodyTemplate = (rowData: Payment) => {
         const isCompleted = rowData.status === 'completed';
         const isPending = rowData.status === 'pending';
 
-        const items:any = [];
+        const items: any = [];
 
         // Always include Delete
         // items.push({
@@ -714,7 +745,7 @@ const operationTypeBodyTemplate = (rowData: Payment) => {
                     <DataTable
                         ref={dt}
                         value={payments}
-                        selection={selectedCompanies}
+                        selection={selectedPayment}
                         onSelectionChange={(e) => setSelectedPayment(e.value as any)}
                         dataKey="id"
                         rows={pagination?.items_per_page}
@@ -734,6 +765,8 @@ const operationTypeBodyTemplate = (rowData: Payment) => {
                         globalFilter={globalFilter}
                         // header={header}
                         responsiveLayout="scroll"
+                        onRowClick={(e) => viewPayment(e.data as Payment)}
+                        rowClassName={() => 'cursor-pointer select-none'}
                     >
                         {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.RESELLER')} body={resellerNameBodyTemplate}></Column>
@@ -834,7 +867,7 @@ const operationTypeBodyTemplate = (rowData: Payment) => {
                                             { label: 'Debit', value: 'debit' },
                                             { label: 'Credit Full', value: 'credit_full' },
                                             { label: 'Debit Full', value: 'debit_full' }
-                                            
+
                                         ]}
                                         onChange={(e) =>
                                             setPayment((prev) => ({
@@ -1068,6 +1101,369 @@ const operationTypeBodyTemplate = (rowData: Payment) => {
                             )}
                         </div>
                     </Dialog>
+
+
+                    {/* View payment Dialog */}
+                    <Dialog
+                        visible={viewPaymentDialog}
+                        style={{ width: '380px', maxWidth: '95vw', padding: 0 }}
+                        header={null}
+                        modal
+                        onHide={() => setViewPaymentDialog(false)}
+                        closable={false}
+                    >
+                        <div id="hawala-view-modal" style={{ backgroundColor: 'white', fontFamily: "'iranyekan', sans-serif,iranyekan" }}>
+                            {selectedPayment && (
+                                <div style={{ background: 'white' }}>
+                                    {/* Header */}
+                                    <div style={{
+                                        textAlign: 'center',
+                                        padding: '0.5rem 0.5rem',
+                                        borderBottom: '2px dashed #e5e7eb',
+                                        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
+                                    }}>
+                                        <div>
+                                            <img src={process.env.NEXT_PUBLIC_PROJECT_LOGO} alt="" className='h-2 w-2' />
+                                        </div>
+                                        <div style={{
+                                            fontSize: '1rem',
+                                            fontWeight: 'bold',
+                                            color: '#1f2937',
+                                            marginBottom: '0.5rem'
+                                        }}>
+                                            {t('PAYMENT_DETAILS')}
+                                        </div>
+                                        <div style={{
+                                            display: 'inline-block',
+                                            padding: '0.25rem 1rem',
+                                            borderRadius: '20px',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 'bold',
+                                            textTransform: 'uppercase',
+                                            backgroundColor: selectedPayment.status === 'completed' ? '#10b981' :
+                                                selectedPayment.status === 'pending' ? '#f59e0b' :
+                                                    selectedPayment.status === 'failed' ? '#ef4444' :
+                                                        selectedPayment.status === 'rollbacked' ? '#dc2626' : '#6b7280',
+                                            color: 'white'
+                                        }}>
+                                            {selectedPayment.status === 'completed' ? t('COMPLETED') :
+                                                selectedPayment.status === 'pending' ? t('PENDING') :
+                                                    selectedPayment.status === 'failed' ? t('FAILED') :
+                                                        selectedPayment.status === 'rollbacked' ? t('ROLLBACKED') : t('UNKNOWN')}
+                                        </div>
+                                    </div>
+
+                                    {/* Content */}
+                                    <div style={{ padding: '1rem 0.75rem' }}>
+                                        {/* Reseller Name */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('PAYMENT.TABLE.COLUMN.RESELLER')}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '700', letterSpacing: '1px' }}>{selectedPayment?.reseller?.reseller_name || '...'}</span>
+                                        </div>
+
+                                        {/* Payment Method */}
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'flex-start',
+                                            marginBottom: '4px',
+                                            paddingBottom: '6px',
+                                            borderBottom: '1px solid #f3f4f6',
+                                            gap: '10px'
+                                        }}>
+                                            {/* Label */}
+                                            <span style={{
+                                                fontSize: '0.8rem',
+                                                color: '#6b7280',
+                                                fontWeight: '500',
+                                                minWidth: '120px',      // FIXED LABEL WIDTH
+                                                flexShrink: 0
+                                            }}>
+                                                {t('PAYMENT.TABLE.COLUMN.PAYMENTMETHOD')}
+                                            </span>
+
+                                            {/* Value */}
+                                            <span style={{
+                                                fontSize: '0.9rem',
+                                                color: '#1f2937',
+                                                fontWeight: '600',
+                                                wordWrap: 'break-word',
+                                                whiteSpace: 'normal',
+                                                flex: 1,                // WRAPS TEXT WITHOUT BREAKING LAYOUT
+                                                textAlign: 'right'
+                                            }}>
+                                                {selectedPayment?.payment_method?.method_name || '...'}
+                                            </span>
+                                        </div>
+
+
+                                        {/* Amount */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('PAYMENT.TABLE.COLUMN.AMOUNT')}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>{selectedPayment.amount} {selectedPayment?.currency?.code}</span>
+                                        </div>
+
+                                        {/* Operation Type */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('PAYMENT.FORM.INPUT.OPRATIONTYPE')}</span>
+                                            <span style={{
+                                                fontSize: '0.8rem',
+                                                fontWeight: 'bold',
+                                                padding: '0.2rem 0.5rem',
+                                                borderRadius: '12px',
+                                                backgroundColor: selectedPayment.operation_type === 'credit' ? '#dbeafe' :
+                                                    selectedPayment.operation_type === 'debit' ? '#fee2e2' :
+                                                        selectedPayment.operation_type === 'credit_full' ? '#bfdbfe' :
+                                                            selectedPayment.operation_type === 'debit_full' ? '#fecaca' : '#f3f4f6',
+                                                color: selectedPayment.operation_type === 'credit' ? '#1e40af' :
+                                                    selectedPayment.operation_type === 'debit' ? '#dc2626' :
+                                                        selectedPayment.operation_type === 'credit_full' ? '#1e3a8a' :
+                                                            selectedPayment.operation_type === 'debit_full' ? '#b91c1c' : '#6b7280'
+                                            }}>
+                                                {selectedPayment.operation_type?.toUpperCase() || '...'}
+                                            </span>
+                                        </div>
+
+                                        {/* Remaining Payment Amount */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('PAYMENT.TABLE.COLUMN.REMAININGPAYMENTAMOUNT')}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>{selectedPayment.remaining_payment_amount} {selectedPayment?.currency?.code}</span>
+                                        </div>
+
+                                        {/* Payment Date */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('PAYMENT.TABLE.COLUMN.PAYMENTDATE')}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>
+                                                {selectedPayment.payment_date
+                                                    ? new Date(selectedPayment.payment_date).toLocaleString("en-GB", {
+                                                        day: "2-digit",
+                                                        month: "2-digit",
+                                                        year: "numeric",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                        hour12: true
+                                                    })
+                                                    : "-"}
+                                            </span>
+                                        </div>
+
+                                        {/* Created Date */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('CREATED_AT')}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>
+                                                {selectedPayment.created_at
+                                                    ? new Date(selectedPayment.created_at).toLocaleString("en-GB", {
+                                                        day: "2-digit",
+                                                        month: "2-digit",
+                                                        year: "numeric",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                        hour12: true
+                                                    })
+                                                    : "-"}
+                                            </span>
+                                        </div>
+
+                                        {/* Notes */}
+                                        {selectedPayment.notes && (
+                                            <div style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'flex-start',
+                                                marginBottom: '4px',
+                                                paddingBottom: '6px',
+                                                borderBottom: '1px solid #f3f4f6',
+                                                gap: '10px'
+                                            }}>
+                                                {/* Label */}
+                                                <span style={{
+                                                    fontSize: '0.8rem',
+                                                    color: '#6b7280',
+                                                    fontWeight: '500',
+                                                    minWidth: '120px',      // FIXED LABEL WIDTH
+                                                    flexShrink: 0
+                                                }}>
+                                                    {t('PAYMENT.TABLE.COLUMN.PAYMENTMETHOD')}
+                                                </span>
+
+                                                {/* Value */}
+                                                <span style={{
+                                                    fontSize: '0.9rem',
+                                                    color: '#1f2937',
+                                                    fontWeight: '600',
+                                                    wordWrap: 'break-word',
+                                                    whiteSpace: 'normal',
+                                                    flex: 1,                // WRAPS TEXT WITHOUT BREAKING LAYOUT
+                                                    textAlign: 'right'
+                                                }}>
+                                                    {selectedPayment?.notes || '...'}
+                                                </span>
+                                            </div>
+
+                                        )}
+
+                                        {/* Performed By */}
+                                        {selectedPayment.performed_by_name && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
+                                                <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('PERFORMED_BY')}</span>
+                                                <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>{selectedPayment.performed_by_name}</span>
+                                            </div>
+                                        )}
+                                        {/* Images Section */}
+                                        {(selectedPayment.payment_image || selectedPayment.extra_image_1 || selectedPayment.extra_image_2) && (
+                                            <div style={{
+                                                marginBottom: '4px',
+                                                paddingBottom: '6px',
+                                                borderBottom: '1px solid #f3f4f6'
+                                            }}>
+                                                <div style={{
+                                                    fontSize: '0.8rem',
+                                                    color: '#6b7280',
+                                                    fontWeight: '500',
+                                                    marginBottom: '8px'
+                                                }}>
+                                                    {t('IMAGES')}
+                                                </div>
+                                                <div style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: 'repeat(3, 1fr)',
+                                                    gap: '8px'
+                                                }}>
+                                                    {/* Payment Image */}
+                                                    {selectedPayment.payment_image && (
+                                                        <div
+                                                            style={{
+                                                                width: '100%',
+                                                                aspectRatio: '1',
+                                                                borderRadius: '8px',
+                                                                overflow: 'hidden',
+                                                                cursor: 'pointer',
+                                                                border: '1px solid #e5e7eb'
+                                                            }}
+                                                            onClick={() => {
+                                                                //window.open(selectedPayment.payment_image, '_blank');
+                                                            }}
+                                                        >
+                                                            <img
+                                                                src={selectedPayment.payment_image}
+                                                                alt="Payment image"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    objectFit: 'cover',
+                                                                    transition: 'transform 0.2s'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.transform = 'scale(1)';
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {/* Extra Image 1 */}
+                                                    {selectedPayment.extra_image_1 && (
+                                                        <div
+                                                            style={{
+                                                                width: '100%',
+                                                                aspectRatio: '1',
+                                                                borderRadius: '8px',
+                                                                overflow: 'hidden',
+                                                                cursor: 'pointer',
+                                                                border: '1px solid #e5e7eb'
+                                                            }}
+                                                            onClick={() => {
+                                                                //window.open(selectedPayment.extra_image_1, '_blank');
+                                                            }}
+                                                        >
+                                                            <img
+                                                                src={selectedPayment.extra_image_1}
+                                                                alt="Extra image 1"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    objectFit: 'cover',
+                                                                    transition: 'transform 0.2s'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.transform = 'scale(1)';
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {/* Extra Image 2 */}
+                                                    {selectedPayment.extra_image_2 && (
+                                                        <div
+                                                            style={{
+                                                                width: '100%',
+                                                                aspectRatio: '1',
+                                                                borderRadius: '8px',
+                                                                overflow: 'hidden',
+                                                                cursor: 'pointer',
+                                                                border: '1px solid #e5e7eb'
+                                                            }}
+                                                            onClick={() => {
+                                                                //window.open(selectedPayment.extra_image_2, '_blank');
+                                                            }}
+                                                        >
+                                                            <img
+                                                                src={selectedPayment.extra_image_2}
+                                                                alt="Extra image 2"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    objectFit: 'cover',
+                                                                    transition: 'transform 0.2s'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.transform = 'scale(1)';
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div style={{
+                                        padding: '0.75rem',
+                                        borderTop: '2px dashed #e5e7eb',
+                                        display: 'flex',
+                                        gap: '0.5rem',
+                                        justifyContent: 'flex-end'
+                                    }}>
+                                        <Button
+                                            label={t('APP.GENERAL.CANCEL')}
+                                            icon="pi pi-times"
+                                            onClick={() => setViewPaymentDialog(false)}
+                                            className="p-button-text p-button-sm"
+                                            style={{ minWidth: '90px' }}
+                                        />
+                                        <Button
+                                            label={t('DOWNLOAD')}
+                                            icon="pi pi-download"
+                                            onClick={downloadPaymentAsImage}
+                                            className="p-button-success p-button-sm"
+                                            style={{ minWidth: '90px' }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </Dialog>
+
                 </div>
             </div>
         </div>

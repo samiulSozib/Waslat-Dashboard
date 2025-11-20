@@ -1580,5 +1580,11 @@
   "SERVICE_PROVIDER":"نماینده خدمات",
   "PHONE_NUMBER": "د تلیفون شمیره",
     "ADDRESS": "پته",
-    "AMOUNT":"مقدار پول"
+    "AMOUNT":"مقدار پول",
+
+    "BALANCE.TABLE.COLUMN.BALANCE_STATUS": "د بیلانس حالت",
+  "VERIFIED_BY": "تایید شوی لخوا",
+  "VERIFIED_OR_PERFORMED": "تایید یا ترسره شوی",
+  "RESELLER_NAME": "د ریسلر نوم",
+  "PAYMENT_DETAILS": "د پیسو تفصیلات"
 }

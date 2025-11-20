@@ -1579,5 +1579,11 @@
   "SERVICE_PROVIDER":"نماینده خدمات",
    "PHONE_NUMBER": "شماره تماس",
     "ADDRESS": "آدرس",
-    "AMOUNT":"مقدار پول"
+    "AMOUNT":"مقدار پول",
+
+    "BALANCE.TABLE.COLUMN.BALANCE_STATUS": "وضعیت موجودی",
+  "VERIFIED_BY": "تأیید شده توسط",
+  "VERIFIED_OR_PERFORMED": "تأیید یا انجام شده",
+  "RESELLER_NAME": "نام نماینده فروش",
+  "PAYMENT_DETAILS": "جزئیات پرداخت"
 }

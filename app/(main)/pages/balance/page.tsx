@@ -401,7 +401,7 @@ const BalancePage = () => {
         return (
             <>
                 <span className="p-column-title">Status</span>
-                <span className={`px-2 py-1  rounded-full text-xs font-semibold ${getStatusClass(status)}`}>{displayStatus}</span>
+                <span className={`px-2 py-1  border-round-xl text-xs font-semibold ${getStatusClass(status)} w-5rem inline-block text-center`}>{displayStatus}</span>
                 
             </>
         );
@@ -426,7 +426,7 @@ const BalancePage = () => {
         return (
             <>
                 <span className="p-column-title">Type</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getTypeClass(type)}`}>{displayType}</span>
+                <span className={`px-2 py-1 text-xs font-semibold border-round-xl ${getTypeClass(type)}`}>{displayType}</span>
             </>
         );
     };
@@ -488,6 +488,28 @@ const BalancePage = () => {
     //         </>
     //     );
     // };
+
+const loanRequestByBodyTemplate = (rowData: Balance) => {
+    // Convert to Boolean safely
+    const isLoan = rowData.is_reseller_loan_request == "1"
+
+    return (
+        <>
+            <span className="p-column-title">Performed By</span>
+
+            {isLoan ? (
+                <span className="text-blue-600 font-medium">
+                    {t('VERIFIED_BY')} <span>{rowData.performed_by_name}</span>
+                </span>
+            ) : (
+                <span className="text-green-600 font-medium">
+                    {t('PERFORMED_BY')} <span>{rowData.performed_by_name}</span>
+                </span>
+            )}
+        </>
+    );
+};
+
 
     const actionBodyTemplate = (rowData: Balance) => {
         const items = [
@@ -687,6 +709,7 @@ const BalancePage = () => {
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TYPE')} body={typeBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.DESCRIPTIONS')} body={descriptionBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PERFORMED_BY')} body={performedByBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('VERIFIED_OR_PERFORMED')} body={loanRequestByBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.BALANCEDATE')} body={createdAtBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate}></Column>
                     </DataTable>
