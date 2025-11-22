@@ -867,9 +867,26 @@ const OrderPage = () => {
                         totalRecords={pagination?.total}
                         onPageChange={(e) => onPageChange(e)}
                         template={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
                         }
+                        currentPageReportTemplate={
+                            isRTL()
+                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
+                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
+                        }
+                        firstPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-right"
+                                : "pi pi-angle-double-left"
+                        }
+                        lastPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-left"
+                                : "pi pi-angle-double-right"
+                        }
+
                     />
+
 
                     <Dialog visible={orderDialog} style={{ width: '700px' }} header="Bundle Details" modal className="p-fluid" footer={companyDialogFooter} onHide={hideDialog}>
                         {/* <div className="formgrid grid">

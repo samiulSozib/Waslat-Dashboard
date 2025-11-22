@@ -98,8 +98,8 @@ const ProviderPage = () => {
 
 
     useEffect(() => {
-        dispatch(_fetchProviders(1,searchTag));
-    }, [dispatch,searchTag]);
+        dispatch(_fetchProviders(1, searchTag));
+    }, [dispatch, searchTag]);
 
 
 
@@ -107,7 +107,7 @@ const ProviderPage = () => {
         if (Object.keys(activeFilters).length > 0) {
             dispatch(_fetchProviders(1, searchTag, activeFilters));
         }
-    }, [dispatch, activeFilters,searchTag]);
+    }, [dispatch, activeFilters, searchTag]);
 
     const [ipWhitelistText, setIpWhitelistText] = useState(provider.ip_whitelist.join(', '));
 
@@ -545,22 +545,22 @@ const ProviderPage = () => {
         );
     };
 
-const statusBodyTemplate = (rowData: Provider) => {
+    const statusBodyTemplate = (rowData: Provider) => {
 
-    const handleToggle = (checked: boolean) => {
-        dispatch(_toggleProvider(rowData.id, checked, toast, t));
+        const handleToggle = (checked: boolean) => {
+            dispatch(_toggleProvider(rowData.id, checked, toast, t));
+        };
+
+        return (
+            <>
+                <span className="p-column-title">{t("APP.GENERAL.STATUS")}</span>
+                <InputSwitch
+                    checked={rowData.is_active}
+                    onChange={(e) => handleToggle(e.value)}
+                />
+            </>
+        );
     };
-
-    return (
-        <>
-            <span className="p-column-title">{t("APP.GENERAL.STATUS")}</span>
-            <InputSwitch
-                checked={rowData.is_active}
-                onChange={(e) => handleToggle(e.value)}
-            />
-        </>
-    );
-};
 
     const createdAtBodyTemplate = (rowData: Provider) => {
         const formatDate = (dateString: string | null) => {
@@ -677,7 +677,22 @@ const statusBodyTemplate = (rowData: Provider) => {
                         totalRecords={pagination?.total || providers.length}
                         onPageChange={(e) => onPageChange(e)}
                         template={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                        }
+                        currentPageReportTemplate={
+                            isRTL()
+                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
+                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
+                        }
+                        firstPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-right"
+                                : "pi pi-angle-double-left"
+                        }
+                        lastPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-left"
+                                : "pi pi-angle-double-right"
                         }
                     />
 
@@ -1047,7 +1062,7 @@ const statusBodyTemplate = (rowData: Provider) => {
 
                     <Dialog visible={deleteProviderDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteProviderDialogFooter} onHide={hideDeleteProviderDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {provider && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{provider.name}</b>
@@ -1058,7 +1073,7 @@ const statusBodyTemplate = (rowData: Provider) => {
 
                     <Dialog visible={deleteProvidersDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteProvidersDialogFooter} onHide={hideDeleteProvidersDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {selectedProviders && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')} </span>}
                         </div>
                     </Dialog>

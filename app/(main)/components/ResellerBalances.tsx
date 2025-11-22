@@ -83,11 +83,11 @@ const ResellerBalances = ({ resellerId }: ResellerBalancesProps) => {
     const filterRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        dispatch(fetchResellerBalances(resellerId, 1, searchTag,activeFilters));
+        dispatch(fetchResellerBalances(resellerId, 1, searchTag, activeFilters));
         dispatch(_fetchCurrencies());
         dispatch(_fetchResellers());
         dispatch(_fetchPaymentMethods());
-    }, [dispatch, searchTag, resellerId,activeFilters]);
+    }, [dispatch, searchTag, resellerId, activeFilters]);
 
     const openNew = () => {
         setBalance(emptyBalance);
@@ -164,103 +164,103 @@ const ResellerBalances = ({ resellerId }: ResellerBalancesProps) => {
                 <div className="-m-1 my-2 flex flex-wrap gap-1 w-full">
 
                     <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
-                    <Button
-                        className="p-button-info w-full"
-                        label={t('FILTER')} style={{gap:'8px'}}
-                        icon="pi pi-filter"
-                        onClick={() => setFilterDialogVisible(!filterDialogVisible)}
-                    />
-                    {filterDialogVisible && (
-                        <div
-                            className="p-card p-fluid"
-                            style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: isRTL() ? 0 : '',
-                                right: isRTL() ? '' : 0,
-                                width: '300px',
-                                zIndex: 1000,
-                                marginTop: '0.5rem',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                            }}
-                        >
-                            <div className="p-card-body" style={{ padding: '1rem' }}>
-                                <div className="grid">
-                                    {/* Transaction Type Filter */}
-                                    <div className="col-12">
-                                        <label htmlFor="transactionTypeFilter" style={{ fontSize: '0.875rem' }}>
-                                            {t('BALANCE.FORM.INPUT.TRANSACTIONTYPE')}
-                                        </label>
-                                        <Dropdown
-                                            id="transactionTypeFilter"
-                                            options={[
-                                                { label: t('CREDIT'), value: 'credit' },
-                                                { label: t('DEBIT'), value: 'debit' }
-                                            ]}
-                                            value={filters.filter_transaction_type}
-                                            onChange={(e) => setFilters({ ...filters, filter_transaction_type: e.value })}
-                                            placeholder={t('SELECT_TRANSACTION_TYPE')}
-                                            style={{ width: '100%' }}
-                                        />
-                                    </div>
+                        <Button
+                            className="p-button-info w-full"
+                            label={t('FILTER')} style={{ gap: '8px' }}
+                            icon="pi pi-filter"
+                            onClick={() => setFilterDialogVisible(!filterDialogVisible)}
+                        />
+                        {filterDialogVisible && (
+                            <div
+                                className="p-card p-fluid"
+                                style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: isRTL() ? 0 : '',
+                                    right: isRTL() ? '' : 0,
+                                    width: '300px',
+                                    zIndex: 1000,
+                                    marginTop: '0.5rem',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                }}
+                            >
+                                <div className="p-card-body" style={{ padding: '1rem' }}>
+                                    <div className="grid">
+                                        {/* Transaction Type Filter */}
+                                        <div className="col-12">
+                                            <label htmlFor="transactionTypeFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('BALANCE.FORM.INPUT.TRANSACTIONTYPE')}
+                                            </label>
+                                            <Dropdown
+                                                id="transactionTypeFilter"
+                                                options={[
+                                                    { label: t('CREDIT'), value: 'credit' },
+                                                    { label: t('DEBIT'), value: 'debit' }
+                                                ]}
+                                                value={filters.filter_transaction_type}
+                                                onChange={(e) => setFilters({ ...filters, filter_transaction_type: e.value })}
+                                                placeholder={t('SELECT_TRANSACTION_TYPE')}
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
 
-                                    {/* Date Range Filters */}
-                                    <div className="col-12">
-                                        <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
-                                            {t('START_DATE')}
-                                        </label>
-                                        <InputText
-                                            type="date"
-                                            id="startDateFilter"
-                                            value={filters.filter_startdate || ''}
-                                            onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })}
-                                            style={{ width: '100%' }}
-                                        />
-                                    </div>
+                                        {/* Date Range Filters */}
+                                        <div className="col-12">
+                                            <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('START_DATE')}
+                                            </label>
+                                            <InputText
+                                                type="date"
+                                                id="startDateFilter"
+                                                value={filters.filter_startdate || ''}
+                                                onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })}
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
 
-                                    <div className="col-12">
-                                        <label htmlFor="endDateFilter" style={{ fontSize: '0.875rem' }}>
-                                            {t('END_DATE')}
-                                        </label>
-                                        <InputText
-                                            type="date"
-                                            id="endDateFilter"
-                                            value={filters.filter_enddate || ''}
-                                            onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })}
-                                            style={{ width: '100%' }}
-                                        />
-                                    </div>
+                                        <div className="col-12">
+                                            <label htmlFor="endDateFilter" style={{ fontSize: '0.875rem' }}>
+                                                {t('END_DATE')}
+                                            </label>
+                                            <InputText
+                                                type="date"
+                                                id="endDateFilter"
+                                                value={filters.filter_enddate || ''}
+                                                onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })}
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
 
-                                    {/* Action Buttons */}
-                                    <div className="col-12 mt-3 flex justify-content-between gap-2">
-                                        <Button
-                                            label={t('RESET')}
-                                            icon="pi pi-times"
-                                            className="p-button-secondary p-button-sm"
-                                            onClick={() => {
-                                                setFilters({
-                                                    filter_transaction_type: null,
-                                                    filter_startdate: null,
-                                                    filter_enddate: null
-                                                });
-                                            }}
-                                        />
-                                        <Button
-                                            label={t('APPLY')}
-                                            icon="pi pi-check"
-                                            className="p-button-sm"
-                                            onClick={() => {
-                                                handleSubmitFilter(filters);
-                                                setFilterDialogVisible(false);
-                                            }}
-                                        />
+                                        {/* Action Buttons */}
+                                        <div className="col-12 mt-3 flex justify-content-between gap-2">
+                                            <Button
+                                                label={t('RESET')}
+                                                icon="pi pi-times"
+                                                className="p-button-secondary p-button-sm"
+                                                onClick={() => {
+                                                    setFilters({
+                                                        filter_transaction_type: null,
+                                                        filter_startdate: null,
+                                                        filter_enddate: null
+                                                    });
+                                                }}
+                                            />
+                                            <Button
+                                                label={t('APPLY')}
+                                                icon="pi pi-check"
+                                                className="p-button-sm"
+                                                onClick={() => {
+                                                    handleSubmitFilter(filters);
+                                                    setFilterDialogVisible(false);
+                                                }}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
-                <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{gap:'8px'}} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+                        )}
+                    </div>
+                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{ gap: '8px' }} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
 
                 </div>
             </React.Fragment>
@@ -456,13 +456,13 @@ const ResellerBalances = ({ resellerId }: ResellerBalancesProps) => {
     }, [filterDialogVisible]);
 
 
-// Add these helper functions
-const handleSubmitFilter = (filters: any) => {
-    const cleanedFilters = Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== null && value !== '')
-    );
-    setActiveFilters(cleanedFilters);
-};
+    // Add these helper functions
+    const handleSubmitFilter = (filters: any) => {
+        const cleanedFilters = Object.fromEntries(
+            Object.entries(filters).filter(([_, value]) => value !== null && value !== '')
+        );
+        setActiveFilters(cleanedFilters);
+    };
 
 
     const exportToExcel = async () => {
@@ -524,7 +524,22 @@ const handleSubmitFilter = (filters: any) => {
                         totalRecords={balances_pagination?.total}
                         onPageChange={(e) => onPageChange(e)}
                         template={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                        }
+                        currentPageReportTemplate={
+                            isRTL()
+                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
+                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
+                        }
+                        firstPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-right"
+                                : "pi pi-angle-double-left"
+                        }
+                        lastPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-left"
+                                : "pi pi-angle-double-right"
                         }
                     />
 
@@ -797,7 +812,7 @@ const handleSubmitFilter = (filters: any) => {
 
                     <Dialog visible={deleteBalanceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteBalanceDialogFooter} onHide={hideDeleteBalanceDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {balance && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b></b>
@@ -808,7 +823,7 @@ const handleSubmitFilter = (filters: any) => {
 
                     <Dialog visible={deleteBalancesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteBalancesDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {balance && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>

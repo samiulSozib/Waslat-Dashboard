@@ -248,7 +248,7 @@ const BalancePage = () => {
                         onClick={openNew}
                     />
                     <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
-                        <Button className="p-button-info w-full" label={t('FILTER')} style={{gap:'8px'}} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
+                        <Button className="p-button-info w-full" label={t('FILTER')} style={{ gap: '8px' }} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
                         {filterDialogVisible && (
                             <div
                                 className="p-card p-fluid"
@@ -327,7 +327,7 @@ const BalancePage = () => {
                             </div>
                         )}
                     </div>
-                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{gap:'8px'}} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{ gap: '8px' }} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
                 </div>
             </React.Fragment>
         );
@@ -402,7 +402,7 @@ const BalancePage = () => {
             <>
                 <span className="p-column-title">Status</span>
                 <span className={`px-2 py-1  border-round-xl text-xs font-semibold ${getStatusClass(status)} w-5rem inline-block text-center`}>{displayStatus}</span>
-                
+
             </>
         );
     };
@@ -489,26 +489,26 @@ const BalancePage = () => {
     //     );
     // };
 
-const loanRequestByBodyTemplate = (rowData: Balance) => {
-    // Convert to Boolean safely
-    const isLoan = rowData.is_reseller_loan_request == "1"
+    const loanRequestByBodyTemplate = (rowData: Balance) => {
+        // Convert to Boolean safely
+        const isLoan = rowData.is_reseller_loan_request == "1"
 
-    return (
-        <>
-            <span className="p-column-title">Performed By</span>
+        return (
+            <>
+                <span className="p-column-title">Performed By</span>
 
-            {isLoan ? (
-                <span className="text-blue-600 font-medium">
-                    {t('VERIFIED_BY')} <span>{rowData.performed_by_name}</span>
-                </span>
-            ) : (
-                <span className="text-green-600 font-medium">
-                    {t('PERFORMED_BY')} <span>{rowData.performed_by_name}</span>
-                </span>
-            )}
-        </>
-    );
-};
+                {isLoan ? (
+                    <span className="text-blue-600 font-medium">
+                        {t('VERIFIED_BY')} <span>{rowData.performed_by_name}</span>
+                    </span>
+                ) : (
+                    <span className="text-green-600 font-medium">
+                        {t('PERFORMED_BY')} <span>{rowData.performed_by_name}</span>
+                    </span>
+                )}
+            </>
+        );
+    };
 
 
     const actionBodyTemplate = (rowData: Balance) => {
@@ -720,7 +720,22 @@ const loanRequestByBodyTemplate = (rowData: Balance) => {
                         totalRecords={pagination?.total}
                         onPageChange={(e) => onPageChange(e)}
                         template={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                        }
+                        currentPageReportTemplate={
+                            isRTL()
+                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
+                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
+                        }
+                        firstPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-right"
+                                : "pi pi-angle-double-left"
+                        }
+                        lastPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-left"
+                                : "pi pi-angle-double-right"
                         }
                     />
 
@@ -1000,7 +1015,7 @@ const loanRequestByBodyTemplate = (rowData: Balance) => {
 
                     <Dialog visible={deleteBalanceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteBalanceDialogFooter} onHide={hideDeleteBalanceDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {balance && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b></b>
@@ -1011,7 +1026,7 @@ const loanRequestByBodyTemplate = (rowData: Balance) => {
 
                     <Dialog visible={deleteBalancesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteBalancesDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {balance && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>

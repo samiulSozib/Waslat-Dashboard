@@ -114,13 +114,13 @@ const ResellerSubResellers = ({ resellerId }: ResellerBalancesProps) => {
     const filterRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        dispatch(fetchResellerSubResellers(resellerId,1, searchTag,activeFilters));
+        dispatch(fetchResellerSubResellers(resellerId, 1, searchTag, activeFilters));
         dispatch(_fetchCountries());
         dispatch(_fetchDistricts());
         dispatch(_fetchProvinces());
         dispatch(_fetchCurrencies());
         dispatch(_fetchResellerGroups());
-    }, [dispatch, searchTag,activeFilters,resellerId]);
+    }, [dispatch, searchTag, activeFilters, resellerId]);
 
     // Add this useEffect for click outside detection
     useEffect(() => {
@@ -252,7 +252,7 @@ const ResellerSubResellers = ({ resellerId }: ResellerBalancesProps) => {
             <React.Fragment>
                 <div className="flex justify-end items-center gap-2">
                     <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
-                        <Button className="p-button-info" label={t('FILTER')} style={{gap:'8px'}} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
+                        <Button className="p-button-info" label={t('FILTER')} style={{ gap: '8px' }} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
                         {filterDialogVisible && (
                             <div
                                 className="p-card p-fluid"
@@ -347,7 +347,7 @@ const ResellerSubResellers = ({ resellerId }: ResellerBalancesProps) => {
                         onClick={confirmDeleteSelected}
                         disabled={!selectedCompanies || !(selectedCompanies as any).length}
                     /> */}
-                <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{gap:'8px'}} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{ gap: '8px' }} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
 
                 </div>
             </React.Fragment>
@@ -587,7 +587,7 @@ const ResellerSubResellers = ({ resellerId }: ResellerBalancesProps) => {
 
     const onPageChange = (event: any) => {
         const page = event.page + 1;
-        dispatch(fetchResellerSubResellers(resellerId,page, searchTag,activeFilters));
+        dispatch(fetchResellerSubResellers(resellerId, page, searchTag, activeFilters));
     };
 
     useEffect(() => {
@@ -625,21 +625,21 @@ const ResellerSubResellers = ({ resellerId }: ResellerBalancesProps) => {
         }
     }, [reseller?.province_id, districts]);
 
-     const handleSubmitFilter = (filters: any) => {
+    const handleSubmitFilter = (filters: any) => {
         const cleanedFilters = Object.fromEntries(Object.entries(filters).filter(([_, value]) => value !== null && value !== ''));
         setActiveFilters(cleanedFilters);
     };
 
 
-            const exportToExcel = async () => {
-                await generateSubResellerExcelFile({
-                    sub_resellers,
-                    resellerId,
-                    t,
-                    toast,
-                    all: true
-                });
-            };
+    const exportToExcel = async () => {
+        await generateSubResellerExcelFile({
+            sub_resellers,
+            resellerId,
+            t,
+            toast,
+            all: true
+        });
+    };
 
     return (
         <div className="grid crud-demo -m-5">
@@ -731,7 +731,22 @@ const ResellerSubResellers = ({ resellerId }: ResellerBalancesProps) => {
                         totalRecords={sub_resellers_pagination?.total}
                         onPageChange={(e) => onPageChange(e)}
                         template={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                        }
+                        currentPageReportTemplate={
+                            isRTL()
+                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
+                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
+                        }
+                        firstPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-right"
+                                : "pi pi-angle-double-left"
+                        }
+                        lastPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-left"
+                                : "pi pi-angle-double-right"
                         }
                     />
 
@@ -1095,7 +1110,7 @@ const ResellerSubResellers = ({ resellerId }: ResellerBalancesProps) => {
 
                     <Dialog visible={deleteResellerDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteResellerDialogFooter} onHide={hideDeleteResellerDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {reseller && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{reseller.reseller_name}</b>
@@ -1106,7 +1121,7 @@ const ResellerSubResellers = ({ resellerId }: ResellerBalancesProps) => {
 
                     <Dialog visible={statusResellerDialog} style={{ width: '450px' }} header="Confirm" modal footer={statusResellerDialogFooter} onHide={hideStatusResellerDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {reseller && (
                                 <span>
                                     Are you sure you want to change status <b>{reseller.reseller_name}</b>?
@@ -1117,7 +1132,7 @@ const ResellerSubResellers = ({ resellerId }: ResellerBalancesProps) => {
 
                     <Dialog visible={deleteResellersDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteResellersDialogFooter} onHide={hideDeleteResellersDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {reseller && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>

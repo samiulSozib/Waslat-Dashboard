@@ -885,9 +885,24 @@ const HawalaPage = () => {
                         rows={pagination?.items_per_page}
                         totalRecords={pagination?.total}
                         onPageChange={onPageChange}
-                        template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                        currentPageReportTemplate="{first} to {last} of {totalRecords}"
-                        className="mt-3"
+                        template={
+                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                        }
+                        currentPageReportTemplate={
+                            isRTL()
+                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
+                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
+                        }
+                        firstPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-right"
+                                : "pi pi-angle-double-left"
+                        }
+                        lastPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-left"
+                                : "pi pi-angle-double-right"
+                        }
                     />
 
                     {/* Exchange Rates Modal */}
@@ -1188,11 +1203,11 @@ const HawalaPage = () => {
                                         {/* Hawala branch */}
                                         {selectedHawala?.branch?.name && (
                                             <div className='bg-blue-100 p-2 mt-2 rounded-xl shadow-sm'>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6'}}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
                                                     <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('MENU.HAWALA_BRANCH')}</span>
                                                     <span style={{ fontSize: '0.8rem', color: '#1f2937', fontWeight: '700', letterSpacing: '1px' }}>{selectedHawala?.branch?.name}</span>
                                                 </div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6'}}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
                                                     <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('ADDRESS')}</span>
                                                     <span style={{ fontSize: '0.8rem', color: '#1f2937', fontWeight: '700', letterSpacing: '1px' }}>{selectedHawala?.branch?.address}</span>
                                                 </div>

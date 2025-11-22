@@ -21,13 +21,13 @@ import { customCellStyle } from '../../utilities/customRow';
 import i18n from '@/i18n';
 import { Paginator } from 'primereact/paginator';
 import { isRTL } from '../../utilities/rtlUtil';
-import { 
-  _fetchHawalaNumberSeriesList, 
-  _addHawalaNumberSeries, 
-  _editHawalaNumberSeries, 
-  _deleteHawalaNumberSeries, 
-  _changeHawalaNumberSeriesStatus,
-  _fetchHawalaNextNumber 
+import {
+    _fetchHawalaNumberSeriesList,
+    _addHawalaNumberSeries,
+    _editHawalaNumberSeries,
+    _deleteHawalaNumberSeries,
+    _changeHawalaNumberSeriesStatus,
+    _fetchHawalaNextNumber
 } from '@/app/redux/actions/hawalaSeriesActions';
 import { HawalaBranch, HawalaNumberSeries } from '@/types/interface';
 import { _fetchHawalaBranchList } from '@/app/redux/actions/hawalaBranchActions';
@@ -119,10 +119,10 @@ const HawalaNumberSeriesPage = () => {
     const editHawalaSeries = (series: HawalaNumberSeries) => {
         // Find the matching branch object from hawalaBranches
         const matchingBranch = hawalaBranches.find((branch: HawalaBranch) => branch.id === series.branch_id);
-        
-        setHawalaSeries({ 
-            ...series, 
-            branch: matchingBranch 
+
+        setHawalaSeries({
+            ...series,
+            branch: matchingBranch
         });
         setHawalaSeriesDialog(true);
     };
@@ -175,11 +175,11 @@ const HawalaNumberSeriesPage = () => {
             <div className="flex items-center">
                 <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
                     <i className="pi pi-search" />
-                    <InputText 
-                        type="search" 
-                        onInput={(e) => setSearchTag(e.currentTarget.value)} 
-                        placeholder={t('ECOMMERCE.COMMON.SEARCH')} 
-                        className="w-full md:w-auto" 
+                    <InputText
+                        type="search"
+                        onInput={(e) => setSearchTag(e.currentTarget.value)}
+                        placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        className="w-full md:w-auto"
                     />
                 </span>
             </div>
@@ -261,24 +261,24 @@ const HawalaNumberSeriesPage = () => {
     const actionBodyTemplate = (rowData: HawalaNumberSeries) => {
         return (
             <div className="flex gap-2">
-                <Button 
-                    icon="pi pi-pencil" 
-                    rounded 
-                    severity="success" 
+                <Button
+                    icon="pi pi-pencil"
+                    rounded
+                    severity="success"
                     size="small"
-                    onClick={() => editHawalaSeries(rowData)} 
+                    onClick={() => editHawalaSeries(rowData)}
                 />
-                <Button 
-                    icon="pi pi-trash" 
-                    rounded 
-                    severity="warning" 
+                <Button
+                    icon="pi pi-trash"
+                    rounded
+                    severity="warning"
                     size="small"
-                    onClick={() => confirmDeleteHawalaSeries(rowData)} 
+                    onClick={() => confirmDeleteHawalaSeries(rowData)}
                 />
-                <Button 
-                    icon={rowData.is_active ? "pi pi-eye-slash" : "pi pi-eye"} 
-                    rounded 
-                    severity={rowData.is_active ? "secondary" : "info"} 
+                <Button
+                    icon={rowData.is_active ? "pi pi-eye-slash" : "pi pi-eye"}
+                    rounded
+                    severity={rowData.is_active ? "secondary" : "info"}
                     size="small"
                     onClick={() => handleStatusChange(rowData.id, !rowData.is_active)}
                     tooltip={rowData.is_active ? t('DEACTIVATE') : t('ACTIVATE')}
@@ -289,56 +289,56 @@ const HawalaNumberSeriesPage = () => {
 
     const hawalaSeriesDialogFooter = (
         <>
-            <Button 
-                label={t('APP.GENERAL.CANCEL')} 
-                icon="pi pi-times" 
-                severity="danger" 
-                className={isRTL() ? 'rtl-button' : ''} 
-                onClick={hideDialog} 
+            <Button
+                label={t('APP.GENERAL.CANCEL')}
+                icon="pi pi-times"
+                severity="danger"
+                className={isRTL() ? 'rtl-button' : ''}
+                onClick={hideDialog}
             />
-            <Button 
-                label={t('FORM.GENERAL.SUBMIT')} 
-                icon="pi pi-check" 
-                severity="success" 
-                className={isRTL() ? 'rtl-button' : ''} 
-                onClick={saveHawalaSeries} 
+            <Button
+                label={t('FORM.GENERAL.SUBMIT')}
+                icon="pi pi-check"
+                severity="success"
+                className={isRTL() ? 'rtl-button' : ''}
+                onClick={saveHawalaSeries}
             />
         </>
     );
 
     const deleteHawalaSeriesDialogFooter = (
         <>
-            <Button 
-                label={t('APP.GENERAL.CANCEL')} 
-                icon="pi pi-times" 
-                severity="danger" 
-                className={isRTL() ? 'rtl-button' : ''} 
-                onClick={hideDeleteHawalaSeriesDialog} 
+            <Button
+                label={t('APP.GENERAL.CANCEL')}
+                icon="pi pi-times"
+                severity="danger"
+                className={isRTL() ? 'rtl-button' : ''}
+                onClick={hideDeleteHawalaSeriesDialog}
             />
-            <Button 
-                label={t('FORM.GENERAL.SUBMIT')} 
-                icon="pi pi-check" 
-                severity="success" 
-                className={isRTL() ? 'rtl-button' : ''} 
-                onClick={deleteHawalaSeries} 
+            <Button
+                label={t('FORM.GENERAL.SUBMIT')}
+                icon="pi pi-check"
+                severity="success"
+                className={isRTL() ? 'rtl-button' : ''}
+                onClick={deleteHawalaSeries}
             />
         </>
     );
 
     const deleteHawalaSeriesBulkDialogFooter = (
         <>
-            <Button 
-                label={t('APP.GENERAL.CANCEL')} 
-                icon="pi pi-times" 
-                severity="danger" 
-                className={isRTL() ? 'rtl-button' : ''} 
-                onClick={hideDeleteHawalaSeriesBulkDialog} 
+            <Button
+                label={t('APP.GENERAL.CANCEL')}
+                icon="pi pi-times"
+                severity="danger"
+                className={isRTL() ? 'rtl-button' : ''}
+                onClick={hideDeleteHawalaSeriesBulkDialog}
             />
-            <Button 
-                label={t('FORM.GENERAL.SUBMIT')} 
-                icon="pi pi-check" 
-                severity="success" 
-                className={isRTL() ? 'rtl-button' : ''} 
+            <Button
+                label={t('FORM.GENERAL.SUBMIT')}
+                icon="pi pi-check"
+                severity="success"
+                className={isRTL() ? 'rtl-button' : ''}
             />
         </>
     );
@@ -354,7 +354,7 @@ const HawalaNumberSeriesPage = () => {
                 <div className="card p-2">
                     {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
                     <Toast ref={toast} />
-                    
+
                     {/* Next Number Display */}
                     {/* {nextNumber && (
                         <div className="mb-4 p-3 border-round bg-blue-50 border-1 border-blue-200">
@@ -389,31 +389,31 @@ const HawalaNumberSeriesPage = () => {
                         responsiveLayout="scroll"
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ 
+                        style={{
                             direction: isRTL() ? 'rtl' : 'ltr',
-                            fontFamily: "'iranyekan', sans-serif,iranyekan" 
+                            fontFamily: "'iranyekan', sans-serif,iranyekan"
                         }}
                     >
-                        <Column 
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} 
-                            field="branch_id" 
-                            header={t('HAWALA_SERIES.TABLE.BRANCH')} 
-                            body={branchBodyTemplate} 
-                            sortable 
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="branch_id"
+                            header={t('HAWALA_SERIES.TABLE.BRANCH')}
+                            body={branchBodyTemplate}
+                            sortable
                         />
-                        <Column 
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} 
-                            field="prefix" 
-                            header={t('HAWALA_SERIES.TABLE.PREFIX')} 
-                            body={prefixBodyTemplate} 
-                            sortable 
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="prefix"
+                            header={t('HAWALA_SERIES.TABLE.PREFIX')}
+                            body={prefixBodyTemplate}
+                            sortable
                         />
-                        <Column 
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} 
-                            field="current_number" 
-                            header={t('HAWALA_SERIES.TABLE.CURRENT_NUMBER')} 
-                            body={currentNumberBodyTemplate} 
-                            sortable 
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="current_number"
+                            header={t('HAWALA_SERIES.TABLE.CURRENT_NUMBER')}
+                            body={currentNumberBodyTemplate}
+                            sortable
                         />
                         {/* <Column 
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} 
@@ -421,24 +421,24 @@ const HawalaNumberSeriesPage = () => {
                             header={t('HAWALA_SERIES.TABLE.NEXT_NUMBER')} 
                             body={nextNumberBodyTemplate} 
                         /> */}
-                        <Column 
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} 
-                            field="reset_daily" 
-                            header={t('HAWALA_SERIES.TABLE.RESET_DAILY')} 
-                            body={resetDailyBodyTemplate} 
-                            sortable 
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="reset_daily"
+                            header={t('HAWALA_SERIES.TABLE.RESET_DAILY')}
+                            body={resetDailyBodyTemplate}
+                            sortable
                         />
-                        <Column 
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} 
-                            field="is_active" 
-                            header={t('HAWALA_SERIES.TABLE.STATUS')} 
-                            body={statusBodyTemplate} 
-                            sortable 
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="is_active"
+                            header={t('HAWALA_SERIES.TABLE.STATUS')}
+                            body={statusBodyTemplate}
+                            sortable
                         />
-                        <Column 
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} 
-                            body={actionBodyTemplate} 
-                            headerStyle={{ minWidth: '12rem' }} 
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            body={actionBodyTemplate}
+                            headerStyle={{ minWidth: '12rem' }}
                         />
                     </DataTable>
 
@@ -448,18 +448,33 @@ const HawalaNumberSeriesPage = () => {
                         totalRecords={pagination?.total}
                         onPageChange={(e) => onPageChange(e)}
                         template={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                        }
+                        currentPageReportTemplate={
+                            isRTL()
+                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
+                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
+                        }
+                        firstPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-right"
+                                : "pi pi-angle-double-left"
+                        }
+                        lastPageLinkIcon={
+                            isRTL()
+                                ? "pi pi-angle-double-left"
+                                : "pi pi-angle-double-right"
                         }
                     />
 
                     {/* Add/Edit Dialog */}
-                    <Dialog 
-                        visible={hawalaSeriesDialog} 
-                        style={{ width: '600px', padding: '5px' }} 
-                        header={t('HAWALA_SERIES.DETAILS')} 
-                        modal 
-                        className="p-fluid" 
-                        footer={hawalaSeriesDialogFooter} 
+                    <Dialog
+                        visible={hawalaSeriesDialog}
+                        style={{ width: '600px', padding: '5px' }}
+                        header={t('HAWALA_SERIES.DETAILS')}
+                        modal
+                        className="p-fluid"
+                        footer={hawalaSeriesDialogFooter}
                         onHide={hideDialog}
                     >
                         <div className="card flex flex-wrap p-fluid mt-3 gap-4">
@@ -589,20 +604,20 @@ const HawalaNumberSeriesPage = () => {
                     </Dialog>
 
                     {/* Delete Confirmation Dialog */}
-                    <Dialog 
-                        visible={deleteHawalaSeriesDialog} 
-                        style={{ width: '450px' }} 
-                        header={t('APP.GENERAL.CONFIRM')} 
-                        modal 
-                        footer={deleteHawalaSeriesDialogFooter} 
+                    <Dialog
+                        visible={deleteHawalaSeriesDialog}
+                        style={{ width: '450px' }}
+                        header={t('APP.GENERAL.CONFIRM')}
+                        modal
+                        footer={deleteHawalaSeriesDialogFooter}
                         onHide={hideDeleteHawalaSeriesDialog}
                     >
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {hawalaSeries && (
                                 <span>
-                                    {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE', { 
-                                        name: `${hawalaSeries.prefix} series` 
+                                    {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE', {
+                                        name: `${hawalaSeries.prefix} series`
                                     })}
                                 </span>
                             )}
@@ -610,16 +625,16 @@ const HawalaNumberSeriesPage = () => {
                     </Dialog>
 
                     {/* Bulk Delete Confirmation Dialog */}
-                    <Dialog 
-                        visible={deleteHawalaSeriesBulkDialog} 
-                        style={{ width: '450px' }} 
-                        header={t('APP.GENERAL.CONFIRM')} 
-                        modal 
-                        footer={deleteHawalaSeriesBulkDialogFooter} 
+                    <Dialog
+                        visible={deleteHawalaSeriesBulkDialog}
+                        style={{ width: '450px' }}
+                        header={t('APP.GENERAL.CONFIRM')}
+                        modal
+                        footer={deleteHawalaSeriesBulkDialogFooter}
                         onHide={hideDeleteHawalaSeriesBulkDialog}
                     >
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             <span>{t('APP.DELETE_SELECTED_CONFIRMATION')}</span>
                         </div>
                     </Dialog>
