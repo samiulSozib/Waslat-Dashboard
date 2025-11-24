@@ -78,7 +78,7 @@ const OrderPage = () => {
 useEffect(() => {
     if (!statusParam) return;
 
-    let statusFilterValue = null;
+    let statusFilterValue:any = null;
 
     switch (statusParam) {
         case 'pending': statusFilterValue = 0; break;
