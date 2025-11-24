@@ -68,52 +68,37 @@ const OrderPage = () => {
         filter_service_category_type: null as string | null,
         filter_company_id: null as number | null,
         filter_service_id: null as number | null,
-        filter_startdate: null as string | null,
-        filter_enddate: null as string | null
+        from_date: null as string | null,
+        to_date: null as string | null
     });
 
     const [activeFilters, setActiveFilters] = useState({});
 
-    useEffect(() => {
-        // Map URL status parameter to filter value
-        let statusFilterValue = null;
+// --- Sync URL Status -> activeFilters ---
+useEffect(() => {
+    if (!statusParam) return;
 
-        if (statusParam) {
-            switch (statusParam) {
-                case 'pending':
-                    statusFilterValue = 0; // Assuming 0 is the value for pending status
-                    break;
-                case 'confirmed':
-                    statusFilterValue = 1; // Assuming 1 is the value for successful status
-                    break;
-                case 'rejected':
-                    statusFilterValue = 2; // Assuming 2 is the value for rejected status
-                    break;
-                default:
-                    statusFilterValue = null;
-            }
+    let statusFilterValue = null;
 
-            if (statusFilterValue !== null) {
-                setActiveFilters({
-                    ...activeFilters,
-                    filter_status: statusFilterValue
-                });
-            }
-        } else {
-            // If no status param, fetch all orders without status filter
-            dispatch(_fetchOrders(1, searchTag));
-        }
-    }, [dispatch, statusParam, searchTag]);
+    switch (statusParam) {
+        case 'pending': statusFilterValue = 0; break;
+        case 'confirmed': statusFilterValue = 1; break;
+        case 'rejected': statusFilterValue = 2; break;
+    }
 
-    // useEffect(() => {
-    //     dispatch(_fetchOrders(1, searchTag)); // No filters initially
-    // }, [dispatch, searchTag]);
+    // Merge with existing filters
+    setActiveFilters(prev => ({
+        ...prev,
+        filter_status: statusFilterValue
+    }));
+}, [statusParam]);
 
-    useEffect(() => {
-        if (Object.keys(activeFilters).length > 0) {
-            dispatch(_fetchOrders(1, searchTag, activeFilters));
-        }
-    }, [dispatch, activeFilters, searchTag]);
+
+// --- Fetch Orders Whenever Filters OR SearchTag Changes ---
+useEffect(() => {
+    dispatch(_fetchOrders(1, searchTag, activeFilters));
+}, [activeFilters, searchTag]);
+
 
     useEffect(() => {
         dispatch(_fetchCompanies());
@@ -333,14 +318,14 @@ const OrderPage = () => {
                                             <label htmlFor="startDateFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.START_DATE')}
                                             </label>
-                                            <InputText type="date" id="startDateFilter" value={filters.filter_startdate || ''} onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })} style={{ width: '100%' }} />
+                                            <InputText type="date" id="startDateFilter" value={filters.from_date || ''} onChange={(e) => setFilters({ ...filters, from_date: e.target.value })} style={{ width: '100%' }} />
                                         </div>
 
                                         <div className="col-12">
                                             <label htmlFor="endDateFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.END_DATE')}
                                             </label>
-                                            <InputText type="date" id="endDateFilter" value={filters.filter_enddate || ''} onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })} style={{ width: '100%' }} />
+                                            <InputText type="date" id="endDateFilter" value={filters.to_date || ''} onChange={(e) => setFilters({ ...filters, to_date: e.target.value })} style={{ width: '100%' }} />
                                         </div>
 
                                         {/* Action Buttons */}
@@ -355,8 +340,8 @@ const OrderPage = () => {
                                                         filter_service_category_type: null,
                                                         filter_service_id: null,
                                                         filter_company_id: null,
-                                                        filter_startdate: null,
-                                                        filter_enddate: null
+                                                        from_date: null,
+                                                        to_date: null
                                                     });
                                                 }}
                                             />

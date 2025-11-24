@@ -31,6 +31,7 @@ import { _fetchResellers } from '@/app/redux/actions/resellerActions';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import { Checkbox } from 'primereact/checkbox';
 import { InputTextarea } from 'primereact/inputtextarea';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // Form Data Interface
 interface HawalaFormData {
@@ -222,6 +223,24 @@ const HawalaPage = () => {
             [name]: value,
         }));
     };
+
+    // Add this useEffect to handle auto-opening the dialog
+    const searchParams = useSearchParams(); // Add this
+    const router = useRouter()
+
+    useEffect(() => {
+        const action = searchParams.get('action');
+        if (action === 'add') {
+            // Small delay to ensure the page is fully loaded and Redux state is ready
+            const timer = setTimeout(() => {
+                openAddHawalaDialog();
+                // Optional: Clean up the URL after opening the dialog
+                router.replace('/pages/hawala');
+            }, 300);
+
+            return () => clearTimeout(timer);
+        }
+    }, [searchParams, router]);
 
     const openAddHawalaDialog = () => {
         setAddHawalaDialog(true);

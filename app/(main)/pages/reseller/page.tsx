@@ -29,7 +29,7 @@ import { resellerGroupReducer } from '@/app/redux/reducers/resellerGroupReducer'
 import { _fetchResellerGroups } from '@/app/redux/actions/resellerGroupActions';
 import { InputSwitch } from 'primereact/inputswitch';
 import { SplitButton } from 'primereact/splitbutton';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Paginator } from 'primereact/paginator';
 import { customCellStyleImage } from '../../utilities/customRow';
 import i18n from '@/i18n';
@@ -145,6 +145,25 @@ const ResellerPage = () => {
     useEffect(() => {
         //console.log(resellers)
     }, [dispatch, resellers]);
+
+    // Add this useEffect to handle auto-opening the dialog
+    const searchParams = useSearchParams(); // Add this
+
+    useEffect(() => {
+        const action = searchParams.get('action');
+        if (action === 'add') {
+            // Small delay to ensure the page is fully loaded and Redux state is ready
+            const timer = setTimeout(() => {
+                openNew();
+                // Optional: Clean up the URL after opening the dialog
+                router.replace('/pages/reseller');
+            }, 300);
+
+            return () => clearTimeout(timer);
+        }
+    }, [searchParams, router]);
+
+
 
     const openNew = () => {
         setReseller(emptyReseller);

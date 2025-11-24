@@ -50,6 +50,8 @@ export interface LayoutContextProps {
 export interface MenuContextProps {
     activeMenu: string;
     setActiveMenu: Dispatch<SetStateAction<string>>;
+    isNavigating: boolean;
+    setIsNavigating: (navigating: boolean) => void;
 }
 
 /* AppConfig Types */

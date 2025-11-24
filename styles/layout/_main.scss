@@ -28,3 +28,73 @@ a {
 }
 
 
+
+
+/* Add to your global styles */
+.layout-menuitem-disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+}
+
+.layout-menuitem-navigating {
+    position: relative;
+}
+
+.layout-menuitem-spinner {
+    margin-left: 8px !important;
+    font-size: 0.875rem !important;
+    opacity: 0.8;
+    animation: spin 1s linear infinite;
+}
+
+/* Ensure proper spacing for menu items with spinner */
+.layout-menuitem {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+.layout-menuitem-text {
+    flex: 1;
+    margin-right: auto;
+}
+
+.layout-submenu-toggler {
+    margin-left: 8px;
+    transition: transform 0.2s ease;
+}
+
+.layout-menuitem.active-menuitem .layout-submenu-toggler {
+    transform: rotate(-180deg);
+}
+
+/* Spinner animation */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Ensure the menu item content is properly aligned */
+.layout-menuitem-icon + .layout-menuitem-text {
+    margin-left: 8px;
+}
+
+/* RTL support for spinner */
+[dir="rtl"] .layout-menuitem-spinner {
+    margin-left: 0 !important;
+    margin-right: 8px !important;
+}
+
+[dir="rtl"] .layout-submenu-toggler {
+    margin-left: 0;
+    margin-right: 8px;
+}
+
+[dir="rtl"] .layout-menuitem-icon + .layout-menuitem-text {
+    margin-left: 0;
+    margin-right: 8px;
+}

@@ -18,8 +18,11 @@ import { _fetchPurchasedProducts } from '../redux/actions/purchasedProductsActio
 import withAuth from './authGuard';
 import { useTranslation } from 'react-i18next';
 import { _fetchPaymentTypes } from '../redux/actions/paymentTypeActions';
-import { useRouter } from 'next/navigation';
-
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Button } from 'primereact/button';
+import { InputText } from 'primereact/inputtext';
+import { Dropdown } from 'primereact/dropdown';
+import { _fetchServiceList } from '../redux/actions/serviceActions';
 
 interface CurrencyBreakdown {
     [currency: string]: {
@@ -30,25 +33,91 @@ interface CurrencyBreakdown {
     };
 }
 
+interface FilterParams {
+    filter_service_id?: string | null;
+    from_date?: string | null;
+    to_date?: string | null;
+}
+
 const Dashboard = () => {
     const { layoutConfig } = useContext(LayoutContext);
     const { data } = useSelector((state: any) => state.dashboardDataReducer);
-    //const {userInfo}=useSelector((state:any)=>state.authReducer)
-    const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}'); // Default to empty object
+    const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
     const [lineOptions, setLineOptions] = useState<ChartOptions>({});
     const { t } = useTranslation();
     const router = useRouter();
-
-
+    const searchParams = useSearchParams();
     const dispatch = useDispatch<AppDispatch>();
+
+    // Filter states
+    const [filterDialogVisible, setFilterDialogVisible] = useState(false);
+    const [filters, setFilters] = useState({
+        filter_service_id: null as number | null,
+        from_date: null as string | null,
+        to_date: null as string | null
+    });
+    const [activeFilters, setActiveFilters] = useState<FilterParams>({});
+    const [showFilters, setShowFilters] = useState(false);
+    const filterRef = useRef<HTMLDivElement>(null);
+    const [showQuickActions, setShowQuickActions] = useState(false);
+
+
+    const { services } = useSelector((state: any) => state.serviceReducer);
+
+    // Initialize filters from URL parameters on component mount
+    useEffect(() => {
+        const urlFilters: FilterParams = {};
+
+        const serviceId = searchParams.get('filter_service_id');
+        const fromDate = searchParams.get('from_date');
+        const toDate = searchParams.get('to_date');
+
+        if (serviceId) {
+            urlFilters.filter_service_id = serviceId;
+            setFilters(prev => ({ ...prev, filter_service_id: parseInt(serviceId) }));
+        }
+        if (fromDate) {
+            urlFilters.from_date = fromDate;
+            setFilters(prev => ({ ...prev, from_date: fromDate }));
+        }
+        if (toDate) {
+            urlFilters.to_date = toDate;
+            setFilters(prev => ({ ...prev, to_date: toDate }));
+        }
+
+        setActiveFilters(urlFilters);
+    }, [searchParams]);
+
     useEffect(() => {
         dispatch(fetchDashboardData());
         dispatch(_fetchPurchasedProducts());
+        dispatch(_fetchServiceList()); // Fetch services for dropdown
     }, [dispatch]);
 
     useEffect(() => {
-        //console.log(data);
-    }, [dispatch, data]);
+        // Fetch data with active filters (which now come from URL)
+        if (Object.keys(activeFilters).length > 0) {
+            dispatch(fetchDashboardData(activeFilters));
+        } else {
+            // If no active filters, fetch default data
+            dispatch(fetchDashboardData());
+        }
+    }, [activeFilters, dispatch]);
+
+    useEffect(() => {
+        // Handle click outside filter dialog
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
+                setFilterDialogVisible(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [filterDialogVisible]);
 
     const applyLightTheme = () => {
         const lineOptions: ChartOptions = {
@@ -78,7 +147,6 @@ const Dashboard = () => {
                 }
             }
         };
-
         setLineOptions(lineOptions);
     };
 
@@ -110,7 +178,6 @@ const Dashboard = () => {
                 }
             }
         };
-
         setLineOptions(lineOptions);
     };
 
@@ -129,6 +196,43 @@ const Dashboard = () => {
         });
     };
 
+    const handleSubmitFilter = (filters: any) => {
+        // Build URL parameters
+        const params = new URLSearchParams();
+
+        if (filters.filter_service_id) {
+            params.append('filter_service_id', filters.filter_service_id.toString());
+        }
+        if (filters.from_date) {
+            params.append('from_date', filters.from_date);
+        }
+        if (filters.to_date) {
+            params.append('to_date', filters.to_date);
+        }
+
+        // Update URL with parameters
+        const newUrl = params.toString() ? `/?${params.toString()}` : '/';
+        router.push(newUrl);
+
+        // Close filters on mobile after applying
+        setShowFilters(false);
+    };
+
+    const resetFilters = () => {
+        // Clear URL parameters
+        router.push('/');
+
+        // Reset local filter state
+        setFilters({
+            filter_service_id: null,
+            from_date: null,
+            to_date: null
+        });
+
+        // Close filters on mobile after resetting
+        setShowFilters(false);
+    };
+
     // Navigation handlers
     const navigateToOrders = (status: string) => {
         router.push(`/pages/order?status=${status}`);
@@ -138,8 +242,234 @@ const Dashboard = () => {
         router.push(path);
     };
 
+    // Check if any filters are active
+    const hasActiveFilters = Object.keys(activeFilters).length > 0;
+
+    // Filter toggle handler
+    const toggleFilters = () => {
+        setShowFilters(!showFilters);
+    };
+
     return (
         <div className="grid -m-5">
+            {/* Filter Header - Always Visible */}
+            <div className="col-12 lg:col-12 xl:col-12 lg:hidden xl:hidden">
+                <div className="card mb-0 p-1" style={{ backgroundImage: 'linear-gradient(to right, #dbeafe, #c7d2fe)' }}>
+                    <div className="flex justify-content-between align-items-center">
+                        <div className="flex align-items-center">
+                            <h3 className="text-sm font-semibold m-0 mr-2">{t('FILTERS')}</h3>
+                            {hasActiveFilters && (
+                                <span className="bg-primary border-circle w-2 h-2"></span>
+                            )}
+                        </div>
+                        <Button
+                            icon="pi pi-filter"
+                            className="p-button-text lg:hidden xl:hidden"
+                            onClick={toggleFilters}
+                            tooltipOptions={{ position: 'bottom' }}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Filter Section - Collapsible on Mobile */}
+            <div className={`col-12 lg:col-12 xl:col-12 transition-all transition-duration-300 ${showFilters ? 'block' : 'hidden lg:block xl:block'}`}>
+                <div className="card mb-0 p-2" style={{ backgroundImage: 'linear-gradient(to right, #dbeafe, #c7d2fe)' }}>
+                    <div className="grid align-items-center">
+                        {/* Service ID Filter */}
+                        <div className="col-12 md:col-3 mb-2 md:mb-0">
+                            <div className="field mb-0">
+                                <label htmlFor="serviceFilter" className="block text-xs font-medium mb-1">
+                                    {t('SERVICE')}
+                                </label>
+                                <Dropdown
+                                    id="serviceFilter"
+                                    options={services}
+                                    value={filters.filter_service_id}
+                                    onChange={(e) => setFilters({ ...filters, filter_service_id: e.value })}
+                                    optionLabel="service_name"
+                                    optionValue="id"
+                                    placeholder={t('SELECT_SERVICE')}
+                                    style={{ width: '100%' }}
+                                    itemTemplate={(option) => (
+                                        <div style={{ display: 'flex', gap: '3px', flexDirection: 'column' }}>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>{option.service_name}</div>
+                                            <div style={{ fontSize: '0.7rem', color: '#666' }}>
+                                                {option.service_category?.category_name} - {option.company?.company_name}
+                                            </div>
+                                        </div>
+                                    )}
+                                    valueTemplate={(option) => {
+                                        if (!option) return t('BUNDLE.FORM.PLACEHOLDER.SERVICENAME');
+                                        return (
+                                            <div style={{ display: 'flex', gap: '5px' }}>
+                                                <div>{option.service_category?.category_name}</div>
+                                                <div>- {option.company?.company_name}</div>
+                                            </div>
+                                        );
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* From Date Filter */}
+                        <div className="col-12 md:col-3 mb-2 md:mb-0">
+                            <div className="field mb-0">
+                                <label htmlFor="fromDate" className="block text-xs font-medium mb-1">
+                                    {t('FROM_DATE')}
+                                </label>
+                                <InputText
+                                    type="date"
+                                    id="fromDate"
+                                    value={filters.from_date || ''}
+                                    onChange={(e) => setFilters({ ...filters, from_date: e.target.value })}
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* To Date Filter */}
+                        <div className="col-12 md:col-3 mb-2 md:mb-0">
+                            <div className="field mb-0">
+                                <label htmlFor="toDate" className="block text-xs font-medium mb-1">
+                                    {t('TO_DATE')}
+                                </label>
+                                <InputText
+                                    type="date"
+                                    id="toDate"
+                                    value={filters.to_date || ''}
+                                    onChange={(e) => setFilters({ ...filters, to_date: e.target.value })}
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Apply Filter Button */}
+                        <div className="col-12 md:col-3">
+                            <div className="field mb-0" style={{ paddingTop: '1.4rem' }}>
+                                <div className="flex align-items-center gap-1 flex-wrap">
+                                    <Button
+                                        label={t('APPLY')}
+                                        icon="pi pi-filter"
+                                        className="p-button-primary flex-1 p-button-sm"
+                                        onClick={() => handleSubmitFilter(filters)}
+                                        style={{ height: '40px', minWidth: '120px' }}
+                                    />
+                                    <Button
+                                        label={t('RESET')}
+                                        icon="pi pi-refresh"
+                                        className="p-button-secondary flex-1 p-button-sm"
+                                        onClick={resetFilters}
+                                        style={{ height: '40px', minWidth: '120px' }}
+                                        disabled={!hasActiveFilters}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Rest of your dashboard content remains the same */}
+            {/* Quick Actions Header - Always Visible */}
+            <div className="col-12 lg:col-12 xl:col-12 lg:hidden xl:hidden">
+                <div className="card mb-0 p-1" style={{ backgroundImage: 'linear-gradient(to right, #dbeafe, #c7d2fe)' }}>
+                    <div className="flex justify-content-between align-items-center">
+                        <div className="flex align-items-center">
+                            <h3 className="text-sm font-semibold m-0 mr-2">{t('QUICK_ACTIONS')}</h3>
+                        </div>
+                        <Button
+                            icon="pi pi-bolt"
+                            className="p-button-text lg:hidden xl:hidden"
+                            onClick={() => setShowQuickActions(!showQuickActions)}
+                            tooltipOptions={{ position: 'bottom' }}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Quick Actions Section - Collapsible on Mobile */}
+            {/* Quick Actions Section - Collapsible on Mobile */}
+            <div className={`col-12 lg:col-12 xl:col-12 transition-all transition-duration-300 ${showQuickActions ? 'block' : 'hidden lg:block xl:block'}`}>
+                <div className="card p-2" style={{ backgroundImage: 'linear-gradient(to right, #dbeafe, #c7d2fe)' }}>
+                    <div className="flex flex-column lg:flex-row xl:flex-row justify-content-between align-items-center">
+                        {/* Title - Hidden on mobile, visible on desktop */}
+                        <div className="hidden lg:flex xl:flex align-items-center">
+                            <span className="text-sm font-semibold text-gray-800">{t('QUICK_ACTIONS')}</span>
+                        </div>
+
+                        {/* Quick Action Buttons */}
+                        <div className="flex flex-wrap justify-content-center lg:justify-content-end xl:justify-content-end gap-1 w-full lg:w-auto xl:w-auto">
+                            {/* Mobile Layout - Stacked buttons */}
+                            <div className="lg:hidden xl:hidden w-full">
+                                <div className="grid">
+                                    <div className="col-6">
+                                        <Button
+                                            label={t('ADD_HAWALA')}
+                                            icon="pi pi-money-bill"
+                                            className="p-button-sm p-button-outlined w-full"
+                                            onClick={() => navigateToPage('/pages/hawala?action=add')}
+                                        />
+                                    </div>
+                                    <div className="col-6">
+                                        <Button
+                                            label={t('ADD_PAYMENT')}
+                                            icon="pi pi-credit-card"
+                                            className="p-button-sm p-button-outlined w-full"
+                                            onClick={() => navigateToPage('/pages/payment?action=add')}
+                                        />
+                                    </div>
+                                    <div className="col-6">
+                                        <Button
+                                            label={t('ADD_BALANCE')}
+                                            icon="pi pi-wallet"
+                                            className="p-button-sm p-button-outlined w-full"
+                                            onClick={() => navigateToPage('/pages/balance?action=add')}
+                                        />
+                                    </div>
+                                    <div className="col-6">
+                                        <Button
+                                            label={t('ADD_RESELLER')}
+                                            icon="pi pi-user-plus"
+                                            className="p-button-sm p-button-outlined w-full"
+                                            onClick={() => navigateToPage('/pages/reseller?action=add')}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Desktop Layout - Horizontal buttons */}
+                            <div className="hidden lg:flex xl:flex gap-1">
+                                <Button
+                                    label={t('ADD_HAWALA')}
+                                    icon="pi pi-money-bill"
+                                    className="p-button-sm p-button-outlined"
+                                    onClick={() => navigateToPage('/pages/hawala?action=add')}
+                                />
+                                <Button
+                                    label={t('ADD_PAYMENT')}
+                                    icon="pi pi-credit-card"
+                                    className="p-button-sm p-button-outlined"
+                                    onClick={() => navigateToPage('/pages/payment?action=add')}
+                                />
+                                <Button
+                                    label={t('ADD_BALANCE')}
+                                    icon="pi pi-wallet"
+                                    className="p-button-sm p-button-outlined"
+                                    onClick={() => navigateToPage('/pages/balance?action=add')}
+                                />
+                                <Button
+                                    label={t('ADD_RESELLER')}
+                                    icon="pi pi-user-plus"
+                                    className="p-button-sm p-button-outlined"
+                                    onClick={() => navigateToPage('/pages/reseller?action=add')}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Today Orders */}
             <div className="col-6 lg:col-6 xl:col-3">
                 <div onClick={() => navigateToPage('/pages/order')} className="cursor-pointer card mb-0 bg-gradient-to-r from-indigo-100 to-purple-200" style={{ height: '140px', backgroundImage: 'linear-gradient(to right, #dbeafe, #c7d2fe)' }}>

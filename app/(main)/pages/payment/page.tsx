@@ -37,6 +37,7 @@ import { Paginator } from 'primereact/paginator';
 import { generatePaymentExcelFile } from '../../utilities/generateExcel';
 import { SplitButton } from 'primereact/splitbutton';
 import { Checkbox } from 'primereact/checkbox';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const PaymentPage = () => {
     let emptyPayment: Payment = {
@@ -128,6 +129,24 @@ const PaymentPage = () => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [filterDialogVisible]);
+
+        // Add this useEffect to handle auto-opening the dialog
+        const searchParams = useSearchParams(); // Add this
+        const router=useRouter()
+    
+        useEffect(() => {
+            const action = searchParams.get('action');
+            if (action === 'add') {
+                // Small delay to ensure the page is fully loaded and Redux state is ready
+                const timer = setTimeout(() => {
+                    openNew();
+                    // Optional: Clean up the URL after opening the dialog
+                    router.replace('/pages/payment');
+                }, 300);
+    
+                return () => clearTimeout(timer);
+            }
+        }, [searchParams, router]);
 
     const openNew = () => {
         setPayment(emptyPayment);

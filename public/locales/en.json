@@ -1566,28 +1566,26 @@
     "HAWALA_NUMBER_AUTO_GENERATED": "Hawala number auto-generated",
     "GENERATING_HAWALA_NUMBER": "Generating hawala number...",
     "REGENERATE_NUMBER": "Regenerate number",
-
-
-    "COMPANY.TABLE.COLUMN.LOGO":"Logo",
-    "ADD_PAYMENT":"Add Payment",
-
-    "PAYMENT.FORM.INPUT.OPRATIONTYPE":"Operation Type",
-    "PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER":"Select Operation Type",
-    "DASHBOARD.PAYMENT":"Totals of the payments",
-    "DASHBOARD.PAYMENT.HINT":"The Total Resellers Payment from Different Currencies shown here",
-    "DASHBOARD.UNPAID":"Totals of unpaid",
-    "DASHBOARD.UNPAID.HINT":"The Total Unpaid from Different Currencies shown here",
-
-    "SERVICE_PROVIDER":"Service Provider",
-    "PHONE_NUMBER":"Phone Number",
-    
-    "ADDRESS":"Address",
-    "AMOUNT":"Amount",
-
-
-    "BALANCE.TABLE.COLUMN.BALANCE_STATUS":"Balance Status",
-    "VERIFIED_BY":"Verified By",
-    "VERIFIED_OR_PERFORMED":"Verified or Performed",
-    "RESELLER_NAME":"Reseller Name",
-    "PAYMENT_DETAILS":"Payment Details"
+    "COMPANY.TABLE.COLUMN.LOGO": "Logo",
+    "ADD_PAYMENT": "Add Payment",
+    "PAYMENT.FORM.INPUT.OPRATIONTYPE": "Operation Type",
+    "PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER": "Select Operation Type",
+    "DASHBOARD.PAYMENT": "Totals of the payments",
+    "DASHBOARD.PAYMENT.HINT": "The Total Resellers Payment from Different Currencies shown here",
+    "DASHBOARD.UNPAID": "Totals of unpaid",
+    "DASHBOARD.UNPAID.HINT": "The Total Unpaid from Different Currencies shown here",
+    "SERVICE_PROVIDER": "Service Provider",
+    "PHONE_NUMBER": "Phone Number",
+    "ADDRESS": "Address",
+    "AMOUNT": "Amount",
+    "BALANCE.TABLE.COLUMN.BALANCE_STATUS": "Balance Status",
+    "VERIFIED_BY": "Verified By",
+    "VERIFIED_OR_PERFORMED": "Verified or Performed",
+    "RESELLER_NAME": "Reseller Name",
+    "PAYMENT_DETAILS": "Payment Details",
+    "FROM_DATE": "From Date",
+    "TO_DATE": "To Date",
+    "QUICK_ACTIONS": "Quick Actions",
+    "ADD_BALANCE": "Add Balance",
+    "ADD_RESELLER": "Add Reseller"
 }
