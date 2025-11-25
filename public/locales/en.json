@@ -1587,5 +1587,6 @@
     "TO_DATE": "To Date",
     "QUICK_ACTIONS": "Quick Actions",
     "ADD_BALANCE": "Add Balance",
-    "ADD_RESELLER": "Add Reseller"
+    "ADD_RESELLER": "Add Reseller",
+    "ROLLBACK_FULL":"Rollback Full"
 }

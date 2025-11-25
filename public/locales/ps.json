@@ -1588,5 +1588,7 @@
     "TO_DATE": "تر نېټې",
     "QUICK_ACTIONS": "چټک کړنې",
     "ADD_BALANCE": "بیلانس زیاتول",
-    "ADD_RESELLER": "ریسلر زیاتول"
+    "ADD_RESELLER": "ریسلر زیاتول",
+      "ROLLBACK_FULL": "بشپړ رولبیک"
+
 }

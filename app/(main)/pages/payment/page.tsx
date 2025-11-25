@@ -95,6 +95,8 @@ const PaymentPage = () => {
     const [showVerifyNotes, setShowVerifyNotes] = useState(false);
     const [showVerifyAndSendNotes, setShowVerifyAndSendNotes] = useState(false);
     const [viewPaymentDialog, setViewPaymentDialog] = useState(false);
+    const [rollbackType, setRollbackType] = useState<'rollback' | 'rollback_full'>('rollback');
+
 
 
     useEffect(() => {
@@ -130,23 +132,23 @@ const PaymentPage = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [filterDialogVisible]);
 
-        // Add this useEffect to handle auto-opening the dialog
-        const searchParams = useSearchParams(); // Add this
-        const router=useRouter()
-    
-        useEffect(() => {
-            const action = searchParams.get('action');
-            if (action === 'add') {
-                // Small delay to ensure the page is fully loaded and Redux state is ready
-                const timer = setTimeout(() => {
-                    openNew();
-                    // Optional: Clean up the URL after opening the dialog
-                    router.replace('/pages/payment');
-                }, 300);
-    
-                return () => clearTimeout(timer);
-            }
-        }, [searchParams, router]);
+    // Add this useEffect to handle auto-opening the dialog
+    const searchParams = useSearchParams(); // Add this
+    const router = useRouter()
+
+    useEffect(() => {
+        const action = searchParams.get('action');
+        if (action === 'add') {
+            // Small delay to ensure the page is fully loaded and Redux state is ready
+            const timer = setTimeout(() => {
+                openNew();
+                // Optional: Clean up the URL after opening the dialog
+                router.replace('/pages/payment');
+            }, 300);
+
+            return () => clearTimeout(timer);
+        }
+    }, [searchParams, router]);
 
     const openNew = () => {
         setPayment(emptyPayment);
@@ -242,6 +244,7 @@ const PaymentPage = () => {
     const confirmRollbackPayment = (payment: Payment) => {
         setPayment(payment);
         setRollbackDialog(true);
+        setRollbackType("rollback")
     };
 
     const rollbackPayment = () => {
@@ -249,7 +252,7 @@ const PaymentPage = () => {
             console.error('Payment  ID is undefined.');
             return;
         }
-        dispatch(_rollbackedPayment(payment?.id, toast, t));
+        dispatch(_rollbackedPayment(payment?.id, toast, t,rollbackType));
         hideRollbackDialog();
     };
 
@@ -276,6 +279,7 @@ const PaymentPage = () => {
 
     const hideRollbackDialog = () => {
         setRollbackDialog(false);
+        setRollbackType("rollback")
     };
 
     const handleVerifyPayment = () => {
@@ -1051,9 +1055,21 @@ const PaymentPage = () => {
 
                     {/* Rollback Confirmation Dialog */}
                     <Dialog visible={rollbackDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={rollbackDialogFooter} onHide={hideRollbackDialog}>
-                        <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-refresh mr-3" style={{ fontSize: '2rem' }} />
-                            {payment && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_ROLLBACK')}?</span>}
+                        <div className="flex flex-column">
+                            {payment && <span className="mb-3">{t('ARE_YOU_SURE_YOU_WANT_TO_ROLLBACK')}?</span>}
+
+                            {(payment?.operation_type === 'credit_full' || payment?.operation_type === 'debit_full') && (
+                                <div className="field-checkbox w-full">
+                                    <Checkbox
+                                        inputId="rollbackFull"
+                                        checked={rollbackType === 'rollback_full'}
+                                        onChange={(e) => setRollbackType(e.checked ? 'rollback_full' : 'rollback')}
+                                    />
+                                    <label htmlFor="rollbackFull" className="ml-2">
+                                        {t('ROLLBACK_FULL')}
+                                    </label>
+                                </div>
+                            )}
                         </div>
                     </Dialog>
 

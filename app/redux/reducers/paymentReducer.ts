@@ -70,7 +70,7 @@ export const paymentReducer = (state = initialState, action: AnyAction): Payment
             return {
                 ...state,
                 loading: false,
-                payments: [...state.payments, action.payload],
+                payments: [ action.payload,...state.payments],
                 error: null,
             };
 
@@ -98,7 +98,7 @@ export const paymentReducer = (state = initialState, action: AnyAction): Payment
                 loading: false,
                 payments: state.payments.map((payment) =>
                     payment.id === action.payload
-                        ? { ...payment, status: 'rollbacked' }
+                        ? { ...payment, status: 'rollback' }
                         : payment
                 ),
                 error: null,

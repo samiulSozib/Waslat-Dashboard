@@ -376,17 +376,22 @@ export const _deletePayment = (
 
 
 // ROLLBACK a payment
-export const _rollbackedPayment = (balanceId: number, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
+export const _rollbackedPayment = (balanceId: number, toast: React.RefObject<Toast>, t: (key: string) => string,rollbackType:string) => async (dispatch: Dispatch) => {
     dispatch({ type: ROLLBACK_PAYMENT_REQUEST });
 
     try {
         const token = getAuthToken();
+        const params: any = {};
+        if (rollbackType === 'rollback_full') {
+            params.rollback_type = 'rollback_full';
+        }
         const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/payments/rollback/${balanceId}`, {}, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
+            params:params
         });
-        console.log(response)
+        //console.log(response)
         dispatch({ type: ROLLBACK_PAYMENT_SUCCESS, payload: balanceId });
         toast.current?.show({
             severity: "success",
@@ -395,7 +400,7 @@ export const _rollbackedPayment = (balanceId: number, toast: React.RefObject<Toa
             life: 3000,
         });
     } catch (error: any) {
-        console.log(error)
+        //console.log(error)
         dispatch({ type: ROLLBACK_PAYMENT_FAIL, payload: error.message });
         toast.current?.show({
             severity: "error",

@@ -1587,5 +1587,7 @@
     "TO_DATE": "تا تاریخ",
     "QUICK_ACTIONS": "اقدامات سریع",
     "ADD_BALANCE": "افزودن موجودی",
-    "ADD_RESELLER": "افزودن نماینده فروش"
+    "ADD_RESELLER": "افزودن نماینده فروش",
+      "ROLLBACK_FULL": "بازگردانی کامل"
+
 }
