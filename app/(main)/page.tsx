@@ -96,12 +96,12 @@ const Dashboard = () => {
 
     useEffect(() => {
         // Fetch data with active filters (which now come from URL)
-        if (Object.keys(activeFilters).length > 0) {
+        //if (Object.keys(activeFilters).length > 0) {
             dispatch(fetchDashboardData(activeFilters));
-        } else {
+        //} else {
             // If no active filters, fetch default data
-            dispatch(fetchDashboardData());
-        }
+            //dispatch(fetchDashboardData());
+        //}
     }, [activeFilters, dispatch]);
 
     useEffect(() => {
@@ -272,103 +272,7 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Filter Section - Collapsible on Mobile */}
-            <div className={`col-12 lg:col-12 xl:col-12 transition-all transition-duration-300 ${showFilters ? 'block' : 'hidden lg:block xl:block'}`}>
-                <div className="card mb-0 p-2" style={{ backgroundImage: 'linear-gradient(to right, #dbeafe, #c7d2fe)' }}>
-                    <div className="grid align-items-center">
-                        {/* Service ID Filter */}
-                        <div className="col-12 md:col-3 mb-2 md:mb-0">
-                            <div className="field mb-0">
-                                <label htmlFor="serviceFilter" className="block text-xs font-medium mb-1">
-                                    {t('SERVICE')}
-                                </label>
-                                <Dropdown
-                                    id="serviceFilter"
-                                    options={services}
-                                    value={filters.filter_service_id}
-                                    onChange={(e) => setFilters({ ...filters, filter_service_id: e.value })}
-                                    optionLabel="service_name"
-                                    optionValue="id"
-                                    placeholder={t('SELECT_SERVICE')}
-                                    style={{ width: '100%' }}
-                                    itemTemplate={(option) => (
-                                        <div style={{ display: 'flex', gap: '3px', flexDirection: 'column' }}>
-                                            <div style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>{option.service_name}</div>
-                                            <div style={{ fontSize: '0.7rem', color: '#666' }}>
-                                                {option.service_category?.category_name} - {option.company?.company_name}
-                                            </div>
-                                        </div>
-                                    )}
-                                    valueTemplate={(option) => {
-                                        if (!option) return t('BUNDLE.FORM.PLACEHOLDER.SERVICENAME');
-                                        return (
-                                            <div style={{ display: 'flex', gap: '5px' }}>
-                                                <div>{option.service_category?.category_name}</div>
-                                                <div>- {option.company?.company_name}</div>
-                                            </div>
-                                        );
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* From Date Filter */}
-                        <div className="col-12 md:col-3 mb-2 md:mb-0">
-                            <div className="field mb-0">
-                                <label htmlFor="fromDate" className="block text-xs font-medium mb-1">
-                                    {t('FROM_DATE')}
-                                </label>
-                                <InputText
-                                    type="date"
-                                    id="fromDate"
-                                    value={filters.from_date || ''}
-                                    onChange={(e) => setFilters({ ...filters, from_date: e.target.value })}
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* To Date Filter */}
-                        <div className="col-12 md:col-3 mb-2 md:mb-0">
-                            <div className="field mb-0">
-                                <label htmlFor="toDate" className="block text-xs font-medium mb-1">
-                                    {t('TO_DATE')}
-                                </label>
-                                <InputText
-                                    type="date"
-                                    id="toDate"
-                                    value={filters.to_date || ''}
-                                    onChange={(e) => setFilters({ ...filters, to_date: e.target.value })}
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Apply Filter Button */}
-                        <div className="col-12 md:col-3">
-                            <div className="field mb-0" style={{ paddingTop: '1.4rem' }}>
-                                <div className="flex align-items-center gap-1 flex-wrap">
-                                    <Button
-                                        label={t('APPLY')}
-                                        icon="pi pi-filter"
-                                        className="p-button-primary flex-1 p-button-sm"
-                                        onClick={() => handleSubmitFilter(filters)}
-                                        style={{ height: '40px', minWidth: '120px' }}
-                                    />
-                                    <Button
-                                        label={t('RESET')}
-                                        icon="pi pi-refresh"
-                                        className="p-button-secondary flex-1 p-button-sm"
-                                        onClick={resetFilters}
-                                        style={{ height: '40px', minWidth: '120px' }}
-                                        disabled={!hasActiveFilters}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
 
             {/* Rest of your dashboard content remains the same */}
             {/* Quick Actions Header - Always Visible */}
@@ -464,6 +368,105 @@ const Dashboard = () => {
                                     className="p-button-sm p-button-outlined"
                                     onClick={() => navigateToPage('/pages/reseller?action=add')}
                                 />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            {/* Filter Section - Collapsible on Mobile */}
+            <div className={`col-12 lg:col-12 xl:col-12 transition-all transition-duration-300 ${showFilters ? 'block' : 'hidden lg:block xl:block'}`}>
+                <div className="card mb-0 p-2" style={{ backgroundImage: 'linear-gradient(to right, #dbeafe, #c7d2fe)' }}>
+                    <div className="grid align-items-center">
+                        {/* Service ID Filter */}
+                        <div className="col-12 md:col-3 mb-2 md:mb-0">
+                            <div className="field mb-0">
+                                <label htmlFor="serviceFilter" className="block text-xs font-medium mb-1">
+                                    {t('SERVICE')}
+                                </label>
+                                <Dropdown
+                                    id="serviceFilter"
+                                    options={services}
+                                    value={filters.filter_service_id}
+                                    onChange={(e) => setFilters({ ...filters, filter_service_id: e.value })}
+                                    optionLabel="service_name"
+                                    optionValue="id"
+                                    placeholder={t('SELECT_SERVICE')}
+                                    style={{ width: '100%' }}
+                                    itemTemplate={(option) => (
+                                        <div style={{ display: 'flex', gap: '3px', flexDirection: 'column' }}>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>{option.service_name}</div>
+                                            <div style={{ fontSize: '0.7rem', color: '#666' }}>
+                                                {option.service_category?.category_name} - {option.company?.company_name}
+                                            </div>
+                                        </div>
+                                    )}
+                                    valueTemplate={(option) => {
+                                        if (!option) return t('BUNDLE.FORM.PLACEHOLDER.SERVICENAME');
+                                        return (
+                                            <div style={{ display: 'flex', gap: '5px' }}>
+                                                <div>{option.service_category?.category_name}</div>
+                                                <div>- {option.company?.company_name}</div>
+                                            </div>
+                                        );
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* From Date Filter */}
+                        <div className="col-12 md:col-3 mb-2 md:mb-0">
+                            <div className="field mb-0">
+                                <label htmlFor="fromDate" className="block text-xs font-medium mb-1">
+                                    {t('FROM_DATE')}
+                                </label>
+                                <InputText
+                                    type="date"
+                                    id="fromDate"
+                                    value={filters.from_date || ''}
+                                    onChange={(e) => setFilters({ ...filters, from_date: e.target.value })}
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* To Date Filter */}
+                        <div className="col-12 md:col-3 mb-2 md:mb-0">
+                            <div className="field mb-0">
+                                <label htmlFor="toDate" className="block text-xs font-medium mb-1">
+                                    {t('TO_DATE')}
+                                </label>
+                                <InputText
+                                    type="date"
+                                    id="toDate"
+                                    value={filters.to_date || ''}
+                                    onChange={(e) => setFilters({ ...filters, to_date: e.target.value })}
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Apply Filter Button */}
+                        <div className="col-12 md:col-3">
+                            <div className="field mb-0" style={{ paddingTop: '1.4rem' }}>
+                                <div className="flex align-items-center gap-1 flex-wrap">
+                                    <Button
+                                        label={t('APPLY')}
+                                        icon="pi pi-filter"
+                                        className="p-button-primary flex-1 p-button-sm"
+                                        onClick={() => handleSubmitFilter(filters)}
+                                        style={{ height: '40px', minWidth: '120px' }}
+                                    />
+                                    <Button
+                                        label={t('RESET')}
+                                        icon="pi pi-refresh"
+                                        className="p-button-secondary flex-1 p-button-sm"
+                                        onClick={resetFilters}
+                                        style={{ height: '40px', minWidth: '120px' }}
+                                        disabled={!hasActiveFilters}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
