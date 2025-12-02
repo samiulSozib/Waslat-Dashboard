@@ -869,6 +869,14 @@ export interface PriceAdjustmentPayload {
     confirmation?: boolean;
 }
 
+export interface BulkBundlePricePayload {
+    adjustment_type: 'percentage' | 'fixed';
+    adjustment_value: number;
+    adjustment_direction?:'increase'|'decrease'
+    base_price?: 'admin_buying_price' | 'buying_price'|'selling_price';
+    confirmation?: boolean;
+}
+
 export interface PriceAdjustmentPreview {
     bundle_id: number;
     bundle_title: string;

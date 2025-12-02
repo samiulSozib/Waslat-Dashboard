@@ -1588,5 +1588,41 @@
     "QUICK_ACTIONS": "Quick Actions",
     "ADD_BALANCE": "Add Balance",
     "ADD_RESELLER": "Add Reseller",
-    "ROLLBACK_FULL":"Rollback Full"
+    "ROLLBACK_FULL":"Rollback Full",
+
+
+    "MENU.SET_SELLING_PRICE":"Set Selling Price",
+    
+  "BULK_BUNDLE_PRICE_UPDATE": "Bulk Bundle Price Update",
+  "BASE_PRICE_FOR_CALCULATION": "Base Price for Calculation",
+  "BASE_PRICE_HELP_TEXT": "Select which price to use as the base for calculation",
+  "ADJUSTMENT_DIRECTION": "Adjustment Direction",
+  "INCREASE_PRICE": "Increase Price",
+  "DECREASE_PRICE": "Decrease Price",
+  "CALCULATION_PREVIEW": "Calculation Preview",
+  "THIS_WILL_AFFECT_ALL_BUNDLES": "This will affect all bundles in the system",
+  "IMPORTANT_NOTES": "Important Notes",
+  "BULK_UPDATE_IRREVERSIBLE": "This bulk update is irreversible",
+  "ALL_BUNDLES_AFFECTED": "All bundles will be affected",
+  "NEW_PRICES_IMMEDIATE": "New prices will take effect immediately",
+  "RECOMMEND_PREVIEW_FIRST": "Recommend reviewing bundle list before proceeding",
+  "I_CONFIRM_BULK_PRICE_UPDATE": "I confirm that I want to update prices for all bundles",
+  "UPDATE_ALL_PRICES": "Update All Prices",
+  "UPDATE_SUMMARY": "Update Summary",
+  "TOTAL_BUNDLES_UPDATED": "Total Bundles Updated",
+  "UPDATED_AT": "Updated At",
+  "UPDATING_PRICES": "Updating prices",
+  
+  "INCREASE": "Increase",
+  "DECREASE": "Decrease",
+  
+  "CURRENT_SELLING_PRICE": "Current Selling Price",
+  "PLEASE_ENTER_VALID_ADJUSTMENT_VALUE": "Please enter a valid adjustment value",
+  "PLEASE_ENTER_VALID_VALUE": "Please enter a valid value",
+  
+  "PLEASE_CONFIRM_UPDATE": "Please confirm the update"
+  
+
+
+
 }

@@ -56,6 +56,11 @@ const AppMenu = () => {
                             label: t('MENU.BUNDLE_PRICING'),
                             icon: 'pi pi-wallet',
                             to: '/pages/bundle-pricing'
+                        },
+                        {
+                            label: t('MENU.SET_SELLING_PRICE'),
+                            icon: 'pi pi-wallet',
+                            to: '/pages/set-selling-price'
                         }
                     ]
                 },

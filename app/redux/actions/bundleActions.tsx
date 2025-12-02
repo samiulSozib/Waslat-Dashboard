@@ -25,10 +25,13 @@ import {
     BUNDLE_PRICE_ADJUSTMENT_UPDATE_REQUEST,
     BUNDLE_PRICE_ADJUSTMENT_UPDATE_SUCCESS,
     BUNDLE_PRICE_ADJUSTMENT_UPDATE_FAIL,
-    CLEAR_PRICE_ADJUSTMENT_PREVIEW
+    CLEAR_PRICE_ADJUSTMENT_PREVIEW,
+    BULK_BUNDLE_PRICE_UPDATE_REQUEST,
+    BULK_BUNDLE_PRICE_UPDATE_SUCCESS,
+    BULK_BUNDLE_PRICE_UPDATE_FAIL
 } from '../constants/bundleConstants';
 import { Toast } from 'primereact/toast';
-import { ApiBinding, Bundle, PriceAdjustmentPayload } from '@/types/interface';
+import { ApiBinding, BulkBundlePricePayload, Bundle, PriceAdjustmentPayload } from '@/types/interface';
 
 const getAuthToken = () => {
     return localStorage.getItem('api_token') || ''; // Get the token or return an empty string if not found
@@ -416,6 +419,62 @@ export const _bundlePriceAdjustmentUpdate =
         } catch (error: any) {
             dispatch({
                 type: BUNDLE_PRICE_ADJUSTMENT_UPDATE_FAIL,
+                payload: error.response?.data?.message || error.message
+            });
+
+            toast.current?.show({
+                severity: 'error',
+                summary: t('ERROR'),
+                detail: error.response?.data?.message || t('PRICE_UPDATE_FAILED'),
+                life: 3000
+            });
+        }
+    };
+
+
+    // bulk Bundle Price Update
+export const _blukbundlePriceUpdate = 
+    (payload: BulkBundlePricePayload, toast: React.RefObject<Toast>, t: (key: string) => string) => 
+    async (dispatch: Dispatch) => {
+        dispatch({ type: BULK_BUNDLE_PRICE_UPDATE_REQUEST });
+        try {
+            const token = getAuthToken();
+            //console.log(payload)
+            //return
+
+            const response = await axios.post(
+                `${process.env.NEXT_PUBLIC_BASE_URL}/bundles/bulk-update-selling-prices`,
+                {
+                    ...payload,
+                    confirmation: true
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            dispatch({
+                type: BULK_BUNDLE_PRICE_UPDATE_SUCCESS,
+                payload: response.data.data
+            });
+
+            // Refresh the bundle list to get updated prices
+            //dispatch(_fetchBundleList(1, ''));
+
+            toast.current?.show({
+                severity: 'success',
+                summary: t('SUCCESS'),
+                detail: t('PRICES_UPDATED_SUCCESSFULLY'),
+                life: 5000
+            });
+
+            return response.data.data.updated_bundles;
+        } catch (error: any) {
+            dispatch({
+                type: BULK_BUNDLE_PRICE_UPDATE_FAIL,
                 payload: error.response?.data?.message || error.message
             });
 

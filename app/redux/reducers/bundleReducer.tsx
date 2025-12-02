@@ -24,7 +24,11 @@ import {
     BUNDLE_PRICE_ADJUSTMENT_UPDATE_REQUEST,
     BUNDLE_PRICE_ADJUSTMENT_UPDATE_SUCCESS,
     BUNDLE_PRICE_ADJUSTMENT_UPDATE_FAIL,
-    CLEAR_PRICE_ADJUSTMENT_PREVIEW
+    CLEAR_PRICE_ADJUSTMENT_PREVIEW,
+    // Add new constants
+    BULK_BUNDLE_PRICE_UPDATE_REQUEST,
+    BULK_BUNDLE_PRICE_UPDATE_SUCCESS,
+    BULK_BUNDLE_PRICE_UPDATE_FAIL
 } from '../constants/bundleConstants';
 
 interface BundleState {
@@ -39,6 +43,12 @@ interface BundleState {
         previewError: string | null;
         updateError: string | null;
     };
+    // Add bulk update state
+    bulkUpdate: {
+        loading: boolean;
+        error: string | null;
+        result: any; // or define a proper type for the result
+    };
 }
 
 const initialState: BundleState = {
@@ -52,6 +62,12 @@ const initialState: BundleState = {
         previewData: null,
         previewError: null,
         updateError: null
+    },
+    // Add bulk update initial state
+    bulkUpdate: {
+        loading: false,
+        error: null,
+        result: null
     }
 };
 
@@ -152,7 +168,7 @@ const bundleReducer = (state = initialState, action: any): BundleState => {
                 error: action.payload
             };
 
-            case BUNDLE_PRICE_ADJUSTMENT_PREVIEW_REQUEST:
+        case BUNDLE_PRICE_ADJUSTMENT_PREVIEW_REQUEST:
             return {
                 ...state,
                 priceAdjustment: {
@@ -183,7 +199,6 @@ const bundleReducer = (state = initialState, action: any): BundleState => {
                 }
             };
 
-        // Price Adjustment Update Cases
         case BUNDLE_PRICE_ADJUSTMENT_UPDATE_REQUEST:
             return {
                 ...state,
@@ -223,6 +238,39 @@ const bundleReducer = (state = initialState, action: any): BundleState => {
                     previewData: null,
                     previewError: null,
                     updateError: null
+                }
+            };
+
+        // Bulk Bundle Price Update Cases
+        case BULK_BUNDLE_PRICE_UPDATE_REQUEST:
+            return {
+                ...state,
+                bulkUpdate: {
+                    ...state.bulkUpdate,
+                    loading: true,
+                    error: null
+                }
+            };
+        
+        case BULK_BUNDLE_PRICE_UPDATE_SUCCESS:
+            return {
+                ...state,
+                bulkUpdate: {
+                    ...state.bulkUpdate,
+                    loading: false,
+                    result: action.payload,
+                    error: null
+                },
+                
+            };
+        
+        case BULK_BUNDLE_PRICE_UPDATE_FAIL:
+            return {
+                ...state,
+                bulkUpdate: {
+                    ...state.bulkUpdate,
+                    loading: false,
+                    error: action.payload
                 }
             };
 
