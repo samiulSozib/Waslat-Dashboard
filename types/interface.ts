@@ -874,6 +874,7 @@ export interface BulkBundlePricePayload {
     adjustment_value: number;
     adjustment_direction?:'increase'|'decrease'
     base_price?: 'admin_buying_price' | 'buying_price'|'selling_price';
+    service_ids?: number[];
     confirmation?: boolean;
 }
 
