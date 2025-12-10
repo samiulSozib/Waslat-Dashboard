@@ -1615,5 +1615,10 @@
     "CURRENT_SELLING_PRICE": "اوسنی د پلور بیه",
     "PLEASE_ENTER_VALID_ADJUSTMENT_VALUE": "مهرباني وکړئ یو معتبر د بدلون مقدار دننه کړئ",
     "PLEASE_ENTER_VALID_VALUE": "مهرباني وکړئ یو معتبر مقدار دننه کړئ",
-    "PLEASE_CONFIRM_UPDATE": "مهرباني وکړئ تازه کول تایید کړئ"
+    "PLEASE_CONFIRM_UPDATE": "مهرباني وکړئ تازه کول تایید کړئ",
+    "RECHARGEABLE_ACCOUNT": "د بیا چارج کېدونکی حساب",
+    "TRANSACTION_STATUS": "د معاملې حالت",
+  "TRANSACTION_HAS_NOT_BEEN_CREATED": "معاملې نه دي جوړې شوې",
+  "TRANSACTION_HAS_BEEN_CREATED": "معاملې جوړې شوې دي"
+
 }

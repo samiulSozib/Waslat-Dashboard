@@ -186,7 +186,7 @@ export interface MoneyTransaction {
     sub_reseller_id: string | null;
     reseller: Reseller | null;
     currency: Currency|null;
-    order: string | null;
+    order?: Order ;
 }
 
 export interface Reseller {

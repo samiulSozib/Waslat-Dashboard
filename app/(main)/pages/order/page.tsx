@@ -74,30 +74,30 @@ const OrderPage = () => {
 
     const [activeFilters, setActiveFilters] = useState({});
 
-// --- Sync URL Status -> activeFilters ---
-useEffect(() => {
-    if (!statusParam) return;
+    // --- Sync URL Status -> activeFilters ---
+    useEffect(() => {
+        if (!statusParam) return;
 
-    let statusFilterValue:any = null;
+        let statusFilterValue: any = null;
 
-    switch (statusParam) {
-        case 'pending': statusFilterValue = 0; break;
-        case 'confirmed': statusFilterValue = 1; break;
-        case 'rejected': statusFilterValue = 2; break;
-    }
+        switch (statusParam) {
+            case 'pending': statusFilterValue = 0; break;
+            case 'confirmed': statusFilterValue = 1; break;
+            case 'rejected': statusFilterValue = 2; break;
+        }
 
-    // Merge with existing filters
-    setActiveFilters(prev => ({
-        ...prev,
-        filter_status: statusFilterValue
-    }));
-}, [statusParam]);
+        // Merge with existing filters
+        setActiveFilters(prev => ({
+            ...prev,
+            filter_status: statusFilterValue
+        }));
+    }, [statusParam]);
 
 
-// --- Fetch Orders Whenever Filters OR SearchTag Changes ---
-useEffect(() => {
-    dispatch(_fetchOrders(1, searchTag, activeFilters));
-}, [activeFilters, searchTag]);
+    // --- Fetch Orders Whenever Filters OR SearchTag Changes ---
+    useEffect(() => {
+        dispatch(_fetchOrders(1, searchTag, activeFilters));
+    }, [activeFilters, searchTag]);
 
 
     useEffect(() => {
@@ -387,6 +387,25 @@ useEffect(() => {
             <>
                 <span className="p-column-title">Reseller Name</span>
                 <span style={{ fontSize: '0.8rem', color: '#666' }}>{rowData.reseller?.reseller_name}</span>
+            </>
+        );
+    };
+
+    const transactionBodyTemplate = (rowData: Order) => {
+        return (
+            <>
+
+
+                {/* Transaction status check */}
+                {rowData.transaction_id === null || rowData.transaction_id === undefined ? (
+                    <div style={{ fontSize: '0.75rem', color: '#ff6b6b', fontStyle: 'italic', marginTop: '4px' }}>
+                        {t('TRANSACTION_HAS_NOT_BEEN_CREATED')}
+                    </div>
+                ) : (
+                    <div style={{ fontSize: '0.75rem', color: '#28a745', marginTop: '4px' }}>
+                        {t('TRANSACTION_HAS_BEEN_CREATED')}
+                    </div>
+                )}
             </>
         );
     };
@@ -837,6 +856,8 @@ useEffect(() => {
                         ></Column>
                         <Column headerStyle={{ whiteSpace: 'nowrap' }} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="bundle.id" header={t('ORDER.TABLE.COLUMN.BUNDLEID')} body={bundleIdBodyTemplate}></Column>
                         <Column headerStyle={{ whiteSpace: 'nowrap' }} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header={t('ORDER.TABLE.COLUMN.PAYABLEAMOUNT')} body={payableAmountBodyTemplate}></Column>
+                        <Column headerStyle={{ whiteSpace: 'nowrap' }} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header={t('TRANSACTION_STATUS')} body={transactionBodyTemplate}></Column>
+
                         <Column headerStyle={{ whiteSpace: 'nowrap' }} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header={t('ORDER.TABLE.COLUMN.BUNDLETITLE')} body={bundleTitleBodyTemplate}></Column>
                         <Column headerStyle={{ whiteSpace: 'nowrap' }} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header={t('ORDER.TABLE.COLUMN.REJECTREASON')} body={rejectedReasonBodyTemplate}></Column>
                         <Column headerStyle={{ whiteSpace: 'nowrap' }} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header={t('ORDER.TABLE.COLUMN.COMPANYNAME')} body={companyNameBodyTemplate}></Column>
