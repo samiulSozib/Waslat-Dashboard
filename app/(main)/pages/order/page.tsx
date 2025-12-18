@@ -68,8 +68,8 @@ const OrderPage = () => {
         filter_service_category_type: null as string | null,
         filter_company_id: null as number | null,
         filter_service_id: null as number | null,
-        from_date: null as string | null,
-        to_date: null as string | null
+        filter_startdate: null as string | null,
+        filter_enddate: null as string | null
     });
 
     const [activeFilters, setActiveFilters] = useState({});
@@ -97,7 +97,7 @@ const OrderPage = () => {
     // --- Fetch Orders Whenever Filters OR SearchTag Changes ---
     useEffect(() => {
         dispatch(_fetchOrders(1, searchTag, activeFilters));
-    }, [activeFilters, searchTag]);
+    }, [activeFilters, searchTag,dispatch]);
 
 
     useEffect(() => {
@@ -318,14 +318,14 @@ const OrderPage = () => {
                                             <label htmlFor="startDateFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.START_DATE')}
                                             </label>
-                                            <InputText type="date" id="startDateFilter" value={filters.from_date || ''} onChange={(e) => setFilters({ ...filters, from_date: e.target.value })} style={{ width: '100%' }} />
+                                            <InputText type="date" id="startDateFilter" value={filters.filter_startdate || ''} onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })} style={{ width: '100%' }} />
                                         </div>
 
                                         <div className="col-12">
                                             <label htmlFor="endDateFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.END_DATE')}
                                             </label>
-                                            <InputText type="date" id="endDateFilter" value={filters.to_date || ''} onChange={(e) => setFilters({ ...filters, to_date: e.target.value })} style={{ width: '100%' }} />
+                                            <InputText type="date" id="endDateFilter" value={filters.filter_enddate || ''} onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })} style={{ width: '100%' }} />
                                         </div>
 
                                         {/* Action Buttons */}
@@ -340,8 +340,8 @@ const OrderPage = () => {
                                                         filter_service_category_type: null,
                                                         filter_service_id: null,
                                                         filter_company_id: null,
-                                                        from_date: null,
-                                                        to_date: null
+                                                        filter_startdate: null,
+                                                        filter_enddate: null
                                                     });
                                                 }}
                                             />
@@ -782,7 +782,8 @@ const OrderPage = () => {
             orders,
             t,
             toast,
-            all: true
+            all: true,
+            filters:activeFilters
         });
     };
 

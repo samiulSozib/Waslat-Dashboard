@@ -36,7 +36,7 @@ export const _fetchOrders = (page: number = 1, search: string = '', filters: any
 
         queryParams.append('page', String(page));
         queryParams.append('search', search);
-        queryParams.append('items_per_page','15');
+        queryParams.append('items_per_page','20');
 
         Object.entries(filters).forEach(([key, value]) => {
             if (value !== null && value !== undefined && value !== '') {

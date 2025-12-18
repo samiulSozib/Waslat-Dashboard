@@ -1619,7 +1619,21 @@
     "RECHARGEABLE_ACCOUNT": "حساب قابل شارژ",
     "TRANSACTION_STATUS": "وضعیت تراکنش",
   "TRANSACTION_HAS_NOT_BEEN_CREATED": "تراکنش ایجاد نشده است",
-  "TRANSACTION_HAS_BEEN_CREATED": "تراکنش ایجاد شده است"
+  "TRANSACTION_HAS_BEEN_CREATED": "تراکنش ایجاد شده است",
+
+  "EXPORTS": {
+    "PROCESSING": "در حال پردازش خروجی",
+    "FETCH_COMPLETE": "دریافت کامل شد",
+    "FOUND": "یافت شد",
+    "ORDERS": "سفارش‌ها",
+    "STARTING": "شروع خروجی...",
+    "PAGES": "صفحات",
+    "FETCHED": "دریافت شد",
+    "SUCCESSFULLY_FETCHED": "با موفقیت دریافت شد",
+    "GENERATING_EXCEL": "در حال ایجاد اکسل برای",
+    "RECORDS": "رکوردها"
+  },
+  "AUTH_TOKEN_MISSING": "توکن احراز هویت وجود ندارد"
 
 
 }

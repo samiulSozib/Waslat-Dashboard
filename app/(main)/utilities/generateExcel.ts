@@ -3,7 +3,42 @@ import axios from 'axios';
 import * as XLSX from 'xlsx';
 
 const getAuthToken = () => {
-    return localStorage.getItem('api_token') || ''; // Retrieve the token from localStorage
+    return localStorage.getItem('api_token') || '';
+};
+
+// Helper function to fetch paginated orders
+const fetchOrdersWithPagination = async (
+    page: number,
+    itemsPerPage: number,
+    token: string,
+    resellerId?: number,
+    filters?: Record<string, any>
+) => {
+    const queryParams = new URLSearchParams();
+    
+    // Add pagination parameters
+    queryParams.append('page', String(page));
+    queryParams.append('items_per_page', String(itemsPerPage));
+    
+    // Add filters
+    Object.entries(filters || {}).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+            queryParams.append(key, String(value));
+        }
+    });
+
+    const endpoint = resellerId 
+        ? `${process.env.NEXT_PUBLIC_BASE_URL}/resellers/${resellerId}/orders?${queryParams.toString()}`
+        : `${process.env.NEXT_PUBLIC_BASE_URL}/orders?${queryParams.toString()}`;
+
+    const response = await axios.get(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+
+    return {
+        orders: response.data?.data?.orders || [],
+        pagination: response.data?.payload?.pagination || { total: 0 }
+    };
 };
 
 export const generateOrderExcelFile = async ({
@@ -22,60 +57,145 @@ export const generateOrderExcelFile = async ({
     filters?: Record<string, any>;
 }) => {
     try {
-        let exportOrders = orders || [];
-
-        // Fetch all orders if "all" flag is set
+        let exportOrders: any[] = orders || [];
+        
+        // If "all" flag is set, fetch ALL orders with pagination
         if (all) {
             const token = getAuthToken();
-            const queryParams = new URLSearchParams();
-
-            Object.entries(filters || {}).forEach(([key, value]) => {
-                if (value !== null && value !== undefined && value !== '') {
-                    queryParams.append(key, String(value));
-                }
-            });
-
-            if (!resellerId) {
-                const response = await axios.get(
-                    `${process.env.NEXT_PUBLIC_BASE_URL}/orders?${queryParams.toString()}&filter_isexport=${all}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
-                if (!orders || orders.length === 0) {
-                    exportOrders = response.data?.data?.orders || [];
-                }
-
-            } else {
-                const response = await axios.get(
-                    `${process.env.NEXT_PUBLIC_BASE_URL}/resellers/${resellerId}/orders?${queryParams.toString()}&filter_isexport=${all}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
-                exportOrders = response.data?.data?.orders || [];
+            if (!token) {
+                toast.current?.show({
+                    severity: 'error',
+                    summary: t('EXPORTS.ERROR'),
+                    detail: t('AUTH_TOKEN_MISSING'),
+                    life: 3000,
+                });
+                return;
             }
 
+            // First, fetch first page to get total count
+            const firstBatch = await fetchOrdersWithPagination(
+                1,
+                1, // Just need pagination info
+                token,
+                resellerId,
+                filters
+            );
+            
+            const totalOrders = firstBatch.pagination.total;
+            
+            if (totalOrders === 0) {
+                toast.current?.show({
+                    severity: 'warn',
+                    summary: t('EXPORTS.WARNING'),
+                    detail: t('EXPORTS.NO_DATA'),
+                    life: 3000,
+                });
+                return;
+            }
 
+            // Show progress notification
+            toast.current?.show({
+                severity: 'info',
+                summary: t('EXPORTS.PROCESSING'),
+                detail: `${t('EXPORTS.FOUND')} ${totalOrders} ${t('EXPORTS.ORDERS')}. ${t('EXPORTS.STARTING')}...`,
+                life: 5000,
+            });
 
+            // Calculate number of batches (1000 records per batch)
+            const itemsPerPage = 1000;
+            const totalPages = Math.ceil(totalOrders / itemsPerPage);
+            
+            // Initialize array for all orders
+            exportOrders = [];
+            
+            // Show progress indicator
+            let progressToast: any = null;
+            if (totalPages > 1) {
+                progressToast = toast.current?.show({
+                    severity: 'info',
+                    summary: t('EXPORTS.PROCESSING'),
+                    detail: `0/${totalPages} ${t('EXPORTS.PAGES')} ${t('EXPORTS.FETCHED')}`,
+                    sticky: true,
+                });
+            }
 
+            // Fetch all batches
+            for (let page = 1; page <= totalPages; page++) {
+                try {
+                    // Update progress
+                    if (progressToast && totalPages > 1) {
+                        progressToast.update({
+                            detail: `${page}/${totalPages} ${t('EXPORTS.PAGES')} ${t('EXPORTS.FETCHED')}`,
+                        });
+                    }
+
+                    // Fetch batch
+                    const batch = await fetchOrdersWithPagination(
+                        page,
+                        itemsPerPage,
+                        token,
+                        resellerId,
+                        filters
+                    );
+
+                    exportOrders = [...exportOrders, ...batch.orders];
+                    
+                    // Optional: Add small delay to prevent rate limiting
+                    if (page < totalPages) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                    
+                } catch (error) {
+                    console.error(`Error fetching page ${page}:`, error);
+                    // Continue with next page if one fails
+                    continue;
+                }
+            }
+
+            // Close progress toast
+            if (progressToast) {
+                toast.current?.remove(progressToast);
+            }
+
+            if (exportOrders.length === 0) {
+                toast.current?.show({
+                    severity: 'warn',
+                    summary: t('EXPORTS.WARNING'),
+                    detail: t('EXPORTS.NO_DATA'),
+                    life: 3000,
+                });
+                return;
+            }
+
+            // Show success message for fetching
+            toast.current?.show({
+                severity: 'success',
+                summary: t('EXPORTS.FETCH_COMPLETE'),
+                detail: `${t('EXPORTS.SUCCESSFULLY_FETCHED')} ${exportOrders.length} ${t('EXPORTS.ORDERS')}`,
+                life: 3000,
+            });
         }
 
+        // If no orders to export
         if (!exportOrders || exportOrders.length === 0) {
             toast.current?.show({
                 severity: 'warn',
-                summary: t('EXPORT.WARNING'),
-                detail: t('EXPORT.NO_DATA'),
+                summary: t('EXPORTS.WARNING'),
+                detail: t('EXPORTS.NO_DATA'),
                 life: 3000,
             });
             return;
         }
 
-        // Transform data
+        // Show processing message for Excel generation
+        const processingToast = toast.current?.show({
+            severity: 'info',
+            summary: t('EXPORTS.PROCESSING'),
+            detail: `${t('EXPORTS.GENERATING_EXCEL')} ${exportOrders.length} ${t('EXPORTS.RECORDS')}...`,
+            sticky: true,
+        });
+
+        // Transform data for Excel
         const exportData = exportOrders.map((order: any) => ({
             [t('ORDER.TABLE.COLUMN.ID')]: order.id,
             [t('ORDER.TABLE.COLUMN.RESELLERNAME')]: order.reseller?.reseller_name || '',
@@ -91,52 +211,70 @@ export const generateOrderExcelFile = async ({
                 order.status === '0'
                     ? t('ORDER.STATUS.PENDING')
                     : order.status === '1'
-                        ? t('ORDER.STATUS.CONFIRMED')
-                        : order.status === '2'
-                            ? t('ORDER.STATUS.REJECTED')
-                            : order.status === '3'
-                                ? t('ORDER.STATUS.UNDER_PROCESS')
-                                : '',
+                    ? t('ORDER.STATUS.CONFIRMED')
+                    : order.status === '2'
+                    ? t('ORDER.STATUS.REJECTED')
+                    : order.status === '3'
+                    ? t('ORDER.STATUS.UNDER_PROCESS')
+                    : '',
+            [t('TRANSACTION_ID')]: order.transaction_id || '',
+            [t('PERFORMED_BY')]: order.performed_by_name || '',
         }));
 
+        // Create worksheet
         const ws = XLSX.utils.json_to_sheet(exportData);
+        
+        // Set column widths
         ws['!cols'] = [
-            { wch: 8 },
-            { wch: 20 },
-            { wch: 20 },
-            { wch: 10 },
-            { wch: 15 },
-            { wch: 30 },
-            { wch: 30 },
-            { wch: 20 },
-            { wch: 20 },
-            { wch: 20 },
-            { wch: 15 },
+            { wch: 8 },    // ID
+            { wch: 20 },   // Reseller Name
+            { wch: 25 },   // Rechargeable Account
+            { wch: 10 },   // Bundle ID
+            { wch: 15 },   // Payable Amount
+            { wch: 30 },   // Bundle Title
+            { wch: 30 },   // Reject Reason
+            { wch: 20 },   // Company Name
+            { wch: 20 },   // Category Name
+            { wch: 20 },   // Ordered Date
+            { wch: 15 },   // Status
+            { wch: 20 },   // Transaction ID
+            { wch: 20 },   // Performed By
         ];
 
+        // Create workbook
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, t('ORDERS'));
 
-        const fileName = `${resellerId ? `Reseller_${resellerId}_` : 'All_'}Orders_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        // Generate filename
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        const fileName = `${resellerId ? `Reseller_${resellerId}_` : 'All_'}Orders_${timestamp}.xlsx`;
+        
+        // Save file
         XLSX.writeFile(wb, fileName);
 
+        // Close processing toast
+        if (processingToast) {
+            toast.current?.remove(processingToast);
+        }
+
+        // Show success message
         toast.current?.show({
             severity: 'success',
-            summary: t('EXPORT.SUCCESS'),
-            detail: t('EXPORT.SUCCESS_DETAIL'),
-            life: 3000,
+            summary: t('EXPORTS.SUCCESS'),
+            detail: `${t('EXPORTS.SUCCESS_DETAIL')} ${exportOrders.length} ${t('EXPORTS.RECORDS')}`,
+            life: 5000,
         });
+
     } catch (error) {
         console.error('Export error:', error);
         toast.current?.show({
             severity: 'error',
-            summary: t('EXPORT.ERROR'),
-            detail: t('EXPORT.ERROR_DETAIL'),
+            summary: t('EXPORTS.ERROR'),
+            detail: t('EXPORTS.ERROR_DETAIL'),
             life: 3000,
         });
     }
 };
-
 
 
 
@@ -199,8 +337,8 @@ export const generateBalanceExcelFile = async ({
         if (!exportBalances || exportBalances.length === 0) {
             toast.current?.show({
                 severity: 'warn',
-                summary: t('EXPORT.WARNING'),
-                detail: t('EXPORT.NO_DATA'),
+                summary: t('EXPORTS.WARNING'),
+                detail: t('EXPORTS.NO_DATA'),
                 life: 3000,
             });
             return;
@@ -248,16 +386,16 @@ export const generateBalanceExcelFile = async ({
 
         toast.current?.show({
             severity: 'success',
-            summary: t('EXPORT.SUCCESS'),
-            detail: t('EXPORT.SUCCESS_DETAIL'),
+            summary: t('EXPORTS.SUCCESS'),
+            detail: t('EXPORTS.SUCCESS_DETAIL'),
             life: 3000,
         });
     } catch (error) {
         console.error('Export error:', error);
         toast.current?.show({
             severity: 'error',
-            summary: t('EXPORT.ERROR'),
-            detail: t('EXPORT.ERROR_DETAIL'),
+            summary: t('EXPORTS.ERROR'),
+            detail: t('EXPORTS.ERROR_DETAIL'),
             life: 3000,
         });
     }
@@ -322,8 +460,8 @@ export const generatePaymentExcelFile = async ({
         if (!exportPayments || exportPayments.length === 0) {
             toast.current?.show({
                 severity: 'warn',
-                summary: t('EXPORT.WARNING'),
-                detail: t('EXPORT.NO_DATA'),
+                summary: t('EXPORTS.WARNING'),
+                detail: t('EXPORTS.NO_DATA'),
                 life: 3000,
             });
             return;
@@ -373,16 +511,16 @@ export const generatePaymentExcelFile = async ({
 
         toast.current?.show({
             severity: 'success',
-            summary: t('EXPORT.SUCCESS'),
-            detail: t('EXPORT.SUCCESS_DETAIL'),
+            summary: t('EXPORTS.SUCCESS'),
+            detail: t('EXPORTS.SUCCESS_DETAIL'),
             life: 3000,
         });
     } catch (error) {
         console.error('Export error:', error);
         toast.current?.show({
             severity: 'error',
-            summary: t('EXPORT.ERROR'),
-            detail: t('EXPORT.ERROR_DETAIL'),
+            summary: t('EXPORTS.ERROR'),
+            detail: t('EXPORTS.ERROR_DETAIL'),
             life: 3000,
         });
     }
@@ -450,8 +588,8 @@ export const generateTransactionExcelFile = async ({
         if (!exportTransactions || exportTransactions.length === 0) {
             toast.current?.show({
                 severity: 'warn',
-                summary: t('EXPORT.WARNING'),
-                detail: t('EXPORT.NO_DATA'),
+                summary: t('EXPORTS.WARNING'),
+                detail: t('EXPORTS.NO_DATA'),
                 life: 3000,
             });
             return;
@@ -516,16 +654,16 @@ export const generateTransactionExcelFile = async ({
 
         toast.current?.show({
             severity: 'success',
-            summary: t('EXPORT.SUCCESS'),
-            detail: t('EXPORT.SUCCESS_DETAIL'),
+            summary: t('EXPORTS.SUCCESS'),
+            detail: t('EXPORTS.SUCCESS_DETAIL'),
             life: 3000,
         });
     } catch (error) {
         console.error('Export error:', error);
         toast.current?.show({
             severity: 'error',
-            summary: t('EXPORT.ERROR'),
-            detail: t('EXPORT.ERROR_DETAIL'),
+            summary: t('EXPORTS.ERROR'),
+            detail: t('EXPORTS.ERROR_DETAIL'),
             life: 3000,
         });
     }
@@ -592,8 +730,8 @@ export const generateSubResellerExcelFile = async ({
         if (!exportSubResellers || exportSubResellers.length === 0) {
             toast.current?.show({
                 severity: 'warn',
-                summary: t('EXPORT.WARNING'),
-                detail: t('EXPORT.NO_DATA'),
+                summary: t('EXPORTS.WARNING'),
+                detail: t('EXPORTS.NO_DATA'),
                 life: 3000,
             });
             return;
@@ -662,16 +800,16 @@ export const generateSubResellerExcelFile = async ({
 
         toast.current?.show({
             severity: 'success',
-            summary: t('EXPORT.SUCCESS'),
-            detail: t('EXPORT.SUCCESS_DETAIL'),
+            summary: t('EXPORTS.SUCCESS'),
+            detail: t('EXPORTS.SUCCESS_DETAIL'),
             life: 3000,
         });
     } catch (error) {
         console.error('Export error:', error);
         toast.current?.show({
             severity: 'error',
-            summary: t('EXPORT.ERROR'),
-            detail: t('EXPORT.ERROR_DETAIL'),
+            summary: t('EXPORTS.ERROR'),
+            detail: t('EXPORTS.ERROR_DETAIL'),
             life: 3000,
         });
     }

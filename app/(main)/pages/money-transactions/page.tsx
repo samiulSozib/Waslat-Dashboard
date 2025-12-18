@@ -511,7 +511,7 @@ const recharableAmountBodyTemplate = (rowData: MoneyTransaction) => {
 
     const onPageChange = (event: any) => {
         const page = event.page + 1;
-        dispatch(_fetchMoneyTransactionsList(page, searchTag));
+        dispatch(_fetchMoneyTransactionsList(page, searchTag,activeFilters));
     };
 
     const handleSubmitFilter = (filters: any) => {

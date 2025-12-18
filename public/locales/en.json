@@ -1625,7 +1625,22 @@
 "RECHARGEABLE_ACCOUNT":"Rechargeable Account",
 "TRANSACTION_STATUS":"Transaction Status",
 "TRANSACTION_HAS_NOT_BEEN_CREATED":"Transactions has not been created",
-"TRANSACTION_HAS_BEEN_CREATED":"Transactions has been created"
+"TRANSACTION_HAS_BEEN_CREATED":"Transactions has been created",
+
+
+"EXPORTS": {
+    "PROCESSING": "Processing Export",
+    "FETCH_COMPLETE": "Fetch Complete",
+    "FOUND": "Found",
+    "ORDERS": "orders",
+    "STARTING": "Starting export...",
+    "PAGES": "pages",
+    "FETCHED": "fetched",
+    "SUCCESSFULLY_FETCHED": "Successfully fetched",
+    "GENERATING_EXCEL": "Generating Excel for",
+    "RECORDS": "records"
+  },
+  "AUTH_TOKEN_MISSING": "Authentication token missing"
 
 
 }

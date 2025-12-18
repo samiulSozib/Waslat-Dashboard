@@ -1619,6 +1619,19 @@
     "RECHARGEABLE_ACCOUNT": "د بیا چارج کېدونکی حساب",
     "TRANSACTION_STATUS": "د معاملې حالت",
   "TRANSACTION_HAS_NOT_BEEN_CREATED": "معاملې نه دي جوړې شوې",
-  "TRANSACTION_HAS_BEEN_CREATED": "معاملې جوړې شوې دي"
+  "TRANSACTION_HAS_BEEN_CREATED": "معاملې جوړې شوې دي",
+  "EXPORTS": {
+    "PROCESSING": "د صادرولو پروسه روانه ده",
+    "FETCH_COMPLETE": "راټولول بشپړ شول",
+    "FOUND": "وموندل شول",
+    "ORDERS": "سفارشونه",
+    "STARTING": "صادرول پیل کېږي...",
+    "PAGES": "پاڼې",
+    "FETCHED": "راټول شول",
+    "SUCCESSFULLY_FETCHED": "په بریالیتوب سره راټول شول",
+    "GENERATING_EXCEL": "اکسل جوړېږي د",
+    "RECORDS": "ریکارډونه"
+  },
+  "AUTH_TOKEN_MISSING": "د تصدیق ټوکن نشته"
 
 }
