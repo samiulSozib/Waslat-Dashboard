@@ -80,7 +80,10 @@ const ResellerSubResellers = ({ resellerId }: ResellerBalancesProps) => {
         reseller_group_id: 0,
         can_create_sub_resellers: 0,
         sub_reseller_limit: 0,
-        sub_resellers_can_create_sub_resellers: 0
+        sub_resellers_can_create_sub_resellers: 0,
+        afg_custom_recharge_adjust_type: 'decrease',
+        afg_custom_recharge_adjust_mode: 'fixed',
+        afg_custom_recharge_adjust_value: 0
     };
 
     const [resellerDialog, setResellerDialog] = useState(false);
