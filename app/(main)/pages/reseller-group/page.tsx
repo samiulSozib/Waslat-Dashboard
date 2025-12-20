@@ -39,7 +39,10 @@ const ResellerGroupPage = () => {
         status: '',
         notes: '',
         created_at: '',
-        updated_at: ''
+        updated_at: '',
+        afg_custom_recharge_adjust_type: 'decrease',
+        afg_custom_recharge_adjust_mode: 'fixed',
+        afg_custom_recharge_adjust_value: 0
     };
 
     const [resellerGroupDialog, setResellerGroupDialog] = useState(false);
@@ -95,7 +98,6 @@ const ResellerGroupPage = () => {
 
     const editResellerGroup = (resellerGroup: ResellerGroup) => {
         setResellerGroup({ ...resellerGroup });
-
         setResellerGroupDialog(true);
     };
 
@@ -129,34 +131,10 @@ const ResellerGroupPage = () => {
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
                         onClick={openNew}
                     />
-                    {/* <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    /> */}
                 </div>
             </React.Fragment>
         );
     };
-
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <div className="flex items-center">
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-    //                 <i className="pi pi-search" />
-    //                 <InputText
-    //                     type="search"
-    //                     onInput={(e) => setGlobalFilter(e.currentTarget.value)}
-    //                     placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-    //                     className="w-full md:w-auto"
-    //                 />
-    //             </span>
-    //         </div>
-    //     );
-    // };
 
     const resellerGroupNameBodyTemplate = (rowData: ResellerGroup) => {
         return (
@@ -236,6 +214,34 @@ const ResellerGroupPage = () => {
         );
     };
 
+    // New field body templates
+    const rechargeAdjustTypeBodyTemplate = (rowData: ResellerGroup) => {
+        return (
+            <>
+                <span className="p-column-title">Recharge Adjust Type</span>
+                {rowData.afg_custom_recharge_adjust_type}
+            </>
+        );
+    };
+
+    const rechargeAdjustModeBodyTemplate = (rowData: ResellerGroup) => {
+        return (
+            <>
+                <span className="p-column-title">Recharge Adjust Mode</span>
+                {rowData.afg_custom_recharge_adjust_mode}
+            </>
+        );
+    };
+
+    const rechargeAdjustValueBodyTemplate = (rowData: ResellerGroup) => {
+        return (
+            <>
+                <span className="p-column-title">Recharge Adjust Value</span>
+                {rowData.afg_custom_recharge_adjust_value}
+            </>
+        );
+    };
+
     const actionBodyTemplate = (rowData: ResellerGroup) => {
         return (
             <>
@@ -244,16 +250,6 @@ const ResellerGroupPage = () => {
             </>
         );
     };
-
-    // const header = (
-    //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-    //         <h5 className="m-0">Manage Products</h5>
-    //         <span className="block mt-2 md:mt-0 p-input-icon-left">
-    //             <i className="pi pi-search" />
-    //             <InputText type="search" onInput={(e) => setGlobalFilter(e.currentTarget.value)} placeholder="Search..." />
-    //         </span>
-    //     </div>
-    // );
 
     const resellerGroupDialogFooter = (
         <>
@@ -302,45 +298,61 @@ const ResellerGroupPage = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
-                        // header={header}
                         responsiveLayout="scroll"
                     >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="name" header={t('RESELLER.GROUP.TABLE.RESELLEGROUP')} body={resellerGroupNameBodyTemplate}></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="guard_name"
+                            field="discount_type"
                             header={t('RESELLER.GROUP.TABLE.DISCOUNTTYPE')}
                             body={discount_typeBodyTemplate}
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="guard_name"
+                            field="discount_value"
                             header={t('RESELLER.GROUP.TABLE.DISCOUNTVALUE')}
                             body={discount_valueBodyTemplate}
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="guard_name"
+                            field="sub_reseller_limit"
                             header={t('RESELLER.GROUP.TABLE.SUBRESELLERLIMIT')}
                             body={subresellerLimitBodyTemplate}
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="guard_name"
+                            field="can_create_sub_resellers"
                             header={t('RESELLER.GROUP.TABLE.CANADDSUBRESELLER')}
                             body={canAddSubResellerBodyTemplate}
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="guard_name"
+                            field="can_sub_reseller_create_subs"
                             header={t('RESELLER.GROUP.TABLE.CANSUBRESLLERADDSUB')}
                             body={canSubResellerCreateSubsBodyTemplate}
                         ></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="guard_name" header={t('RESELLER.GROUP.TABLE.STATUS')} body={statusBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="guard_name" header={t('RESELLER.GROUP.TABLE.NOTES')} body={notesBodyTemplate}></Column>
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="afg_custom_recharge_adjust_type"
+                            header={t('RECHARGE_ADJUST_TYPE')}
+                            body={rechargeAdjustTypeBodyTemplate}
+                        ></Column>
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="afg_custom_recharge_adjust_mode"
+                            header={t('RECHARGE_ADJUST_MODE')}
+                            body={rechargeAdjustModeBodyTemplate}
+                        ></Column>
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="afg_custom_recharge_adjust_value"
+                            header={t('RECHARGE_ADJUST_VALUE')}
+                            body={rechargeAdjustValueBodyTemplate}
+                        ></Column>
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="status" header={t('RESELLER.GROUP.TABLE.STATUS')} body={statusBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="notes" header={t('RESELLER.GROUP.TABLE.NOTES')} body={notesBodyTemplate}></Column>
                         <Column body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
 
@@ -413,6 +425,8 @@ const ResellerGroupPage = () => {
                                     />
                                 </div>
 
+
+
                                 <div className="field">
                                     <label htmlFor="status" style={{ fontWeight: 'bold' }}>
                                         {t('RESELLER.GROUP.LABEL.STATUS')}
@@ -421,8 +435,8 @@ const ResellerGroupPage = () => {
                                         id="status"
                                         value={resellerGroup.status}
                                         options={[
-                                            { label: 'Active', value: 'Active' },
-                                            { label: 'Inactive', value: 'Inactive' }
+                                            { label: 'Active', value: 'active' },
+                                            { label: 'Inactive', value: 'inactive' }
                                         ]}
                                         onChange={(e) =>
                                             setResellerGroup((prev) => ({
@@ -434,6 +448,23 @@ const ResellerGroupPage = () => {
                                         optionValue="value"
                                         placeholder={t('RESELLER.GROUP.PLACEHOLDER.STATUS')}
                                         className="w-full"
+                                    />
+                                </div>
+                                <div className="field">
+                                    <label htmlFor="notes" style={{ fontWeight: 'bold' }}>
+                                        {t('RESELLER.GROUP.LABEL.NOTES')}
+                                    </label>
+                                    <InputTextarea
+                                        value={resellerGroup.notes}
+                                        onChange={(e) =>
+                                            setResellerGroup((prev) => ({
+                                                ...prev,
+                                                notes: e.target.value
+                                            }))
+                                        }
+                                        rows={3}
+                                        cols={30}
+                                        placeholder={t('RESELLER.GROUP.PLACEHOLDER.NOTES')}
                                     />
                                 </div>
                             </div>
@@ -512,29 +543,78 @@ const ResellerGroupPage = () => {
                                 </div>
 
                                 <div className="field">
-                                    <label htmlFor="notes" style={{ fontWeight: 'bold' }}>
-                                        {t('RESELLER.GROUP.LABEL.NOTES')}
+                                    <label htmlFor="afg_custom_recharge_adjust_type" style={{ fontWeight: 'bold' }}>
+                                        {t('RECHARGE_ADJUST_TYPE')}
                                     </label>
-                                    <InputTextarea
-                                        value={resellerGroup.notes}
+                                    <Dropdown
+                                        id="afg_custom_recharge_adjust_type"
+                                        value={resellerGroup.afg_custom_recharge_adjust_type}
+                                        options={[
+                                            { label: t('DECREASE'), value: 'decrease' },
+                                            { label: t('INCREASE'), value: 'increase' }
+                                        ]}
                                         onChange={(e) =>
                                             setResellerGroup((prev) => ({
                                                 ...prev,
-                                                notes: e.target.value
+                                                afg_custom_recharge_adjust_type: e.value
                                             }))
                                         }
-                                        rows={3}
-                                        cols={30}
-                                        placeholder={t('RESELLER.GROUP.PLACEHOLDER.NOTES')}
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder={t('SELECT_ADJUST_TYPE')}
+                                        className="w-full"
                                     />
                                 </div>
+
+                                <div className="field">
+                                    <label htmlFor="afg_custom_recharge_adjust_mode" style={{ fontWeight: 'bold' }}>
+                                        {t('RECHARGE_ADJUST_MODE')}
+                                    </label>
+                                    <Dropdown
+                                        id="afg_custom_recharge_adjust_mode"
+                                        value={resellerGroup.afg_custom_recharge_adjust_mode}
+                                        options={[
+                                            { label: t('PERCENTAGE'), value: 'percentage' },
+                                            { label: t('FIXED'), value: 'fixed' }
+                                        ]}
+                                        onChange={(e) =>
+                                            setResellerGroup((prev) => ({
+                                                ...prev,
+                                                afg_custom_recharge_adjust_mode: e.value
+                                            }))
+                                        }
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder={t('SELECT_ADJUST_MODE')}
+                                        className="w-full"
+                                    />
+                                </div>
+
+                                <div className="field">
+                                    <label htmlFor="afg_custom_recharge_adjust_value" style={{ fontWeight: 'bold' }}>
+                                        {t('RECHARGE_ADJUST_VALUE')}
+                                    </label>
+                                    <InputText
+                                        id="afg_custom_recharge_adjust_value"
+                                        value={resellerGroup.afg_custom_recharge_adjust_value?.toString() || ''}
+                                        onChange={(e) =>
+                                            setResellerGroup((prev) => ({
+                                                ...prev,
+                                                afg_custom_recharge_adjust_value: parseFloat(e.target.value) || 0
+                                            }))
+                                        }
+                                        placeholder={t('ENTER_ADJUST_VALUE')}
+                                    />
+                                </div>
+
+
                             </div>
                         </div>
                     </Dialog>
 
                     <Dialog visible={deleteResellerGroupDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteResellerGroupDialogFooter} onHide={hideDeleteResellerGroupDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {resellerGroup && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{resellerGroup.name}</b>
@@ -545,7 +625,7 @@ const ResellerGroupPage = () => {
 
                     <Dialog visible={deleteResellerGroupsDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteResellerGroupsDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {resellerGroup && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>

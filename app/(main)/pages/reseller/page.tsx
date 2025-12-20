@@ -86,7 +86,10 @@ const ResellerPage = () => {
         max_loan_balance_request_amount: 0,
         min_loan_balance_request_amount: 0,
         reseller_identity_attachment: '',
-        extra_optional_proof: ''
+        extra_optional_proof: '',
+        afg_custom_recharge_adjust_type: 'decrease',
+        afg_custom_recharge_adjust_mode: 'fixed',
+        afg_custom_recharge_adjust_value: 0
     };
 
     const [resellerDialog, setResellerDialog] = useState(false);
@@ -1261,6 +1264,73 @@ const ResellerPage = () => {
                                         className={classNames({
                                             'p-invalid': submitted && !reseller.min_loan_balance_request_amount
                                         })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className='formgrid grid'>
+                                <div className="field col">
+                                    <label htmlFor="afg_custom_recharge_adjust_type" style={{ fontWeight: 'bold' }}>
+                                        {t('RECHARGE_ADJUST_TYPE')}
+                                    </label>
+                                    <Dropdown
+                                        id="afg_custom_recharge_adjust_type"
+                                        value={reseller.afg_custom_recharge_adjust_type}
+                                        options={[
+                                            { label: t('DECREASE'), value: 'decrease' },
+                                            { label: t('INCREASE'), value: 'increase' }
+                                        ]}
+                                        onChange={(e) =>
+                                            setReseller((prev) => ({
+                                                ...prev,
+                                                afg_custom_recharge_adjust_type: e.value
+                                            }))
+                                        }
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder={t('SELECT_ADJUST_TYPE')}
+                                        className="w-full"
+                                    />
+                                </div>
+
+                                <div className="field col">
+                                    <label htmlFor="afg_custom_recharge_adjust_mode" style={{ fontWeight: 'bold' }}>
+                                        {t('RECHARGE_ADJUST_MODE')}
+                                    </label>
+                                    <Dropdown
+                                        id="afg_custom_recharge_adjust_mode"
+                                        value={reseller.afg_custom_recharge_adjust_mode}
+                                        options={[
+                                            { label: t('PERCENTAGE'), value: 'percentage' },
+                                            { label: t('FIXED'), value: 'fixed' }
+                                        ]}
+                                        onChange={(e) =>
+                                            setReseller((prev) => ({
+                                                ...prev,
+                                                afg_custom_recharge_adjust_mode: e.value
+                                            }))
+                                        }
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder={t('SELECT_ADJUST_MODE')}
+                                        className="w-full"
+                                    />
+                                </div>
+
+                                <div className="field col">
+                                    <label htmlFor="afg_custom_recharge_adjust_value" style={{ fontWeight: 'bold' }}>
+                                        {t('RECHARGE_ADJUST_VALUE')}
+                                    </label>
+                                    <InputText
+                                        id="afg_custom_recharge_adjust_value"
+                                        value={reseller.afg_custom_recharge_adjust_value?.toString() || ''}
+                                        onChange={(e) =>
+                                            setReseller((prev) => ({
+                                                ...prev,
+                                                afg_custom_recharge_adjust_value: parseFloat(e.target.value) || 0
+                                            }))
+                                        }
+                                        placeholder={t('ENTER_ADJUST_VALUE')}
                                     />
                                 </div>
                             </div>

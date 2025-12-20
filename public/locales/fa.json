@@ -1287,7 +1287,22 @@
         "API_MSISDN": "شماره MSISDN API",
         "API_REQUEST_ID": "شناسه درخواست API",
         "TELEGRAM_WEBHOOK": "لینک وب‌هوک تلگرام",
-        "TELEGRAM_BOT_TOKEN": "توکن ربات تلگرام"
+        "TELEGRAM_BOT_TOKEN": "توکن ربات تلگرام",
+        "RECHARGE": "شارژ سفارشی",
+        "RECHARGE_ADJUST_TYPE": "نوع تنظیم",
+        "RECHARGE_ADJUST_MODE": "حالت تنظیم",
+        "RECHARGE_ADJUST_VALUE": "مقدار تنظیم",
+        "DECREASE": "کاهش",
+        "INCREASE": "افزایش",
+        "PERCENTAGE": "درصد",
+        "FIXED": "ثابت",
+        "SELECT_TYPE": "انتخاب نوع",
+        "SELECT_MODE": "انتخاب حالت",
+        "PERCENTAGE_NOTE": "مقدار درصد را وارد کنید (مثلاً 10 برای 10٪)",
+        "RECHARGE_SETTINGS_DESCRIPTION": "توضیحات",
+        "RECHARGE_TYPE_DESC": "نوع: مشخص می‌کند که مبلغ شارژ کاهش یابد یا افزایش یابد.",
+        "RECHARGE_MODE_DESC": "حالت: انتخاب بین تنظیم بر اساس درصد یا مبلغ ثابت.",
+        "RECHARGE_VALUE_DESC": "مقدار: مبلغ یا درصدی که شارژ بر اساس آن تنظیم می‌شود."
     },
     "TOTAL_CUSTOM_FIELD": "مجموع فیلدهای سفارشی",
     "MENU.SETTINGS": "تنظیمات",
@@ -1615,25 +1630,28 @@
     "PLEASE_ENTER_VALID_ADJUSTMENT_VALUE": "لطفاً یک مقدار معتبر برای تغییر وارد کنید",
     "PLEASE_ENTER_VALID_VALUE": "لطفاً یک مقدار معتبر وارد کنید",
     "PLEASE_CONFIRM_UPDATE": "لطفاً به‌روزرسانی را تأیید کنید",
-
     "RECHARGEABLE_ACCOUNT": "حساب قابل شارژ",
     "TRANSACTION_STATUS": "وضعیت تراکنش",
-  "TRANSACTION_HAS_NOT_BEEN_CREATED": "تراکنش ایجاد نشده است",
-  "TRANSACTION_HAS_BEEN_CREATED": "تراکنش ایجاد شده است",
-
-  "EXPORTS": {
-    "PROCESSING": "در حال پردازش خروجی",
-    "FETCH_COMPLETE": "دریافت کامل شد",
-    "FOUND": "یافت شد",
-    "ORDERS": "سفارش‌ها",
-    "STARTING": "شروع خروجی...",
-    "PAGES": "صفحات",
-    "FETCHED": "دریافت شد",
-    "SUCCESSFULLY_FETCHED": "با موفقیت دریافت شد",
-    "GENERATING_EXCEL": "در حال ایجاد اکسل برای",
-    "RECORDS": "رکوردها"
-  },
-  "AUTH_TOKEN_MISSING": "توکن احراز هویت وجود ندارد"
-
-
+    "TRANSACTION_HAS_NOT_BEEN_CREATED": "تراکنش ایجاد نشده است",
+    "TRANSACTION_HAS_BEEN_CREATED": "تراکنش ایجاد شده است",
+    "EXPORTS": {
+        "PROCESSING": "در حال پردازش خروجی",
+        "FETCH_COMPLETE": "دریافت کامل شد",
+        "FOUND": "یافت شد",
+        "ORDERS": "سفارش‌ها",
+        "STARTING": "شروع خروجی...",
+        "PAGES": "صفحات",
+        "FETCHED": "دریافت شد",
+        "SUCCESSFULLY_FETCHED": "با موفقیت دریافت شد",
+        "GENERATING_EXCEL": "در حال ایجاد اکسل برای",
+        "RECORDS": "رکوردها"
+    },
+    "AUTH_TOKEN_MISSING": "توکن احراز هویت وجود ندارد",
+    "RECHARGE_ADJUST_TYPE": "نوع تنظیم شارژ",
+    "RECHARGE_ADJUST_MODE": "حالت تنظیم شارژ",
+    "RECHARGE_ADJUST_VALUE": "مقدار تنظیم شارژ",
+    "SELECT_ADJUST_TYPE": "انتخاب نوع تنظیم",
+    "SELECT_ADJUST_MODE": "انتخاب حالت تنظیم",
+    "ENTER_ADJUST_VALUE": "وارد کردن مقدار تنظیم",
+    "FIXED": "ثابت"
 }

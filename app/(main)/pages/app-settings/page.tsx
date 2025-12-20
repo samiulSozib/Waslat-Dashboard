@@ -30,56 +30,60 @@ import { Sidebar } from 'primereact/sidebar';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 
 const emptySettings: AppSettings = {
-  is_instant_confirm: false,
-  maintenance_mode: false,
-  allow_new_registrations: false,
-  default_currency: "",
-  exchange_rate_usd_afn: 0,
-  support_phone: "",
-  support_email: "",
-  support_whatsapp: "",
-  alternative_contact_phone: "",
-  alternative_whatsapp: "",
-  telegram_username: "",
-  telegram_url: "",
-  facebook_page_url: "",
-  instagram_handle: "",
-  instagram_url: "",
-  twitter_url: "",
-  tiktok_url: "",
-  youtube_url: "",
-  website_url: "",
-  app_name: "",
-  app_name_i18n: {
-    en: "",
-    fa: "",
-    ps: ""
-  },
-  app_slogan: "",
-  app_slogan_i18n: {
-    en: "",
-    fa: "",
-    ps: ""
-  },
-  logo_url: "",
-  mobile_app_primary_color: "#3498db",
-  mobile_app_secondary_color: "#FFC107",
-  primary_color_font_color: "#FFFFFF",
-  secondary_color_font_color: "#000000",
-  extra_settings: {
-    max_order_per_day: 0,
-    min_topup_amount: 0,
-    max_topup_amount: 0
-  },
-  integration_settings: {
-    SETARAGAN_API_BASE_URL: "",
-    SETARAGAN_API_USERNAME: "",
-    SETARAGAN_API_AUTHKEY: "",
-    SETARAGAN_MSISDN: "",
-    SETARAGAN_REQUEST_ID: "",
-    TELEGRAM_WEBHOOK_URL: "",
-    TELEGRAM_BOT_TOKEN: ""
-  }
+    is_instant_confirm: false,
+    maintenance_mode: false,
+    allow_new_registrations: false,
+    default_currency: "",
+    exchange_rate_usd_afn: 0,
+    support_phone: "",
+    support_email: "",
+    support_whatsapp: "",
+    alternative_contact_phone: "",
+    alternative_whatsapp: "",
+    telegram_username: "",
+    telegram_url: "",
+    facebook_page_url: "",
+    instagram_handle: "",
+    instagram_url: "",
+    twitter_url: "",
+    tiktok_url: "",
+    youtube_url: "",
+    website_url: "",
+    app_name: "",
+    app_name_i18n: {
+        en: "",
+        fa: "",
+        ps: ""
+    },
+    app_slogan: "",
+    app_slogan_i18n: {
+        en: "",
+        fa: "",
+        ps: ""
+    },
+    logo_url: "",
+    mobile_app_primary_color: "#3498db",
+    mobile_app_secondary_color: "#FFC107",
+    primary_color_font_color: "#FFFFFF",
+    secondary_color_font_color: "#000000",
+    extra_settings: {
+        max_order_per_day: 0,
+        min_topup_amount: 0,
+        max_topup_amount: 0
+    },
+    integration_settings: {
+        SETARAGAN_API_BASE_URL: "",
+        SETARAGAN_API_USERNAME: "",
+        SETARAGAN_API_AUTHKEY: "",
+        SETARAGAN_MSISDN: "",
+        SETARAGAN_REQUEST_ID: "",
+        TELEGRAM_WEBHOOK_URL: "",
+        TELEGRAM_BOT_TOKEN: ""
+    },
+    afg_custom_recharge_adjust_type: "decrease",
+    afg_custom_recharge_adjust_mode: "percentage",
+    afg_custom_recharge_adjust_value: 10
+
 };
 
 const AppSettingsPage = () => {
@@ -93,7 +97,7 @@ const AppSettingsPage = () => {
     const dispatch = useDispatch<AppDispatch>();
     const { loading, settings: reduxSettings } = useSelector((state: any) => state.appSettingsReducer);
     const { t } = useTranslation();
-        const { currencies } = useSelector((state: any) => state.currenciesReducer);
+    const { currencies } = useSelector((state: any) => state.currenciesReducer);
 
 
     useEffect(() => {
@@ -174,7 +178,7 @@ const AppSettingsPage = () => {
                     )} */}
                     <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={ t('APP_SETTINGS.EDIT_SETTINGS')}
+                        label={t('APP_SETTINGS.EDIT_SETTINGS')}
                         icon="pi pi-cog"
                         severity="info"
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
@@ -655,7 +659,7 @@ const AppSettingsPage = () => {
                                 </label>
                                 <InputNumber
                                     id="max_orders"
-                                    value={settings?.extra_settings?.max_order_per_day||0}
+                                    value={settings?.extra_settings?.max_order_per_day || 0}
                                     onValueChange={(e) => setSettings({
                                         ...settings,
                                         extra_settings: { ...settings.extra_settings, max_order_per_day: e.value || 0 }
@@ -826,6 +830,99 @@ const AppSettingsPage = () => {
                     </div>
                 );
 
+            case 'recharge':
+
+
+                return (
+                    <div className="grid p-fluid">
+                        <div className="col-12 md:col-6">
+                            <div className="field">
+                                <label htmlFor="recharge_adjust_type" className="font-bold text-sm md:text-base">
+                                    {t('APP_SETTINGS.RECHARGE_ADJUST_TYPE')}
+                                </label>
+                                <Dropdown
+                                    id="recharge_adjust_type"
+                                    value={settings.afg_custom_recharge_adjust_type}
+                                    options={[
+                                        { label: t('APP_SETTINGS.DECREASE'), value: "decrease" },
+                                        { label: t('APP_SETTINGS.INCREASE'), value: "increase" }
+                                    ]}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        afg_custom_recharge_adjust_type: e.value
+
+                                    })}
+                                    placeholder={t('APP_SETTINGS.SELECT_TYPE')}
+                                    className="w-full"
+                                />
+                            </div>
+
+                            <div className="field">
+                                <label htmlFor="recharge_adjust_mode" className="font-bold text-sm md:text-base">
+                                    {t('APP_SETTINGS.RECHARGE_ADJUST_MODE')}
+                                </label>
+                                <Dropdown
+                                    id="recharge_adjust_mode"
+                                    value={settings.afg_custom_recharge_adjust_mode}
+                                    options={[
+                                        { label: t('APP_SETTINGS.PERCENTAGE'), value: "percentage" },
+                                        { label: t('APP_SETTINGS.FIXED'), value: "fixed" }
+                                    ]}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        afg_custom_recharge_adjust_mode: e.value
+
+                                    })}
+                                    placeholder={t('APP_SETTINGS.SELECT_MODE')}
+                                    className="w-full"
+                                />
+                            </div>
+
+                            <div className="field">
+                                <label htmlFor="recharge_adjust_value" className="font-bold text-sm md:text-base">
+                                    {t('APP_SETTINGS.RECHARGE_ADJUST_VALUE')}
+                                </label>
+                                <InputNumber
+                                    id="recharge_adjust_value"
+                                    value={settings.afg_custom_recharge_adjust_value}
+                                    onValueChange={(e) => setSettings({
+                                        ...settings,
+                                        afg_custom_recharge_adjust_value: e.value || 0
+
+                                    })}
+                                    mode="decimal"
+                                    minFractionDigits={2}
+                                    maxFractionDigits={2}
+                                    min={0}
+                                />
+                                {settings.afg_custom_recharge_adjust_mode === "percentage" && (
+                                    <small className="text-sm text-500">
+                                        {t('APP_SETTINGS.PERCENTAGE_NOTE')}
+                                    </small>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="col-12">
+                            <div className="field">
+                                <label className="font-bold text-sm md:text-base">
+                                    {t('APP_SETTINGS.RECHARGE_SETTINGS_DESCRIPTION')}
+                                </label>
+                                <div className="p-3 border-1 surface-border border-round">
+                                    <p className="text-sm text-500 mb-2">
+                                        {t('APP_SETTINGS.RECHARGE_TYPE_DESC')}
+                                    </p>
+                                    <p className="text-sm text-500 mb-2">
+                                        {t('APP_SETTINGS.RECHARGE_MODE_DESC')}
+                                    </p>
+                                    <p className="text-sm text-500">
+                                        {t('APP_SETTINGS.RECHARGE_VALUE_DESC')}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
             default:
                 return null;
         }
@@ -870,6 +967,14 @@ const AppSettingsPage = () => {
                 className={`p-button-text ${activeTab === 'integration' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
                 onClick={() => {
                     setActiveTab('integration');
+                    setMobileNavVisible(false);
+                }}
+            />
+            <Button
+                label={t('APP_SETTINGS.RECHARGE')}
+                className={`p-button-text ${activeTab === 'recharge' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
+                onClick={() => {
+                    setActiveTab('recharge');
                     setMobileNavVisible(false);
                 }}
             />
@@ -942,8 +1047,8 @@ const AppSettingsPage = () => {
                     >
                         <div className="card" style={{ padding: '20px', maxHeight: '60vh', overflowY: 'auto' }}>
                             <TabView
-                                activeIndex={['general', 'contact', 'branding', 'limits', 'integration'].indexOf(activeTab)}
-                                onTabChange={(e) => setActiveTab(['general', 'contact', 'branding', 'limits', 'integration'][e.index])}
+                                activeIndex={['general', 'contact', 'branding', 'limits', 'integration', 'recharge'].indexOf(activeTab)}
+                                onTabChange={(e) => setActiveTab(['general', 'contact', 'branding', 'limits', 'integration', 'recharge'][e.index])}
                             >
                                 <TabPanel header={t('APP_SETTINGS.GENERAL')}>
                                     {activeTab === 'general' && renderTabContent()}
@@ -959,6 +1064,9 @@ const AppSettingsPage = () => {
                                 </TabPanel>
                                 <TabPanel header={t('APP_SETTINGS.INTEGRATION')}>
                                     {activeTab === 'integration' && renderTabContent()}
+                                </TabPanel>
+                                <TabPanel header={t('APP_SETTINGS.RECHARGE')}>
+                                    {activeTab === 'recharge' && renderTabContent()}
                                 </TabPanel>
                             </TabView>
                         </div>

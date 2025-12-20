@@ -144,6 +144,10 @@ export const _addReseller = (
         // For numeric fields, ensure they're strings if backend expects strings
         formData.append('max_loan_balance_request_amount', String(resellerData.max_loan_balance_request_amount || 0));
         formData.append('min_loan_balance_request_amount', String(resellerData.min_loan_balance_request_amount || 0));
+
+        formData.append("afg_custom_recharge_adjust_type",resellerData?.afg_custom_recharge_adjust_type.toString())
+        formData.append("afg_custom_recharge_adjust_mode",resellerData?.afg_custom_recharge_adjust_mode.toString())
+        formData.append("afg_custom_recharge_adjust_value",resellerData?.afg_custom_recharge_adjust_value.toString())
         //return
 
         const response = await axios.post(
@@ -263,6 +267,10 @@ export const _editReseller = (
         // For numeric fields, ensure they're strings if backend expects strings
         formData.append('max_loan_balance_request_amount', String(resellerData.max_loan_balance_request_amount || 0));
         formData.append('min_loan_balance_request_amount', String(resellerData.min_loan_balance_request_amount || 0));
+
+        formData.append("afg_custom_recharge_adjust_type",resellerData?.afg_custom_recharge_adjust_type.toString())
+        formData.append("afg_custom_recharge_adjust_mode",resellerData?.afg_custom_recharge_adjust_mode.toString())
+        formData.append("afg_custom_recharge_adjust_value",resellerData?.afg_custom_recharge_adjust_value.toString())
 
         const response = await axios.post(
             `${process.env.NEXT_PUBLIC_BASE_URL}/resellers/${id}`,

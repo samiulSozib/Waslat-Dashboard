@@ -243,7 +243,10 @@ export interface Reseller {
     can_see_parent_contact?:boolean,
     can_send_hawala?:boolean,
     max_loan_balance_request_amount?:number|string,
-    min_loan_balance_request_amount?:number|string
+    min_loan_balance_request_amount?:number|string,
+    afg_custom_recharge_adjust_type: string;
+    afg_custom_recharge_adjust_mode: string;
+    afg_custom_recharge_adjust_value: number;
 }
 
 export interface User {
@@ -465,7 +468,10 @@ export interface ResellerGroup{
     status:string,
     notes:string,
     created_at:string,
-    updated_at:string
+    updated_at:string,
+    afg_custom_recharge_adjust_type: string;
+    afg_custom_recharge_adjust_mode: string;
+    afg_custom_recharge_adjust_value: number;
 }
 
 export interface Permission{
@@ -728,6 +734,10 @@ export interface AppSettings {
     TELEGRAM_WEBHOOK_URL: string;
     TELEGRAM_BOT_TOKEN: string;
   };
+    afg_custom_recharge_adjust_type: string|null|undefined;
+    afg_custom_recharge_adjust_mode: string;
+    afg_custom_recharge_adjust_value: number;
+  
 }
 
 
