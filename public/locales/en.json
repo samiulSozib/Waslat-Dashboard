@@ -1302,7 +1302,15 @@
         "RECHARGE_SETTINGS_DESCRIPTION": "Description",
         "RECHARGE_TYPE_DESC": "Type: Determines whether the recharge amount should be decreased or increased.",
         "RECHARGE_MODE_DESC": "Mode: Choose between percentage-based or fixed amount adjustment.",
-        "RECHARGE_VALUE_DESC": "Value: The amount/percentage to adjust the recharge by."
+        "RECHARGE_VALUE_DESC": "Value: The amount/percentage to adjust the recharge by.",
+        "SELLING_PRICE_ADJUST_TYPE": "Selling Price Adjustment Type",
+        "SELLING_PRICE_ADJUST_MODE": "Selling Price Adjustment Mode",
+        "SELLING_PRICE_ADJUST_VALUE": "Selling Price Adjustment Value",
+        "SETARAGAN_ADMIN_BUYING_PRICE_PERCENTAGE": "Setaragan Admin Buying Price Percentage",
+        "SELLING_PRICE_PERCENTAGE_NOTE": "Percentage to adjust the selling price (e.g., 10 for 10%)",
+        "SETARAGAN_ADMIN_BUYING_PRICE_NOTE": "Percentage of buying price for admin commission (0-100)",
+        "SELLING_PRICE_ADJUST_DESC": "Selling Price Adjustment: Adjusts the final selling price shown to customers.",
+        "SETARAGAN_ADMIN_BUYING_PRICE_DESC": "Setaragan Admin Buying Price: Percentage of the buying price that goes to admin commission."
     },
     "TOTAL_CUSTOM_FIELD": "Total Custom Field",
     "MENU.SETTINGS": "Settings",

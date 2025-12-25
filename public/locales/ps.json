@@ -1303,7 +1303,15 @@
         "RECHARGE_SETTINGS_DESCRIPTION": "تشریح",
         "RECHARGE_TYPE_DESC": "ډول: دا ټاکي چې د ریچارج اندازه باید کمه شي که زیاته شي.",
         "RECHARGE_MODE_DESC": "حالت: د سلنې پر بنسټ یا د ثابت مقدار تنظیم وټاکئ.",
-        "RECHARGE_VALUE_DESC": "اندازه: هغه مقدار یا سلنه چې د هغې له مخې ریچارج تنظیمېږي."
+        "RECHARGE_VALUE_DESC": "اندازه: هغه مقدار یا سلنه چې د هغې له مخې ریچارج تنظیمېږي.",
+        "SELLING_PRICE_ADJUST_TYPE": "د خرڅلاو بیه تنظیم کولو ډول",
+    "SELLING_PRICE_ADJUST_MODE": "د خرڅلاو بیه تنظیم کولو حالت",
+    "SELLING_PRICE_ADJUST_VALUE": "د خرڅلاو بیه تنظیم کولو ارزښت",
+    "SETARAGAN_ADMIN_BUYING_PRICE_PERCENTAGE": "ستارګان ادمین د پلورلو بیې سلنه",
+    "SELLING_PRICE_PERCENTAGE_NOTE": "د خرڅلاو بیې تنظیم کولو لپاره سلنه (د مثال په توګه: 10 لپاره 10%)",
+    "SETARAGAN_ADMIN_BUYING_PRICE_NOTE": "د ادمین کمیسیون لپاره د پلورلو بیې سلنه (0-100)",
+    "SELLING_PRICE_ADJUST_DESC": "د خرڅلاو بیې تنظیم: هغه پایلي خرڅلاو بیه چې پیرودونکو ته ښکاره کیږي تنظیموي.",
+    "SETARAGAN_ADMIN_BUYING_PRICE_DESC": "ستارګان ادمین د پلورلو بیه: هغه سلنه چې د پلورلو بیې څخه ادمین کمیسیون ته ځي."
     },
     "TOTAL_CUSTOM_FIELD": "ټول سفارشي فیلډونه",
     "MENU.SETTINGS": "تنظیمات",

@@ -82,7 +82,11 @@ const emptySettings: AppSettings = {
     },
     afg_custom_recharge_adjust_type: "decrease",
     afg_custom_recharge_adjust_mode: "percentage",
-    afg_custom_recharge_adjust_value: 10
+    afg_custom_recharge_adjust_value: 10,
+    afg_custom_recharge_selling_price_adjust_type: "decrease",
+    afg_custom_recharge_selling_price_adjust_mode: "percentage",
+    afg_custom_recharge_selling_price_adjust_value: 0,
+    setaragan_admin_buying_price_percentage: 0,
 
 };
 
@@ -831,8 +835,6 @@ const AppSettingsPage = () => {
                 );
 
             case 'recharge':
-
-
                 return (
                     <div className="grid p-fluid">
                         <div className="col-12 md:col-6">
@@ -850,7 +852,6 @@ const AppSettingsPage = () => {
                                     onChange={(e) => setSettings({
                                         ...settings,
                                         afg_custom_recharge_adjust_type: e.value
-
                                     })}
                                     placeholder={t('APP_SETTINGS.SELECT_TYPE')}
                                     className="w-full"
@@ -871,7 +872,6 @@ const AppSettingsPage = () => {
                                     onChange={(e) => setSettings({
                                         ...settings,
                                         afg_custom_recharge_adjust_mode: e.value
-
                                     })}
                                     placeholder={t('APP_SETTINGS.SELECT_MODE')}
                                     className="w-full"
@@ -888,7 +888,6 @@ const AppSettingsPage = () => {
                                     onValueChange={(e) => setSettings({
                                         ...settings,
                                         afg_custom_recharge_adjust_value: e.value || 0
-
                                     })}
                                     mode="decimal"
                                     minFractionDigits={2}
@@ -900,6 +899,94 @@ const AppSettingsPage = () => {
                                         {t('APP_SETTINGS.PERCENTAGE_NOTE')}
                                     </small>
                                 )}
+                            </div>
+
+                            <div className="field">
+                                <label htmlFor="selling_price_adjust_type" className="font-bold text-sm md:text-base">
+                                    {t('APP_SETTINGS.SELLING_PRICE_ADJUST_TYPE')}
+                                </label>
+                                <Dropdown
+                                    id="selling_price_adjust_type"
+                                    value={settings.afg_custom_recharge_selling_price_adjust_type}
+                                    options={[
+                                        { label: t('APP_SETTINGS.DECREASE'), value: "decrease" },
+                                        { label: t('APP_SETTINGS.INCREASE'), value: "increase" }
+                                    ]}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        afg_custom_recharge_selling_price_adjust_type: e.value
+                                    })}
+                                    placeholder={t('APP_SETTINGS.SELECT_TYPE')}
+                                    className="w-full"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="col-12 md:col-6">
+                            <div className="field">
+                                <label htmlFor="selling_price_adjust_mode" className="font-bold text-sm md:text-base">
+                                    {t('APP_SETTINGS.SELLING_PRICE_ADJUST_MODE')}
+                                </label>
+                                <Dropdown
+                                    id="selling_price_adjust_mode"
+                                    value={settings.afg_custom_recharge_selling_price_adjust_mode}
+                                    options={[
+                                        { label: t('APP_SETTINGS.PERCENTAGE'), value: "percentage" },
+                                        { label: t('APP_SETTINGS.FIXED'), value: "fixed" }
+                                    ]}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        afg_custom_recharge_selling_price_adjust_mode: e.value
+                                    })}
+                                    placeholder={t('APP_SETTINGS.SELECT_MODE')}
+                                    className="w-full"
+                                />
+                            </div>
+
+                            <div className="field">
+                                <label htmlFor="selling_price_adjust_value" className="font-bold text-sm md:text-base">
+                                    {t('APP_SETTINGS.SELLING_PRICE_ADJUST_VALUE')}
+                                </label>
+                                <InputNumber
+                                    id="selling_price_adjust_value"
+                                    value={settings.afg_custom_recharge_selling_price_adjust_value}
+                                    onValueChange={(e) => setSettings({
+                                        ...settings,
+                                        afg_custom_recharge_selling_price_adjust_value: e.value || 0
+                                    })}
+                                    mode="decimal"
+                                    minFractionDigits={2}
+                                    maxFractionDigits={2}
+                                    min={0}
+                                />
+                                {settings.afg_custom_recharge_selling_price_adjust_mode === "percentage" && (
+                                    <small className="text-sm text-500">
+                                        {t('APP_SETTINGS.SELLING_PRICE_PERCENTAGE_NOTE')}
+                                    </small>
+                                )}
+                            </div>
+
+                            <div className="field">
+                                <label htmlFor="setaragan_admin_buying_price_percentage" className="font-bold text-sm md:text-base">
+                                    {t('APP_SETTINGS.SETARAGAN_ADMIN_BUYING_PRICE_PERCENTAGE')}
+                                </label>
+                                <InputNumber
+                                    id="setaragan_admin_buying_price_percentage"
+                                    value={settings.setaragan_admin_buying_price_percentage}
+                                    onValueChange={(e) => setSettings({
+                                        ...settings,
+                                        setaragan_admin_buying_price_percentage: e.value || 0
+                                    })}
+                                    mode="decimal"
+                                    minFractionDigits={2}
+                                    maxFractionDigits={2}
+                                    min={0}
+                                    max={100}
+                                    suffix="%"
+                                />
+                                <small className="text-sm text-500">
+                                    {t('APP_SETTINGS.SETARAGAN_ADMIN_BUYING_PRICE_NOTE')}
+                                </small>
                             </div>
                         </div>
 
@@ -915,8 +1002,14 @@ const AppSettingsPage = () => {
                                     <p className="text-sm text-500 mb-2">
                                         {t('APP_SETTINGS.RECHARGE_MODE_DESC')}
                                     </p>
-                                    <p className="text-sm text-500">
+                                    <p className="text-sm text-500 mb-2">
                                         {t('APP_SETTINGS.RECHARGE_VALUE_DESC')}
+                                    </p>
+                                    <p className="text-sm text-500 mb-2">
+                                        {t('APP_SETTINGS.SELLING_PRICE_ADJUST_DESC')}
+                                    </p>
+                                    <p className="text-sm text-500">
+                                        {t('APP_SETTINGS.SETARAGAN_ADMIN_BUYING_PRICE_DESC')}
                                     </p>
                                 </div>
                             </div>

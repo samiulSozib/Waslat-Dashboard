@@ -1302,7 +1302,15 @@
         "RECHARGE_SETTINGS_DESCRIPTION": "توضیحات",
         "RECHARGE_TYPE_DESC": "نوع: مشخص می‌کند که مبلغ شارژ کاهش یابد یا افزایش یابد.",
         "RECHARGE_MODE_DESC": "حالت: انتخاب بین تنظیم بر اساس درصد یا مبلغ ثابت.",
-        "RECHARGE_VALUE_DESC": "مقدار: مبلغ یا درصدی که شارژ بر اساس آن تنظیم می‌شود."
+        "RECHARGE_VALUE_DESC": "مقدار: مبلغ یا درصدی که شارژ بر اساس آن تنظیم می‌شود.",
+        "SELLING_PRICE_ADJUST_TYPE": "نوع تنظیم قیمت فروش",
+    "SELLING_PRICE_ADJUST_MODE": "حالت تنظیم قیمت فروش",
+    "SELLING_PRICE_ADJUST_VALUE": "مقدار تنظیم قیمت فروش",
+    "SETARAGAN_ADMIN_BUYING_PRICE_PERCENTAGE": "درصد قیمت خرید ادمین ستارگان",
+    "SELLING_PRICE_PERCENTAGE_NOTE": "درصد برای تنظیم قیمت فروش (مثلاً 10 برای 10%)",
+    "SETARAGAN_ADMIN_BUYING_PRICE_NOTE": "درصد قیمت خرید برای کمیسیون ادمین (0-100)",
+    "SELLING_PRICE_ADJUST_DESC": "تنظیم قیمت فروش: قیمت نهایی فروش نمایش داده شده به مشتریان را تنظیم می‌کند.",
+    "SETARAGAN_ADMIN_BUYING_PRICE_DESC": "قیمت خرید ادمین ستارگان: درصدی از قیمت خرید که به عنوان کمیسیون ادمین می‌رود."
     },
     "TOTAL_CUSTOM_FIELD": "مجموع فیلدهای سفارشی",
     "MENU.SETTINGS": "تنظیمات",
@@ -1654,4 +1662,5 @@
     "SELECT_ADJUST_MODE": "انتخاب حالت تنظیم",
     "ENTER_ADJUST_VALUE": "وارد کردن مقدار تنظیم",
     "FIXED": "ثابت"
+    
 }
