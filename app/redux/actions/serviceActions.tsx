@@ -223,8 +223,10 @@ export const _addService = (newServiceData: Service, toast: React.RefObject<Toas
       service_name: newServiceData.service_name,
       service_category_id: newServiceData.service_category?.id,
       company_id: newServiceData.company?.id,
-      input_form_schema:newServiceData.input_form_schema
+      input_form_schema:newServiceData.input_form_schema,
+      telegram_chat_id:newServiceData.telegram_chat_id?.id.toString()||''
     };
+
 
     const token = getAuthToken();
     const response = await axios.post(`${BASE_URL}/services`, body, {
@@ -267,7 +269,8 @@ export const _editService = (serviceId: number, updatedServiceData: Service, toa
       service_name: updatedServiceData.service_name,
       service_category_id: updatedServiceData.service_category?.id,
       company_id: updatedServiceData.company?.id,
-      input_form_schema:updatedServiceData.input_form_schema
+      input_form_schema:updatedServiceData.input_form_schema,
+      telegram_chat_id:updatedServiceData.telegram_chat_id?.id.toString()||''
     };
 
     const token = getAuthToken();

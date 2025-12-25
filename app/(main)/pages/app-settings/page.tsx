@@ -1,3 +1,5 @@
+
+
 /* eslint-disable @next/next/no-img-element */
 'use client';
 import { Button } from 'primereact/button';
@@ -24,10 +26,16 @@ import { InputSwitch } from 'primereact/inputswitch';
 import { InputNumber } from 'primereact/inputnumber';
 import { ColorPicker } from 'primereact/colorpicker';
 import { fetchAppSettings, updateAppSettings } from '@/app/redux/actions/appSettingsActions';
-import { AppSettings, Currency } from '@/types/interface';
+import { AppSettings, Currency, SupportContacts } from '@/types/interface';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Sidebar } from 'primereact/sidebar';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
+import { 
+  _fetchSupportContacts, 
+  _addSupportContact, 
+  _editSupportContact, 
+  _deleteSupportContact 
+} from '@/app/redux/actions/supportContactActions';
 
 const emptySettings: AppSettings = {
     is_instant_confirm: false,
@@ -87,7 +95,20 @@ const emptySettings: AppSettings = {
     afg_custom_recharge_selling_price_adjust_mode: "percentage",
     afg_custom_recharge_selling_price_adjust_value: 0,
     setaragan_admin_buying_price_percentage: 0,
+};
 
+const emptySupportContact: SupportContacts = {
+    id: 0,
+    title: "",
+    description: "",
+    phone: "",
+    is_whatsapp: false,
+    is_phone: false,
+    status: "active",
+    links: {
+        telegram: "",
+        website: ""
+    }
 };
 
 const AppSettingsPage = () => {
@@ -97,17 +118,25 @@ const AppSettingsPage = () => {
     const [activeTab, setActiveTab] = useState('general');
     const [mobileNavVisible, setMobileNavVisible] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    
+    // Support Contacts States
+    const [supportContacts, setSupportContacts] = useState<SupportContacts[]>([]);
+    const [supportContactDialog, setSupportContactDialog] = useState(false);
+    const [deleteSupportContactDialog, setDeleteSupportContactDialog] = useState(false);
+    const [selectedSupportContact, setSelectedSupportContact] = useState<SupportContacts>(emptySupportContact);
+    const [supportContactSubmitted, setSupportContactSubmitted] = useState(false);
+
     const toast = useRef<Toast>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { loading, settings: reduxSettings } = useSelector((state: any) => state.appSettingsReducer);
+    const { loading: supportContactsLoading, supportContacts: reduxSupportContacts } = useSelector((state: any) => state.supportContactReducer);
     const { t } = useTranslation();
     const { currencies } = useSelector((state: any) => state.currenciesReducer);
 
-
     useEffect(() => {
         dispatch(fetchAppSettings());
-        dispatch(_fetchCurrencies()); // Fetch currencies
-
+        dispatch(_fetchCurrencies());
+        dispatch(_fetchSupportContacts());
 
         // Check if device is mobile
         const checkIsMobile = () => {
@@ -121,6 +150,12 @@ const AppSettingsPage = () => {
             window.removeEventListener('resize', checkIsMobile);
         };
     }, [dispatch]);
+
+    useEffect(() => {
+        if (reduxSupportContacts) {
+            setSupportContacts(reduxSupportContacts);
+        }
+    }, [reduxSupportContacts]);
 
     const selectedCurrency = currencies?.find((currency: Currency) =>
         currency.code === settings.default_currency
@@ -169,17 +204,146 @@ const AppSettingsPage = () => {
         setSubmitted(false);
     };
 
+    // Support Contacts Functions
+    const openNewSupportContact = () => {
+        setSelectedSupportContact(emptySupportContact);
+        setSupportContactSubmitted(false);
+        setSupportContactDialog(true);
+    };
+
+    const hideSupportContactDialog = () => {
+        setSupportContactSubmitted(false);
+        setSupportContactDialog(false);
+    };
+
+    const hideDeleteSupportContactDialog = () => {
+        setDeleteSupportContactDialog(false);
+    };
+
+    const editSupportContact = (supportContact: SupportContacts) => {
+        setSelectedSupportContact({ ...supportContact });
+        setSupportContactDialog(true);
+    };
+
+    const confirmDeleteSupportContact = (supportContact: SupportContacts) => {
+        setSelectedSupportContact(supportContact);
+        setDeleteSupportContactDialog(true);
+    };
+
+    const saveSupportContact = () => {
+        setSupportContactSubmitted(true);
+
+        if (!selectedSupportContact.title || !selectedSupportContact.phone) {
+            toast.current?.show({
+                severity: 'error',
+                summary: t('VALIDATION_ERROR'),
+                detail: t('PLEASE_FILLED_ALL_REQUIRED_FIELDS'),
+                life: 3000
+            });
+            return;
+        }
+
+        if (selectedSupportContact.id) {
+            dispatch(_editSupportContact(selectedSupportContact, toast, t));
+        } else {
+            dispatch(_addSupportContact(selectedSupportContact, toast, t));
+        }
+        setSupportContactDialog(false);
+    };
+
+    const deleteSupportContact = () => {
+        dispatch(_deleteSupportContact(selectedSupportContact.id, toast, t));
+        setDeleteSupportContactDialog(false);
+        setSelectedSupportContact(emptySupportContact);
+    };
+
+    const supportContactDialogFooter = (
+        <>
+            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideSupportContactDialog} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={saveSupportContact} />
+        </>
+    );
+
+    const deleteSupportContactDialogFooter = (
+        <>
+            <Button label={t('NO')} icon="pi pi-times" severity="secondary" onClick={hideDeleteSupportContactDialog} />
+            <Button label={t('YES')} icon="pi pi-check" severity="danger" onClick={deleteSupportContact} />
+        </>
+    );
+
+    const statusBodyTemplate = (rowData: SupportContacts) => {
+        return (
+            <span className={`customer-badge status-${rowData.status}`}>
+                {rowData.status === 'active' ? t('ACTIVE') : t('INACTIVE')}
+            </span>
+        );
+    };
+
+    const actionBodyTemplate = (rowData: SupportContacts) => {
+        return (
+            <div className="flex gap-2">
+                <Button
+                    icon="pi pi-pencil"
+                    severity="info"
+                    rounded
+                    size="small"
+                    onClick={() => editSupportContact(rowData)}
+                />
+                <Button
+                    icon="pi pi-trash"
+                    severity="danger"
+                    rounded
+                    size="small"
+                    onClick={() => confirmDeleteSupportContact(rowData)}
+                />
+            </div>
+        );
+    };
+
+    const renderSupportContactsTab = () => {
+        return (
+            <div className="grid">
+                <div className="col-12">
+                    <div className="card">
+                        <Toolbar className="mb-4" 
+                            left={
+                                <Button
+                                    label={t('SUPPORT_CONTACT.ADD_NEW')}
+                                    icon="pi pi-plus"
+                                    severity="success"
+                                    className="mr-2"
+                                    onClick={openNewSupportContact}
+                                />
+                            }
+                        />
+                        
+                        <DataTable
+                            value={supportContacts}
+                            loading={supportContactsLoading}
+                            responsiveLayout="scroll"
+                            paginator
+                            rows={10}
+                            rowsPerPageOptions={[5, 10, 25]}
+                            emptyMessage={t('SUPPORT_CONTACT.NO_CONTACTS_FOUND')}
+                        >
+                            <Column field="title" header={t('SUPPORT_CONTACT.TITLE')} sortable style={{ minWidth: '200px' }} />
+                            <Column field="description" header={t('SUPPORT_CONTACT.DESCRIPTION')} sortable style={{ minWidth: '250px' }} />
+                            <Column field="phone" header={t('SUPPORT_CONTACT.PHONE')} sortable style={{ minWidth: '150px' }} />
+                            <Column field="is_whatsapp" header={t('SUPPORT_CONTACT.IS_WHATSAPP')} body={(rowData) => rowData.is_whatsapp ? t('YES') : t('NO')} style={{ minWidth: '120px' }} />
+                            <Column field="is_phone" header={t('SUPPORT_CONTACT.IS_PHONE')} body={(rowData) => rowData.is_phone ? t('YES') : t('NO')} style={{ minWidth: '120px' }} />
+                            <Column field="status" header={t('STATUS')} body={statusBodyTemplate} sortable style={{ minWidth: '100px' }} />
+                            <Column body={actionBodyTemplate} style={{ minWidth: '120px' }} />
+                        </DataTable>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const rightToolbarTemplate = () => {
         return (
             <React.Fragment>
                 <div className="flex justify-end items-center space-x-2">
-                    {/* {isMobile && (
-                        <Button
-                            icon="pi pi-bars"
-                            className="p-button-text p-button-plain"
-                            onClick={() => setMobileNavVisible(true)}
-                        />
-                    )} */}
                     <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                         label={t('APP_SETTINGS.EDIT_SETTINGS')}
@@ -1016,6 +1180,10 @@ const AppSettingsPage = () => {
                         </div>
                     </div>
                 );
+
+            case 'support-contacts':
+                return renderSupportContactsTab();
+
             default:
                 return null;
         }
@@ -1068,6 +1236,14 @@ const AppSettingsPage = () => {
                 className={`p-button-text ${activeTab === 'recharge' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
                 onClick={() => {
                     setActiveTab('recharge');
+                    setMobileNavVisible(false);
+                }}
+            />
+            <Button
+                label={t('SUPPORT_CONTACT.TITLE')}
+                className={`p-button-text ${activeTab === 'support-contacts' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
+                onClick={() => {
+                    setActiveTab('support-contacts');
                     setMobileNavVisible(false);
                 }}
             />
@@ -1140,8 +1316,8 @@ const AppSettingsPage = () => {
                     >
                         <div className="card" style={{ padding: '20px', maxHeight: '60vh', overflowY: 'auto' }}>
                             <TabView
-                                activeIndex={['general', 'contact', 'branding', 'limits', 'integration', 'recharge'].indexOf(activeTab)}
-                                onTabChange={(e) => setActiveTab(['general', 'contact', 'branding', 'limits', 'integration', 'recharge'][e.index])}
+                                activeIndex={['general', 'contact', 'branding', 'limits', 'integration', 'recharge', 'support-contacts'].indexOf(activeTab)}
+                                onTabChange={(e) => setActiveTab(['general', 'contact', 'branding', 'limits', 'integration', 'recharge', 'support-contacts'][e.index])}
                             >
                                 <TabPanel header={t('APP_SETTINGS.GENERAL')}>
                                     {activeTab === 'general' && renderTabContent()}
@@ -1161,7 +1337,154 @@ const AppSettingsPage = () => {
                                 <TabPanel header={t('APP_SETTINGS.RECHARGE')}>
                                     {activeTab === 'recharge' && renderTabContent()}
                                 </TabPanel>
+                                <TabPanel header={t('SUPPORT_CONTACT.TITLE')}>
+                                    {activeTab === 'support-contacts' && renderTabContent()}
+                                </TabPanel>
                             </TabView>
+                        </div>
+                    </Dialog>
+
+                    {/* Support Contact Dialog */}
+                    <Dialog
+                        visible={supportContactDialog}
+                        style={{ width: isMobile ? '95vw' : '500px' }}
+                        header={selectedSupportContact.id ? t('SUPPORT_CONTACT.EDIT_CONTACT') : t('SUPPORT_CONTACT.ADD_NEW')}
+                        modal
+                        className="p-fluid"
+                        footer={supportContactDialogFooter}
+                        onHide={hideSupportContactDialog}
+                    >
+                        <div className="field">
+                            <label htmlFor="title" className="font-bold">
+                                {t('SUPPORT_CONTACT.TITLE')} *
+                            </label>
+                            <InputText
+                                id="title"
+                                value={selectedSupportContact.title}
+                                onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, title: e.target.value })}
+                                required
+                                className={classNames({
+                                    'p-invalid': supportContactSubmitted && !selectedSupportContact.title
+                                })}
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="description" className="font-bold">
+                                {t('SUPPORT_CONTACT.DESCRIPTION')}
+                            </label>
+                            <InputText
+                                id="description"
+                                value={selectedSupportContact.description}
+                                onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, description: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="phone" className="font-bold">
+                                {t('SUPPORT_CONTACT.PHONE')} *
+                            </label>
+                            <InputText
+                                id="phone"
+                                value={selectedSupportContact.phone}
+                                onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, phone: e.target.value })}
+                                required
+                                className={classNames({
+                                    'p-invalid': supportContactSubmitted && !selectedSupportContact.phone
+                                })}
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="telegram" className="font-bold">
+                                {t('SUPPORT_CONTACT.TELEGRAM_LINK')}
+                            </label>
+                            <InputText
+                                id="telegram"
+                                value={selectedSupportContact.links.telegram}
+                                onChange={(e) => setSelectedSupportContact({
+                                    ...selectedSupportContact,
+                                    links: { ...selectedSupportContact.links, telegram: e.target.value }
+                                })}
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="website" className="font-bold">
+                                {t('SUPPORT_CONTACT.WEBSITE_LINK')}
+                            </label>
+                            <InputText
+                                id="website"
+                                value={selectedSupportContact.links.website}
+                                onChange={(e) => setSelectedSupportContact({
+                                    ...selectedSupportContact,
+                                    links: { ...selectedSupportContact.links, website: e.target.value }
+                                })}
+                            />
+                        </div>
+
+                        <div className="grid">
+                            <div className="col-12 md:col-6">
+                                <div className="field flex align-items-center">
+                                    <InputSwitch
+                                        id="is_whatsapp"
+                                        checked={selectedSupportContact.is_whatsapp}
+                                        onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, is_whatsapp: e.value })}
+                                    />
+                                    <label htmlFor="is_whatsapp" className="ml-2">
+                                        {t('SUPPORT_CONTACT.IS_WHATSAPP')}
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="col-12 md:col-6">
+                                <div className="field flex align-items-center">
+                                    <InputSwitch
+                                        id="is_phone"
+                                        checked={selectedSupportContact.is_phone}
+                                        onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, is_phone: e.value })}
+                                    />
+                                    <label htmlFor="is_phone" className="ml-2">
+                                        {t('SUPPORT_CONTACT.IS_PHONE')}
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="col-12 md:col-6">
+                                <div className="field">
+                                    <label htmlFor="status" className="font-bold">
+                                        {t('STATUS')}
+                                    </label>
+                                    <Dropdown
+                                        id="status"
+                                        value={selectedSupportContact.status}
+                                        options={[
+                                            { label: t('ACTIVE'), value: 'active' },
+                                            { label: t('INACTIVE'), value: 'inactive' }
+                                        ]}
+                                        onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, status: e.value })}
+                                        placeholder={t('SELECT_STATUS')}
+                                        className="w-full"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </Dialog>
+
+                    {/* Delete Support Contact Dialog */}
+                    <Dialog
+                        visible={deleteSupportContactDialog}
+                        style={{ width: '450px' }}
+                        header={t('CONFIRM')}
+                        modal
+                        footer={deleteSupportContactDialogFooter}
+                        onHide={hideDeleteSupportContactDialog}
+                    >
+                        <div className="confirmation-content">
+                            <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                            <span>
+                                {t('SUPPORT_CONTACT.CONFIRM_DELETE')} <b>{selectedSupportContact.title}</b>?
+                            </span>
                         </div>
                     </Dialog>
                 </div>

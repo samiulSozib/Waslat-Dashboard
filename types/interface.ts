@@ -326,7 +326,8 @@ export interface Service {
     updated_at: string;
     service_category: ServiceCategory | null;
     company: Company | null;
-    input_form_schema?: string | CustomField[] | null
+    input_form_schema?: string | CustomField[] | null;
+    telegram_chat_id?: Telegram_Chat_Id | null;
 }
 
 export interface Supplier {
@@ -913,4 +914,19 @@ export interface HawalaNumberSeries {
     current_number: number;
     reset_daily: boolean;
     is_active: boolean;
+}
+
+
+export interface SupportContacts {
+  id: number;
+  title: string;
+  description: string;
+  phone: string;
+  is_whatsapp: boolean;
+  is_phone: boolean;
+  status: "active" | "inactive";
+  links: {
+    telegram: string;
+    website: string;
+  };
 }

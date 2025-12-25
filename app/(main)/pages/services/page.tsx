@@ -26,6 +26,7 @@ import { isRTL } from '../../utilities/rtlUtil';
 import { parseInputFormSchema, stringifyInputFormSchema } from '../../utilities/parseInputFormSchema';
 import { Badge } from 'primereact/badge';
 import { CustomFields } from '../../components/CustomFields';
+import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 
 const Services = () => {
     let emptyService: Service = {
@@ -38,7 +39,8 @@ const Services = () => {
         updated_at: '',
         service_category: null,
         company: null,
-        input_form_schema: []
+        input_form_schema: [],
+        telegram_chat_id: null,
     };
 
     const [serviceDialog, setServiceDialog] = useState(false);
@@ -54,6 +56,8 @@ const Services = () => {
     const { companies } = useSelector((state: any) => state.companyReducer);
     const { services, loading } = useSelector((state: any) => state.serviceReducer);
     const { serviceCategories } = useSelector((state: any) => state.serviceCategoryReducer);
+    const { telegramChatIds } = useSelector((state: any) => state.telegramReducer);
+
     const { t } = useTranslation();
     const [searchTag, setSearchTag] = useState('');
 
@@ -61,6 +65,8 @@ const Services = () => {
         dispatch(_fetchServiceList(searchTag));
         dispatch(_fetchCompanies());
         dispatch(_fetchServiceCategories());
+        dispatch(_fetchTelegramList());
+
     }, [dispatch, searchTag]);
 
     const openNew = () => {
@@ -378,7 +384,7 @@ const Services = () => {
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="Company Name"
                             header={t('SERVICE.TABLE.COLUMN.COMPANYNAME')}
-                            
+
                             body={companyInfoBodyTemplate}
                         ></Column>
                         <Column
@@ -386,13 +392,13 @@ const Services = () => {
                             field="Country"
                             header={t('SERVICE.TABLE.COLUMN.COUNTRY')}
                             body={countryNameBodyTemplate}
-                            
+
                         ></Column>
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="Service Category"
                             header={t('SERVICE.TABLE.COLUMN.SERVICECATEGORY')}
-                            
+
                             body={serviceCategoryNameBodyTemplate}
                         ></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TOTAL_CUSTOM_FIELD')} body={customFieldsBodyTemplate}></Column>
@@ -483,6 +489,29 @@ const Services = () => {
                                     )}
                                 </div>
                             </div>
+
+                            <div className='formgrid grid'>
+                                <div className="field col">
+                                    <label htmlFor="telegram_chat_id" style={{ fontWeight: 'bold' }}>
+                                        {t('COMPANY.FORM.INPUT.TELEGRAMID')}
+                                    </label>
+                                    <Dropdown
+                                        id="telegram_chat_id"
+                                        value={service.telegram_chat_id}
+                                        options={telegramChatIds}
+                                        onChange={(e) =>
+                                            setService((prevService) => ({
+                                                ...prevService,
+                                                telegram_chat_id: e.value
+                                            }))
+                                        }
+                                        optionLabel="group_name"
+                                        placeholder={t('COMPANY.FORM.PLACEHOLDER.TELEGRAM_GROUP')}
+                                        className="w-full"
+                                    />
+                                </div>
+                            </div>
+
                         </div>
                         <CustomFields
                             fields={parseInputFormSchema(service.input_form_schema)}
@@ -498,7 +527,7 @@ const Services = () => {
 
                     <Dialog visible={deleteServiceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteServiceDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {service && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{service.service_name}</b>
@@ -509,7 +538,7 @@ const Services = () => {
 
                     <Dialog visible={deleteServicesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteServicesDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {service && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
