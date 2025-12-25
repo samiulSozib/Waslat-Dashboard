@@ -285,6 +285,15 @@ const Services = () => {
         );
     };
 
+        const telegramGroupNameBodyTemplate = (rowData: Service) => {
+            return (
+                <>
+                    <span className="p-column-title">Telegram Group Name</span>
+                    {rowData.telegram_chat_id?.group_name}
+                </>
+            );
+        };
+
     const customFieldsBodyTemplate = (rowData: Service) => {
         const fieldCount = parseInputFormSchema(rowData.input_form_schema).length;
         return (
@@ -400,6 +409,12 @@ const Services = () => {
                             header={t('SERVICE.TABLE.COLUMN.SERVICECATEGORY')}
 
                             body={serviceCategoryNameBodyTemplate}
+                        ></Column>
+                         <Column
+                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="Group Name"
+                            header={t('COMPANY.TABLE.COLUMN.CHATGROUPNAME')}
+                            body={telegramGroupNameBodyTemplate}
                         ></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TOTAL_CUSTOM_FIELD')} body={customFieldsBodyTemplate}></Column>
 
