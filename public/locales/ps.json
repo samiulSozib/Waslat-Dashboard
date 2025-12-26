@@ -1749,6 +1749,20 @@
 
   "SUPPORT_CONTACT_DELETED": "د ملاتړ اړیکه په بریالیتوب سره حذف شوه",
   "SUPPORT_CONTACT_ADDED": "د ملاتړ اړیکه په بریالیتوب سره اضافه شوه",
-  "SUPPORT_CONTACT_UPDATED": "د ملاتړ اړیکه په بریالیتوب سره سم شوه"
+  "SUPPORT_CONTACT_UPDATED": "د ملاتړ اړیکه په بریالیتوب سره سم شوه",
+
+  "PAYMENTMETHOD.TABLE.COLUMN.BANKNAME": "د بانک نوم",
+  "PAYMENTMETHOD.TABLE.COLUMN.ACCOUNTHOLDER": "د حساب لرونکي نوم",
+  "PAYMENTMETHOD.TABLE.COLUMN.ACCOUNTNUMBER": "د حساب شمېره",
+  "PAYMENTMETHOD.TABLE.COLUMN.SHEBANUMBER": "د شیبا شمېره",
+  "PAYMENTMETHOD.TABLE.COLUMN.CARDNUMBER": "د کارت شمېره",
+  "PAYMENTMETHOD.TABLE.COLUMN.NOTES": "یادښتونه",
+
+  "PAYMENTMETHOD.FORM.INPUT.BANKNAME": "د بانک نوم",
+  "PAYMENTMETHOD.FORM.INPUT.ACCOUNTHOLDER": "د حساب لرونکي نوم",
+  "PAYMENTMETHOD.FORM.INPUT.ACCOUNTNUMBER": "د حساب شمېره",
+  "PAYMENTMETHOD.FORM.INPUT.SHEBANUMBER": "د شیبا شمېره",
+  "PAYMENTMETHOD.FORM.INPUT.CARDNUMBER": "د کارت شمېره",
+  "PAYMENTMETHOD.FORM.INPUT.NOTES": "یادښتونه"
 
 }

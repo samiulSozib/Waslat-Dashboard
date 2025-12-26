@@ -1724,5 +1724,20 @@
     "STATUS": "وضعیت",
     "SUPPORT_CONTACT_DELETED": "مخاطب پشتیبانی با موفقیت حذف شد",
     "SUPPORT_CONTACT_ADDED": "مخاطب پشتیبانی با موفقیت اضافه شد",
-    "SUPPORT_CONTACT_UPDATED": "مخاطب پشتیبانی با موفقیت ویرایش شد"
+    "SUPPORT_CONTACT_UPDATED": "مخاطب پشتیبانی با موفقیت ویرایش شد",
+
+
+    "PAYMENTMETHOD.TABLE.COLUMN.BANKNAME": "نام بانک",
+  "PAYMENTMETHOD.TABLE.COLUMN.ACCOUNTHOLDER": "نام صاحب حساب",
+  "PAYMENTMETHOD.TABLE.COLUMN.ACCOUNTNUMBER": "شماره حساب",
+  "PAYMENTMETHOD.TABLE.COLUMN.SHEBANUMBER": "شماره شبا",
+  "PAYMENTMETHOD.TABLE.COLUMN.CARDNUMBER": "شماره کارت",
+  "PAYMENTMETHOD.TABLE.COLUMN.NOTES": "یادداشت‌ها",
+
+  "PAYMENTMETHOD.FORM.INPUT.BANKNAME": "نام بانک",
+  "PAYMENTMETHOD.FORM.INPUT.ACCOUNTHOLDER": "نام صاحب حساب",
+  "PAYMENTMETHOD.FORM.INPUT.ACCOUNTNUMBER": "شماره حساب",
+  "PAYMENTMETHOD.FORM.INPUT.SHEBANUMBER": "شماره شبا",
+  "PAYMENTMETHOD.FORM.INPUT.CARDNUMBER": "شماره کارت",
+  "PAYMENTMETHOD.FORM.INPUT.NOTES": "یادداشت‌ها"
 }
