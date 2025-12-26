@@ -269,6 +269,16 @@ export interface User {
     confirm_password?: string
 }
 
+// export interface PaymentMethod {
+//     id: number;
+//     method_name: string;
+//     account_details: string;
+//     account_image: File | string;
+//     status: number;
+//     created_at: string;
+//     updated_at: string;
+// }
+
 export interface PaymentMethod {
     id: number;
     method_name: string;
@@ -277,6 +287,20 @@ export interface PaymentMethod {
     status: number;
     created_at: string;
     updated_at: string;
+    
+    // New fields from migration (nullable)
+    bank_name?: string | null;
+    account_holder_name?: string | null;
+    card_number?: string | null;
+    account_number?: string | null;
+    sheba_number?: string | null;
+    
+    
+    
+    // New notes field from migration
+    notes?: string | null;
+    
+   
 }
 
 export interface Supplier {

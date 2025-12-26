@@ -244,6 +244,15 @@ export const _addPaymentMethod = (
     formData.append('account_image', newMethod.account_image);
   }
 
+  formData.append('bank_name', newMethod.bank_name || '');
+  formData.append('account_holder_name', newMethod.account_holder_name || '');
+  formData.append('card_number', newMethod.card_number || '');
+  formData.append('account_number', newMethod.account_number || '');
+  formData.append('sheba_number', newMethod.sheba_number || '');
+  formData.append('notes', newMethod.notes || '');
+
+
+
   try {
     const token = getAuthToken();
     const response = await axios.post(
@@ -305,6 +314,13 @@ export const _editPaymentMethod = (
   if (updatedMethod.account_image && typeof updatedMethod.account_image !== 'string') {
     formData.append('account_image', updatedMethod.account_image);
   }
+
+  formData.append('bank_name', updatedMethod.bank_name || '');
+  formData.append('account_holder_name', updatedMethod.account_holder_name || '');
+  formData.append('card_number', updatedMethod.card_number || '');
+  formData.append('account_number', updatedMethod.account_number || '');
+  formData.append('sheba_number', updatedMethod.sheba_number || '');
+  formData.append('notes', updatedMethod.notes || '');
 
   try {
     const token = getAuthToken();
