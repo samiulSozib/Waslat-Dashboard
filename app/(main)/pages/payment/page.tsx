@@ -159,6 +159,9 @@ const PaymentPage = () => {
     const hideDialog = () => {
         setSubmitted(false);
         setPaymentDialog(false);
+        setResellerBalance(null);
+        setResellerPayment(null);
+        setResellerLoan(null);
     };
 
     const hideDeletePaymentDialog = () => {
