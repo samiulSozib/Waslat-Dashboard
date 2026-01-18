@@ -181,6 +181,15 @@ const CurrencyPage = () => {
         );
     };
 
+        const ignoreDigitsCountBodyTemplate = (rowData: Currency) => {
+        return (
+            <>
+                <span className="p-column-title">Ignore Digits Count</span>
+                {rowData.ignore_digits_count}
+            </>
+        );
+    };
+
     const actionBodyTemplate = (rowData: Currency) => {
         return (
             <>
@@ -273,6 +282,13 @@ const CurrencyPage = () => {
                             header={t('CURRENCY.TABLE.COLUMN.EXCHANGERATE')}
                             sortable
                             body={exchangeRateBodyTemplate}
+                        ></Column>
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="exchange_rate"
+                            header={t('CURRENCY.FORM.INPUT.IGNOREDIGITSCOUNT')}
+                            sortable
+                            body={ignoreDigitsCountBodyTemplate}
                         ></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
@@ -393,6 +409,27 @@ const CurrencyPage = () => {
                                         {t('THIS_FIELD_IS_REQUIRED')}
                                     </small>
                                 )}
+                            </div>
+                            <div className="field">
+                                <label htmlFor="exchange_rate_per_usd" style={{ fontWeight: 'bold' }}>
+                                    {t('CURRENCY.FORM.INPUT.IGNOREDIGITSCOUNT')}
+                                </label>
+                                <InputText
+                                    id="ignore_digits_count"
+                                    value={currency.ignore_digits_count?.toString()}
+                                    onChange={(e) =>
+                                        setCurrency((prevCurrency) => ({
+                                            ...prevCurrency,
+                                            ignore_digits_count: e.target.value
+                                        }))
+                                    }
+                                    autoFocus
+                                    placeholder={t('CURRENCY.FORM.INPUT.IGNOREDIGITSCOUNT')}
+                                    className={classNames({
+                                        'p-invalid': submitted && !currency.ignore_digits_count
+                                    })}
+                                />
+                                
                             </div>
                         </div>
                     </Dialog>

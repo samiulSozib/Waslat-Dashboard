@@ -757,6 +757,31 @@ const PaymentPage = () => {
         });
     };
 
+    
+        const [resellerBalance, setResellerBalance] = useState<any>(null);
+        const [resellerPayment, setResellerPayment] = useState<any>(null);
+        const [resellerLoan, setResellerLoan] = useState<any>(null);
+
+        useEffect(() => {
+            if (payment.reseller) {
+                const formattedCurrency = payment.currency?.code || '';
+    
+                const resellerBalanceValue = Number(payment.reseller?.balance ?? 0);
+                const totalSent = Number(payment.reseller?.total_balance_sent ?? 0);
+                const totalReceived = Number(payment.reseller?.total_payments_received ?? 0);
+                const paymentDiff = totalSent - totalReceived;
+    
+                const totalPayments = Number(payment?.reseller?.total_payments_received) || 0;
+                const totalBalance = Number(payment?.reseller?.total_balance_sent) || 0;
+                const availablePaymentAmount = totalPayments - totalBalance;
+    
+                setResellerBalance(`${resellerBalanceValue} ${formattedCurrency}`);
+                //setResellerPayment(`${paymentDiff > 0 ? paymentDiff : 0} ${formattedCurrency}`);
+                setResellerPayment(`${availablePaymentAmount > 0 ? availablePaymentAmount : 0} ${formattedCurrency}`)
+                setResellerLoan(`${paymentDiff > 0 ? paymentDiff : 0} ${formattedCurrency}`);
+            }
+        }, [payment.reseller, payment.currency?.code]);
+
     return (
         <div className="grid crud-demo -m-5">
             <div className="col-12">
@@ -831,6 +856,37 @@ const PaymentPage = () => {
                     />
 
                     <Dialog visible={paymentDialog} style={{ width: '900px', padding: '5px' }} header={t('PAYMENT.DETAILS.TITLE')} modal className="p-fluid" footer={paymentDialogFooter} onHide={hideDialog}>
+                        
+                        {resellerBalance !== null && resellerPayment !== null && (
+                            <div
+                                className="flex flex-wrap justify-between items-center"
+                                style={{
+                                    borderRadius: '10px',
+                                    background: '#ffffff',
+                                    border: '1px solid #e5e7eb', // Tailwind gray-200
+                                    boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
+                                }}
+                            >
+                                {/* Reseller Balance */}
+                                <div className="flex-1 col-12 lg:col-4 text-center p-4 bg-green-50 rounded-xl shadow-sm">
+                                    <p className="text-gray-600 font-medium">{t('BALANCE.FORM.RESELLER.BALANCE')}</p>
+                                    <p className="text-xl font-bold text-green-600 mt-2">{resellerBalance}</p>
+                                </div>
+
+                                {/* Reseller Payment */}
+                                <div className="flex-1 col-12 lg:col-4 text-center p-4 bg-red-50 rounded-xl shadow-sm">
+                                    <p className="text-gray-600 font-medium">{t('RESELLER.TABLE.COLUMN.AVAILABLEPAYMENT')}</p>
+                                    <p className="text-xl font-bold text-red-600 mt-2">{resellerPayment}</p>
+                                </div>
+
+                                {/* Reseller Loan */}
+                                <div className="flex-1 col-12 lg:col-4 text-center p-4 bg-purple-50 rounded-xl shadow-sm">
+                                    <p className="text-gray-600 font-medium">{t('BALANCE.FORM.RESELLER.LOAN')}</p>
+                                    <p className="text-xl font-bold text-purple-600 mt-2">{resellerLoan}</p>
+                                </div>
+                            </div>
+                        )}
+                        
                         <div className="card flex  flex-wrap p-fluid mt-3 gap-4">
                             <div className=" flex-1 col-12 lg:col-6">
                                 <div className="field">

@@ -18,7 +18,7 @@ export interface Currency {
     name: string;
     code: string;
     symbol: string;
-    ignore_digits_count: string | null;
+    ignore_digits_count: string;
     exchange_rate_per_usd: string;
     deleted_at: string | null;
     created_at: string;
@@ -160,7 +160,7 @@ export interface Currency {
     name: string;
     code: string;
     symbol: string;
-    ignore_digits_count: string | null;
+    ignore_digits_count: string;
     exchange_rate_per_usd: string;
     deleted_at: string | null;
     created_at: string;
@@ -954,3 +954,52 @@ export interface SupportContacts {
     website: string;
   };
 }
+
+
+export interface Notification{
+    id:number;
+    title?:string;
+    message?:string;
+    reseller_id?:number;
+    status?:number|boolean;
+    target_type?:string|null;
+    media?:null|string|File;
+    created_at?:string|null;
+    is_read?:boolean
+}
+
+export interface WithdrawalPolicy {
+  id: number;
+  currency_id: number;
+  commission_type: 'percentage' | 'fixed';
+  commission_value: number;
+  min_withdraw_amount: number;
+  max_withdraw_amount: number;
+  status: boolean;
+  currency?: Currency
+}
+
+
+export interface WithdrawRequest {
+  id: number;
+  reseller_id: number;
+  currency_id: number;
+  amount: number;
+  net_amount:number;
+  commission_amount:number;
+  admin_note?: string;
+  status: number;
+  created_at: string;
+  updated_at: string;
+  reseller?: Reseller;
+  currency?: Currency;
+  bank_details?:{
+    bank_name?:string;
+    account_holder_name?:string;
+    account_number?:string;
+    iban?:string;
+    branch?:string;
+    swift_code?:string
+  }
+}
+

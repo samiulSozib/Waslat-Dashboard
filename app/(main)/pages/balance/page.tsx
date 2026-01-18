@@ -107,22 +107,22 @@ const BalancePage = () => {
     }, [resellerSearchTerm, dispatch]);
 
     // Add this useEffect to handle auto-opening the dialog
-            const searchParams = useSearchParams(); // Add this
-            const router=useRouter()
-        
-            useEffect(() => {
-                const action = searchParams.get('action');
-                if (action === 'add') {
-                    // Small delay to ensure the page is fully loaded and Redux state is ready
-                    const timer = setTimeout(() => {
-                        openNew();
-                        // Optional: Clean up the URL after opening the dialog
-                        router.replace('/pages/balance');
-                    }, 300);
-        
-                    return () => clearTimeout(timer);
-                }
-            }, [searchParams, router]);
+    const searchParams = useSearchParams(); // Add this
+    const router = useRouter()
+
+    useEffect(() => {
+        const action = searchParams.get('action');
+        if (action === 'add') {
+            // Small delay to ensure the page is fully loaded and Redux state is ready
+            const timer = setTimeout(() => {
+                openNew();
+                // Optional: Clean up the URL after opening the dialog
+                router.replace('/pages/balance');
+            }, 300);
+
+            return () => clearTimeout(timer);
+        }
+    }, [searchParams, router]);
 
     const openNew = () => {
         setBalance(emptyBalance);
@@ -647,9 +647,14 @@ const BalancePage = () => {
             const totalReceived = Number(balance.reseller?.total_payments_received ?? 0);
             const paymentDiff = totalSent - totalReceived;
 
+            const totalPayments = Number(balance?.reseller?.total_payments_received) || 0;
+            const totalBalance = Number(balance?.reseller?.total_balance_sent) || 0;
+            const availablePaymentAmount = totalPayments - totalBalance;
+
             setResellerBalance(`${resellerBalanceValue} ${formattedCurrency}`);
-            setResellerPayment(`${paymentDiff > 0 ? paymentDiff : 0} ${formattedCurrency}`);
-            setResellerLoan(`${paymentDiff} ${formattedCurrency}`);
+            //setResellerPayment(`${paymentDiff > 0 ? paymentDiff : 0} ${formattedCurrency}`);
+            setResellerPayment(`${availablePaymentAmount > 0 ? availablePaymentAmount : 0} ${formattedCurrency}`)
+            setResellerLoan(`${paymentDiff > 0 ? paymentDiff : 0} ${formattedCurrency}`);
         }
     }, [balance.reseller, balance.currency?.code]);
 
@@ -777,7 +782,7 @@ const BalancePage = () => {
 
                                 {/* Reseller Payment */}
                                 <div className="flex-1 col-12 lg:col-4 text-center p-4 bg-red-50 rounded-xl shadow-sm">
-                                    <p className="text-gray-600 font-medium">{t('BALANCE.FORM.RESELLER.PAYMENT')}</p>
+                                    <p className="text-gray-600 font-medium">{t('RESELLER.TABLE.COLUMN.AVAILABLEPAYMENT')}</p>
                                     <p className="text-xl font-bold text-red-600 mt-2">{resellerPayment}</p>
                                 </div>
 

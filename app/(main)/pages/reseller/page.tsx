@@ -571,7 +571,7 @@ const ResellerPage = () => {
         return (
             <>
                 <span className="p-column-title">Loan Amount</span>
-                <span style={{ color: 'red' }}>{loanAmount}</span>
+                <span style={{ color: 'red' }}>{loanAmount>0?loanAmount:0}</span>
             </>
         );
     };

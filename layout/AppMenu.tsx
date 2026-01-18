@@ -243,6 +243,21 @@ const AppMenu = () => {
                     icon: 'pi pi-fw pi-question-circle',
                     to: '/pages/app-providers'
                 },
+                {
+                    label: t('MENU.NOTIFICATION'),
+                    icon: 'pi pi-fw pi-question-circle',
+                    to: '/pages/notification'
+                },
+                {
+                    label: t('MENU.WITHDRAWAL_POLICY'),
+                    icon: 'pi pi-fw pi-question-circle',
+                    to: '/pages/withdrawal-policy'
+                },
+                {
+                    label: t('MENU.WITHDRAWAL_REQUEST'),
+                    icon: 'pi pi-fw pi-question-circle',
+                    to: '/pages/withdrawal-request'
+                },
             ]
         }
     ];
