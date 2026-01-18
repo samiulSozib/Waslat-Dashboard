@@ -149,7 +149,7 @@ const WithdrawRequestsPage = () => {
     if (selectedReseller) {
       // Find the currency based on reseller's code
       const resellerCode = selectedReseller.code; // Assuming reseller has code attribute
-      let currency = null;
+      let currency: Currency | null = null;
       
       if (resellerCode) {
         currency = findCurrencyByCode(resellerCode);
