@@ -409,8 +409,9 @@ const BundlePage = () => {
         const hasSelectedBundles = selectedBundles && (selectedBundles as any).length > 0;
         return (
             <React.Fragment>
+                
                 <div className="my-2" style={{ display: 'flex', gap: '0.5rem', position: 'relative' }}>
-                    <div ref={filterRef} style={{ position: 'relative' }}>
+                    <div className="flex-shrink-0 h-10 min-w-0" ref={filterRef} style={{ position: 'relative' }}>
                         <Button style={{ gap: '8px' }} label={t('ORDER.FILTER.FILTER')} icon="pi pi-filter" className="p-button-info" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
                         {filterDialogVisible && (
                             <div
@@ -418,8 +419,8 @@ const BundlePage = () => {
                                 style={{
                                     position: 'absolute',
                                     top: '100%',
-                                    left: isRTL() ? 0 : '',
-                                    right: isRTL() ? '' : 0,
+                                    left: isRTL() ? '-100%' : '-20%',
+                                    right: isRTL() ? '-20%' : '-100%',
                                     width: '300px',
                                     zIndex: 1000,
                                     marginTop: '0.5rem',

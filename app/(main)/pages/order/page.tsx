@@ -97,7 +97,7 @@ const OrderPage = () => {
     // --- Fetch Orders Whenever Filters OR SearchTag Changes ---
     useEffect(() => {
         dispatch(_fetchOrders(1, searchTag, activeFilters));
-    }, [activeFilters, searchTag,dispatch]);
+    }, [activeFilters, searchTag, dispatch]);
 
 
     useEffect(() => {
@@ -783,7 +783,7 @@ const OrderPage = () => {
             t,
             toast,
             all: true,
-            filters:activeFilters
+            filters: activeFilters
         });
     };
 
