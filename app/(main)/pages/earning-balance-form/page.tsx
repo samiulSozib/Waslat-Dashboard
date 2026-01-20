@@ -134,6 +134,7 @@ const AddEarningBalanceRequestPage = () => {
                                 onFilter={(e) => {
                                     setResellerSearchTerm(e.filter);
                                 }}
+                                filterIcon
                             />
 
                             {submitted && !formData.reseller_id && <small className="p-invalid block mt-1">{t('FORM.VALIDATION.REQUIRED')}</small>}

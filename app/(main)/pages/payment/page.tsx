@@ -858,7 +858,7 @@ const PaymentPage = () => {
                         }
                     />
 
-                    <Dialog visible={paymentDialog} style={{ width: '900px', padding: '5px' }} header={t('PAYMENT.DETAILS.TITLE')} modal className="p-fluid" footer={paymentDialogFooter} onHide={hideDialog}>
+                    <Dialog visible={paymentDialog} style={{ width: '900px', padding: '5px'  }} header={t('PAYMENT.DETAILS.TITLE')} modal className="p-fluid" footer={paymentDialogFooter} onHide={hideDialog}>
                         
                         {resellerBalance !== null && resellerPayment !== null && (
                             <div
@@ -917,6 +917,7 @@ const PaymentPage = () => {
                                         onFilter={(e) => {
                                             setResellerSearchTerm(e.filter);
                                         }}
+                                        filterIcon
                                     />
 
                                     {submitted && !payment.reseller && (

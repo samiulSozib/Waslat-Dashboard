@@ -507,12 +507,7 @@ const WithdrawRequestsPage = () => {
             responsiveLayout="scroll"
           >
             <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
-            <Column
-              style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-              field="id"
-              header="ID"
-              sortable
-            ></Column>
+            
             <Column
               style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
               header={t('RESELLER')}
@@ -521,7 +516,7 @@ const WithdrawRequestsPage = () => {
             ></Column>
             <Column
               style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-              header={t('CURRENCY')}
+              header={t('MENU.CURRENCY')}
               body={currencyBodyTemplate}
               sortable
             ></Column>

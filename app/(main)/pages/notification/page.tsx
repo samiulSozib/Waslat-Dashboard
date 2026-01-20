@@ -493,7 +493,7 @@ const NotificationPage = () => {
                     <Dialog
                         visible={notificationDialog}
                         style={{ width: '700px', padding: '5px' }}
-                        header={notification.id ? t('EDIT_NOTIFICATION') : t('CREATE_NOTIFICATION')}
+                        header={notification.id ? t('NOTIFICATION.EDIT_NOTIFICATION') : t('NOTIFICATION.CREATE_NOTIFICATION')}
                         modal
                         className="p-fluid"
                         footer={notificationDialogFooter}
@@ -555,7 +555,7 @@ const NotificationPage = () => {
                             {/* Message Field */}
                             <div className="field mb-4">
                                 <label htmlFor="message" style={{ fontWeight: 'bold' }}>
-                                    {t('MESSAGE')} *
+                                    {t('NOTIFICATION.MESSAGE')} *
                                 </label>
                                 <textarea
                                     id="message"
@@ -633,7 +633,7 @@ const NotificationPage = () => {
                             {/* Media Upload */}
                             <div className="field mb-4">
                                 <label htmlFor="media" style={{ fontWeight: 'bold' }}>
-                                    {t('MEDIA')}
+                                    {t('NOTIFICATION.MEDIA')}
                                 </label>
                                 <FileUpload
                                     mode="basic"
@@ -687,6 +687,7 @@ const NotificationPage = () => {
                                             setResellerSearchTerm(e.filter);
                                         }}
                                         required={notification.target_type === 'reseller'}
+                                        filterIcon
                                     />
                                     {submitted && notification.target_type === 'reseller' && !notification.reseller_id && (
                                         <small className="p-invalid" style={{ color: 'red' }}>

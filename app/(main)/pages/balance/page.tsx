@@ -824,6 +824,7 @@ const BalancePage = () => {
                                             onFilter={(e) => {
                                                 setResellerSearchTerm(e.filter);
                                             }}
+                                            filterIcon
                                         />
                                         {submitted && !balance.reseller && (
                                             <small className="p-invalid" style={{ color: 'red' }}>

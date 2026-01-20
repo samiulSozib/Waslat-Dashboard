@@ -1874,5 +1874,8 @@
     "WITHDRAW_REQUEST": "Withdraw request",
     "WITHDRAW_REQUEST_UPDATED_SUCCESSFULLY": "Withdraw request updated successfully",
     "SELECT_RESELLER_FIRST": "Select a reseller first",
-    "CURRENCY_WILL_BE_AUTO_SELECTED": "Currency will be auto-selected"
+    "CURRENCY_WILL_BE_AUTO_SELECTED": "Currency will be auto-selected",
+
+    "MENU.WITHDRAWAL_REQUEST":"Withdrawal Request"
+
 }

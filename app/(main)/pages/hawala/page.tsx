@@ -1331,6 +1331,7 @@ const HawalaPage = () => {
                                                 onFilter={(e) => {
                                                     setResellerSearchTerm(e.filter);
                                                 }}
+                                                filterIcon
                                             />
                                             {submitted && !formData.reseller && (
                                                 <small className="p-invalid" style={{ color: 'red' }}>

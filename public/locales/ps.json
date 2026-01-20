@@ -1903,7 +1903,8 @@
     "WITHDRAW_REQUEST": "د برداشت غوښتنه",
     "WITHDRAW_REQUEST_UPDATED_SUCCESSFULLY": "د برداشت غوښتنه په بریالیتوب سره تازه شوه",
     "SELECT_RESELLER_FIRST": "لومړی یو بیا پلورونکی وټاکئ",
-    "CURRENCY_WILL_BE_AUTO_SELECTED": "اسعار به په اتومات ډول ټاکل شي"
+    "CURRENCY_WILL_BE_AUTO_SELECTED": "اسعار به په اتومات ډول ټاکل شي",
+        "MENU.WITHDRAWAL_REQUEST": "د پیسو د را اخستلو غوښتنه"
 
 
 }
