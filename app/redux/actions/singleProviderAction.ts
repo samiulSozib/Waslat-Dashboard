@@ -42,13 +42,17 @@ export const _fetchSingleProvider = (
     const response = await axios.get(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    console.log(response)
 
     dispatch({
       type: FETCH_SINGLE_PROVIDER_SUCCESS,
       payload: {
         provider: response.data.data.provider,
         internets: response.data.data.internet,
-        rawInternets:response.data.data.raw.internet,
+        //rawInternets:response.data.data.raw.internet,
+        rawInternets:response.data.data.categories[0].bundles,
+        rawBundles:response.data.data.bundles,
+        
         pagination: response.data.payload?.pagination || null,
       },
     });

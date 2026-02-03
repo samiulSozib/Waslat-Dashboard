@@ -1876,6 +1876,9 @@
     "SELECT_RESELLER_FIRST": "Select a reseller first",
     "CURRENCY_WILL_BE_AUTO_SELECTED": "Currency will be auto-selected",
 
-    "MENU.WITHDRAWAL_REQUEST":"Withdrawal Request"
+    "MENU.WITHDRAWAL_REQUEST":"Withdrawal Request",
+
+    "PROVIDER.CAPABILITIES.VOICE_BUNDLES":"Voice Bundles",
+    "PROVIDER.CAPABILITIES.SMS_BUNDLES":"SMS Bundles"
 
 }

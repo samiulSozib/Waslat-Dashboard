@@ -92,7 +92,9 @@ const ProviderPage = () => {
         { label: t('PROVIDER.CAPABILITIES.INTERNET'), value: 'internet' },
         { label: t('PROVIDER.CAPABILITIES.BILL'), value: 'bill' },
         { label: t('PROVIDER.CAPABILITIES.CREDIT'), value: 'credit' },
-        { label: t('PROVIDER.CAPABILITIES.PRODUCTS'), value: 'products' }
+        { label: t('PROVIDER.CAPABILITIES.PRODUCTS'), value: 'products' },
+        { label: t('PROVIDER.CAPABILITIES.VOICE_BUNDLES'), value: 'voice' },
+        { label: t('PROVIDER.CAPABILITIES.SMS_BUNDLES'), value: 'sms' }
     ];
 
 

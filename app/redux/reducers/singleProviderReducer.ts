@@ -1,5 +1,5 @@
 // singleProviderReducer.ts
-import { Internet, Pagination, RawInternet, SingleProvider } from '@/types/interface';
+import { Internet, Pagination, RawBundles, RawInternet, SingleProvider } from '@/types/interface';
 import {
   FETCH_SINGLE_PROVIDER_REQUEST,
   FETCH_SINGLE_PROVIDER_SUCCESS,
@@ -12,6 +12,7 @@ interface SingleProviderState {
   provider: SingleProvider | null;
   internets: Internet[];
   rawInternets:RawInternet[],
+  rawBundles:RawBundles[],
   error: string | null;
   pagination: Pagination | null;
 }
@@ -21,6 +22,7 @@ const initialState: SingleProviderState = {
   provider: null,
   internets: [],
   rawInternets:[],
+  rawBundles:[],
   error: null,
   pagination: null
 };
@@ -44,6 +46,7 @@ export const singleProviderReducer = (
         provider: action.payload.provider,
         internets: action.payload.internets,
         rawInternets:action.payload.rawInternets,
+        rawBundles:action.payload.rawBundles,
         pagination: action.payload.pagination,
         error: null,
       };
@@ -56,6 +59,7 @@ export const singleProviderReducer = (
         provider: null,
         internets: [],
         rawInternets:[],
+        rawBundles:[],
         pagination: null,
       };
 

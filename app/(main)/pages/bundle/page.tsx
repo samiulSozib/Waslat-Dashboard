@@ -89,13 +89,15 @@ const BundlePage = () => {
 
     const [activeFilters, setActiveFilters] = useState({});
     const { providers } = useSelector((state: any) => state.providerReducer);
-    const { rawInternets } = useSelector((state: any) => state.singleProviderReducer);
+    const { rawInternets,rawBundles } = useSelector((state: any) => state.singleProviderReducer);
 
     const [providerSearchTag, setProviderSearchTag] = useState('');
 
     const [unsetDialogVisible, setUnsetDialogVisible] = useState(false);
     const [bundleToUnset, setBundleToUnset] = useState<Bundle | null>(null);
     const [editingRows, setEditingRows] = useState({});
+
+    
 
 
     useEffect(() => {
@@ -127,6 +129,11 @@ const BundlePage = () => {
             dispatch(_fetchBundleList(1, searchTag, activeFilters));
         }
     }, [dispatch, activeFilters, searchTag]);
+
+
+    useEffect(()=>{
+        console.log(rawInternets)
+    },[dispatch,rawInternets])
 
     const openNew = () => {
         setBundle(emptyBundle);
@@ -300,6 +307,7 @@ const BundlePage = () => {
                 const providerBundle = rawInternets.find((b: any) => String(b.table_id) === String(parsedApiBinding.table_id) && String(b.id) === String(parsedApiBinding.product_id));
 
                 if (providerBundle) {
+                    console.log(providerBundle)
                     setSelectedProviderBundle(providerBundle);
                 } else {
                     console.warn('Bundle not found in rawInternets, falling back to parsed object');
@@ -1262,18 +1270,18 @@ const BundlePage = () => {
                                         panelClassName="min-w-[20rem]"
                                         itemTemplate={(option) => (
                                             <div className="flex flex-col p-2 gap-2 item-center">
-                                                <div className="font-semibold text-sm">{option.name}</div>
+                                                <div className="font-semibold text-sm">{option.title}</div>
                                                 <div className="flex flex-wrap gap-2 text-xs text-gray-600">
                                                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">{option.operator}</span>
-                                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                                                    {/* <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
                                                         {option.volume} {option.unit}
-                                                    </span>
-                                                    {option.days && <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">{option.days}</span>}
-                                                    <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded">{option.periodicity}</span>
-                                                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded">{option.amount_rial ? `${option.amount_rial}` : `${option.amount}`}</span>
+                                                    </span> */}
+                                                    {option.validity && <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">{option.validity}</span>}
+                                                    {/* <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded">{option.periodicity}</span> */}
+                                                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded">{option.price ? `${option.price}` : `${option.tprice}`}</span>
                                                 </div>
                                                 <div className="text-xs text-gray-500 mt-1">
-                                                    {option.internet_type} | {option.sim_type}
+                                                    {option.Category}
                                                 </div>
                                             </div>
                                         )}
@@ -1281,9 +1289,9 @@ const BundlePage = () => {
                                             if (!option) return t('SEARCH_BUNDLE');
                                             return (
                                                 <div className="flex flex-col">
-                                                    <span className="font-semibold text-sm">{option.name}</span>
+                                                    <span className="font-semibold text-sm">{option.title}</span>
                                                     <span className="text-xs text-gray-600">
-                                                        {option.volume} {option.unit} <span className="mx-2"> | </span> {option.amount_rial ? `${option.amount_rial}` : `${option.amount}`}{' '}
+                                                        {option.operator} <span className="mx-2"> | </span> {option.price ? `${option.price}` : `${option.tprice}`}{' '}
                                                     </span>
                                                 </div>
                                             );

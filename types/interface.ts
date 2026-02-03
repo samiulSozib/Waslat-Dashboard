@@ -891,11 +891,20 @@ export interface RawInternet {
     gross_price_rial: number;
     internet_type: string;
 }
+export interface RawBundles{
+    
+    id:string;
+    title:string;
+    desc:string;
+    price:string;
+    tprice:string;
+}
 
 export interface SingleProviderResponse {
     provider: SingleProvider;
     internets: Internet[];
-    rawInternets: RawInternet[]
+    rawInternets: RawInternet[];
+    rawBundles:RawBundles[];
 }
 
 
