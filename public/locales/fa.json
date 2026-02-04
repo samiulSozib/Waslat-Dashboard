@@ -1876,7 +1876,11 @@
     "WITHDRAW_REQUEST_UPDATED_SUCCESSFULLY": "درخواست برداشت با موفقیت به‌روزرسانی شد",
     "SELECT_RESELLER_FIRST": "ابتدا یک فروشنده انتخاب کنید",
     "CURRENCY_WILL_BE_AUTO_SELECTED": "ارز به صورت خودکار انتخاب خواهد شد",
-        "MENU.WITHDRAWAL_REQUEST": "درخواست برداشت"
+        "MENU.WITHDRAWAL_REQUEST": "درخواست برداشت",
+
+
+        "PROVIDER.CAPABILITIES.VOICE_BUNDLES":"بسته‌های صوتی",
+"PROVIDER.CAPABILITIES.SMS_BUNDLES":"بسته‌های پیامکی"
 
 
 }

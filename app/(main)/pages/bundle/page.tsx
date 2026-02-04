@@ -1253,51 +1253,76 @@ const BundlePage = () => {
                                 <div className="field col">
                                     <label htmlFor="provider">{t('BUNDLE')} *</label>
                                     <Dropdown
-                                        id="provider"
-                                        value={selectedProviderBundle}
-                                        options={rawInternets}
-                                        onChange={(e) => {
-                                            console.log(e.value);
-                                            setSelectedProviderBundle(e.value);
-                                        }}
-                                        optionLabel="name"
-                                        filter
-                                        filterBy="title,operator"
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        showFilterClear
-                                        placeholder={t('SEARCH_PROVIDER')}
-                                        className="w-full"
-                                        panelClassName="min-w-[20rem]"
-                                        itemTemplate={(option) => (
-                                            <div className="flex flex-col p-2 gap-2 item-center">
-                                                <div className="font-semibold text-sm">{option.name || option.title}</div>
-                                                <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">{option.operator}</span>
-                                                    {option.validity && <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">{option.validity}</span>}
-                                                    {option.price && <span className="bg-red-100 text-red-800 px-2 py-1 rounded">Price: {option.price}</span>}
-                                                    {option.tprice && <span className="bg-green-100 text-green-800 px-2 py-1 rounded">TPrice: {option.tprice}</span>}
-                                                </div>
-                                                <div className="text-xs text-gray-500 mt-1">
-                                                    {option.Category}
-                                                </div>
-                                            </div>
-                                        )}
-                                        valueTemplate={(option) => {
-                                            if (!option) return t('SEARCH_BUNDLE');
-                                            return (
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold text-sm">{option.name || option.title}</span>
-                                                    <span className="mx-2 text-xs text-gray-600">
-                                                        {option.operator}
-                                                        {(option.price || option.tprice) && <span className="mx-2"> | </span>}
-                                                        {option.price && <span>Price: {option.price}</span>}
-                                                        {option.price && option.tprice && <span className="mx-1">•</span>}
-                                                        {option.tprice && <span>TPrice: {option.tprice}</span>}
-                                                    </span>
-                                                </div>
-                                            );
-                                        }}
-                                    />
+    id="provider"
+    value={selectedProviderBundle}
+    options={rawInternets.filter((item: RawInternet) => {
+        // If no service is selected, show all options
+         if (!bundle.service) return true;
+        
+        // Get the company name from the selected service
+        const serviceCompanyName = bundle.service?.company?.company_name;
+        //const serviceCompanyName = bundle.service?.service_category?.category_name;
+        
+        // Get the operator from rawInternet meta
+        const rawInternetOperator = item.meta?.operator || item.operator;
+        
+        // If either is missing, don't include
+        if (!serviceCompanyName || !rawInternetOperator) return false;
+        
+        // Check if operator matches service company name (case insensitive)
+        const serviceNameLower = serviceCompanyName.toLowerCase();
+        const operatorLower = rawInternetOperator.toLowerCase();
+        
+        return serviceNameLower.includes(operatorLower) || 
+               operatorLower.includes(serviceNameLower);
+    })}
+    onChange={(e) => {
+        console.log(e.value);
+        setSelectedProviderBundle(e.value);
+    }}
+    optionLabel="name"
+    filter
+    filterBy="title,operator,validity"
+    filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+    showFilterClear
+    placeholder={t('SEARCH_PROVIDER')}
+    className="w-full"
+    panelClassName="min-w-[20rem]"
+    itemTemplate={(option) => (
+        <div className="flex flex-col p-2 gap-2 item-center">
+            <div className="font-semibold text-sm">{option.name || option.title}</div>
+            <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">{option.operator}</span>
+                {option.validity && <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">{option.validity}</span>}
+                {option.price && <span className="bg-red-100 text-red-800 px-2 py-1 rounded">Price: {option.price}</span>}
+                {option.tprice && <span className="bg-green-100 text-green-800 px-2 py-1 rounded">TPrice: {option.tprice}</span>}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+                {option.Category}
+                {bundle.service && (
+                    <div className="text-xs text-green-600 mt-1">
+                        Matches: {bundle.service.company?.company_name}
+                    </div>
+                )}
+            </div>
+        </div>
+    )}
+    valueTemplate={(option) => {
+        if (!option) return t('SEARCH_BUNDLE');
+        return (
+            <div className="flex flex-col">
+                <span className="font-semibold text-sm">{option.name || option.title}</span>
+                <span className="mx-2 text-xs text-gray-600">
+                    {option.operator}
+                    {(option.price || option.tprice) && <span className="mx-2"> | </span>}
+                    {option.price && <span>Price: {option.price}</span>}
+                    {option.price && option.tprice && <span className="mx-1">•</span>}
+                    {option.tprice && <span>TPrice: {option.tprice}</span>}
+                </span>
+            </div>
+        );
+    }}
+/>
                                 </div>
                             </div>
                             <div className="gridcol col">{bundle.api_provider_id && <Button label={t('UNSET_BUNDLE')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={() => confirmUnsetBundle(bundle)} />}</div>

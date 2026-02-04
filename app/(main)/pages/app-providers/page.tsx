@@ -95,6 +95,7 @@ const ProviderPage = () => {
         { label: t('PROVIDER.CAPABILITIES.PRODUCTS'), value: 'products' },
         { label: t('PROVIDER.CAPABILITIES.VOICE_BUNDLES'), value: 'voice' },
         { label: t('PROVIDER.CAPABILITIES.SMS_BUNDLES'), value: 'sms' }
+        
     ];
 
 

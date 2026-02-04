@@ -890,6 +890,7 @@ export interface RawInternet {
     amount_rial: number;
     gross_price_rial: number;
     internet_type: string;
+    meta?:Meta
 }
 export interface RawBundles{
     

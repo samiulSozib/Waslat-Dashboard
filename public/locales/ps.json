@@ -1904,7 +1904,11 @@
     "WITHDRAW_REQUEST_UPDATED_SUCCESSFULLY": "د برداشت غوښتنه په بریالیتوب سره تازه شوه",
     "SELECT_RESELLER_FIRST": "لومړی یو بیا پلورونکی وټاکئ",
     "CURRENCY_WILL_BE_AUTO_SELECTED": "اسعار به په اتومات ډول ټاکل شي",
-        "MENU.WITHDRAWAL_REQUEST": "د پیسو د را اخستلو غوښتنه"
+        "MENU.WITHDRAWAL_REQUEST": "د پیسو د را اخستلو غوښتنه",
+
+
+        "PROVIDER.CAPABILITIES.VOICE_BUNDLES":"د غږ بسته‌ګانې",
+"PROVIDER.CAPABILITIES.SMS_BUNDLES":"د اس‌ام‌اس بسته‌ګانې"
 
 
 }
