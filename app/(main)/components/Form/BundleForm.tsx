@@ -124,9 +124,9 @@ const BundleForm: React.FC<BundleFormProps> = ({
 
   useEffect(() => {
     if (selectedProvider && selectedCapability) {
-      dispatch(_fetchSingleProvider(selectedProvider?.id, selectedProvider?.code, selectedCapability));
+      dispatch(_fetchSingleProvider(selectedProvider?.id, selectedProvider?.code, selectedCapability,bundle?.service?.company?.company_name??""));
     }
-  }, [dispatch, selectedProvider, selectedCapability]);
+  }, [dispatch, selectedProvider, selectedCapability,bundle?.service?.company?.company_name]);
 
   const resetProviderData = () => {
     setSelectedProvider(null);
