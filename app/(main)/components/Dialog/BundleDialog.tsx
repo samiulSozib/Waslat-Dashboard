@@ -68,9 +68,9 @@ const BundleDialog: React.FC<BundleDialogProps> = ({
 
   useEffect(() => {
     if (selectedProvider && selectedCapability) {
-      dispatch(_fetchSingleProvider(selectedProvider?.id, selectedProvider?.code, selectedCapability));
+      dispatch(_fetchSingleProvider(selectedProvider?.id, selectedProvider?.code, selectedCapability,bundle.service?.company?.company_name??""));
     }
-  }, [dispatch, selectedProvider, selectedCapability]);
+  }, [dispatch, selectedProvider, selectedCapability,bundle.service?.company?.company_name]);
 
   // Populate provider data when editing an existing bundle with provider info
   useEffect(() => {
