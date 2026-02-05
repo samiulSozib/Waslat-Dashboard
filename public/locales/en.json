@@ -1880,7 +1880,7 @@
     "PROVIDER.CAPABILITIES.SMS_BUNDLES": "SMS Bundles",
 
 
-    "PROVIDER": {
+    "PROVIDERS": {
         "VIEW": "View",
         "ID": "ID",
         "CODE": "Code",

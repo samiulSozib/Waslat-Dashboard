@@ -1879,7 +1879,7 @@
     "MENU.WITHDRAWAL_REQUEST": "د پیسو د را اخستلو غوښتنه",
     "PROVIDER.CAPABILITIES.VOICE_BUNDLES": "د غږ بسته‌ګانې",
     "PROVIDER.CAPABILITIES.SMS_BUNDLES": "د اس‌ام‌اس بسته‌ګانې",
-    "PROVIDER": {
+    "PROVIDERS": {
         "VIEW": "لیدنه",
         "ID": "پېژندنه",
         "CODE": "کوډ",

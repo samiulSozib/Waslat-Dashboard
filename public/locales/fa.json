@@ -1878,7 +1878,7 @@
     "MENU.WITHDRAWAL_REQUEST": "درخواست برداشت",
     "PROVIDER.CAPABILITIES.VOICE_BUNDLES": "بسته‌های صوتی",
     "PROVIDER.CAPABILITIES.SMS_BUNDLES": "بسته‌های پیامکی",
-    "PROVIDER": {
+    "PROVIDERS": {
         "VIEW": "مشاهده",
         "ID": "شناسه",
         "CODE": "کد",

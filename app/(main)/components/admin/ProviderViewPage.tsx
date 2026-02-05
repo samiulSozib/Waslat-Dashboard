@@ -168,18 +168,18 @@ const ProviderViewPage: React.FC<ProviderViewPageProps> = ({ providerId }) => {
           <Card title={t('PROVIDER_INFO')} className="h-full">
             <div className="space-y-2">
               <div className="flex justify-between gap-2">
-                <span className="font-medium">{t('PROVIDER.HAS_CREDENTIALS')}:</span>
+                <span className="font-medium">{t('PROVIDERS.HAS_CREDENTIALS')}:</span>
                 <Tag 
                   value={accountData.provider.has_credentials ? t('YES') : t('NO')} 
                   severity={accountData.provider.has_credentials ? "success" : "danger"} 
                 />
               </div>
               <div className="flex justify-between">
-                <span className="font-medium">{t('PROVIDER.ID')}:</span>
+                <span className="font-medium">{t('PROVIDERS.ID')}:</span>
                 <span>{accountData.provider.id}</span>
               </div>
               <div className="flex justify-between gap-2">
-                <span className="font-medium">{t('PROVIDER.CODE')}:</span>
+                <span className="font-medium">{t('PROVIDERS.CODE')}:</span>
                 <Tag value={accountData.provider.code} severity="info" />
               </div>
             </div>
