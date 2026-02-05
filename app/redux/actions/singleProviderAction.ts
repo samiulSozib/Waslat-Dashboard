@@ -17,6 +17,7 @@ export const _fetchSingleProvider = (
   providerId: number,
   code: string,
   capability: string,
+  company:string,
   page: number = 1,
   search: string = '',
   filters: Record<string, any> = {}
@@ -27,7 +28,8 @@ export const _fetchSingleProvider = (
     const token = getAuthToken();
     const queryParams = new URLSearchParams();
 
-    queryParams.append('page', String(page));
+    queryParams.append("company",company)
+    //queryParams.append('page', String(page));
     if (search) queryParams.append('search', search);
 
     Object.entries(filters).forEach(([key, value]) => {

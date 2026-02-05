@@ -121,8 +121,8 @@ const BundlePage = () => {
     }, [providerSearchTag, dispatch]);
 
     useEffect(() => {
-        if (selectedProvider && selectedCapability) dispatch(_fetchSingleProvider(selectedProvider?.id, selectedProvider?.code, selectedCapability));
-    }, [dispatch, selectedProvider, selectedCapability]);
+        if (selectedProvider && selectedCapability) dispatch(_fetchSingleProvider(selectedProvider?.id, selectedProvider?.code, selectedCapability,bundle.service?.company?.company_name??""));
+    }, [dispatch, selectedProvider, selectedCapability,bundle.service?.company?.company_name]);
 
     useEffect(() => {
         if (Object.keys(activeFilters).length > 0) {
