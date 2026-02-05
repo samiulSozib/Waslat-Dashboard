@@ -1736,7 +1736,6 @@
     "PAYMENTMETHOD.FORM.INPUT.SHEBANUMBER": "شماره شبا",
     "PAYMENTMETHOD.FORM.INPUT.CARDNUMBER": "شماره کارت",
     "PAYMENTMETHOD.FORM.INPUT.NOTES": "یادداشت‌ها",
-    
     "CURRENCY.FORM.INPUT.IGNOREDIGITSCOUNT": "تعداد ارقام نادیده گرفته شده",
     "VALIDATION": {
         "VALIDATION_FAILED": "اعتبارسنجی ناموفق بود"
@@ -1876,11 +1875,55 @@
     "WITHDRAW_REQUEST_UPDATED_SUCCESSFULLY": "درخواست برداشت با موفقیت به‌روزرسانی شد",
     "SELECT_RESELLER_FIRST": "ابتدا یک فروشنده انتخاب کنید",
     "CURRENCY_WILL_BE_AUTO_SELECTED": "ارز به صورت خودکار انتخاب خواهد شد",
-        "MENU.WITHDRAWAL_REQUEST": "درخواست برداشت",
-
-
-        "PROVIDER.CAPABILITIES.VOICE_BUNDLES":"بسته‌های صوتی",
-"PROVIDER.CAPABILITIES.SMS_BUNDLES":"بسته‌های پیامکی"
-
-
+    "MENU.WITHDRAWAL_REQUEST": "درخواست برداشت",
+    "PROVIDER.CAPABILITIES.VOICE_BUNDLES": "بسته‌های صوتی",
+    "PROVIDER.CAPABILITIES.SMS_BUNDLES": "بسته‌های پیامکی",
+    "PROVIDER": {
+        "VIEW": "مشاهده",
+        "ID": "شناسه",
+        "CODE": "کد",
+        "HAS_CREDENTIALS": "دارای اعتبارنامه",
+        "ACCOUNT_INFO": "اطلاعات حساب"
+    },
+    "ACCOUNT_INFO": {
+        "BALANCE": "موجودی حساب",
+        "CURRENCY": "واحد پول",
+        "LAST_UPDATED": "آخرین بروزرسانی"
+    },
+    "USER_INFO": "اطلاعات کاربر",
+    "USER": {
+        "UID": "شناسه کاربری",
+        "NAME": "نام",
+        "BALANCE": "موجودی کاربر",
+        "LANGUAGE": "زبان"
+    },
+    "RECENT_TRANSACTIONS": "تراکنش‌های اخیر",
+    "TRANSACTION": {
+        "ID": "شناسه",
+        "DESCRIPTION": "توضیحات",
+        "PHONE": "تلفن",
+        "TYPE": "نوع",
+        "AMOUNT": "مبلغ",
+        "DATE": "تاریخ",
+        "TYPE": {
+            "RECHARGE": "شارژ",
+            "BALANCE": "موجودی"
+        }
+    },
+    "TRANSACTION_SUMMARY": "خلاصه تراکنش‌ها",
+    "TOTAL_TRANSACTIONS": "کل تراکنش‌ها",
+    "TOTAL_RECHARGE_AMOUNT": "مجموع مبلغ شارژ",
+    "TOTAL_BALANCE_ADDED": "مجموع اضافه شده به موجودی",
+    "QUICK_ACTIONS": "اقدامات سریع",
+    "ADD_BALANCE": "افزودن موجودی",
+    "MAKE_RECHARGE": "انجام شارژ",
+    "VIEW_DETAILED_REPORT": "مشاهده گزارش تفصیلی",
+    "EXPORT_DATA": "خروجی داده",
+    "GO_BACK": "بازگشت",
+    "REFRESH": "تازه‌سازی",
+    "YES": "بله",
+    "NO": "خیر",
+    "NO_TRANSACTIONS_FOUND": "تراکنشی یافت نشد",
+    "LAST_UPDATED": "آخرین بروزرسانی",
+    "PROVIDER_INFO": "اطلاعات ارائه‌دهنده"
 }

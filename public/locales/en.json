@@ -1875,10 +1875,57 @@
     "WITHDRAW_REQUEST_UPDATED_SUCCESSFULLY": "Withdraw request updated successfully",
     "SELECT_RESELLER_FIRST": "Select a reseller first",
     "CURRENCY_WILL_BE_AUTO_SELECTED": "Currency will be auto-selected",
+    "MENU.WITHDRAWAL_REQUEST": "Withdrawal Request",
+    "PROVIDER.CAPABILITIES.VOICE_BUNDLES": "Voice Bundles",
+    "PROVIDER.CAPABILITIES.SMS_BUNDLES": "SMS Bundles",
 
-    "MENU.WITHDRAWAL_REQUEST":"Withdrawal Request",
 
-    "PROVIDER.CAPABILITIES.VOICE_BUNDLES":"Voice Bundles",
-    "PROVIDER.CAPABILITIES.SMS_BUNDLES":"SMS Bundles"
-
+    "PROVIDER": {
+        "VIEW": "View",
+        "ID": "ID",
+        "CODE": "Code",
+        "HAS_CREDENTIALS": "Has Credentials",
+        "ACCOUNT_INFO": "Account Information"
+    },
+    "ACCOUNT_INFO": {
+        "BALANCE": "Account Balance",
+        "CURRENCY": "Currency",
+        "LAST_UPDATED": "Last Updated"
+    },
+    "USER_INFO": "User Information",
+    "USER": {
+        "UID": "User ID",
+        "NAME": "Name",
+        "BALANCE": "User Balance",
+        "LANGUAGE": "Language"
+    },
+    "RECENT_TRANSACTIONS": "Recent Transactions",
+    "TRANSACTION": {
+        "ID": "ID",
+        "DESCRIPTION": "Description",
+        "PHONE": "Phone",
+        "TYPE": "Type",
+        "AMOUNT": "Amount",
+        "DATE": "Date",
+        "TYPE": {
+            "RECHARGE": "Recharge",
+            "BALANCE": "Balance"
+        }
+    },
+    "TRANSACTION_SUMMARY": "Transaction Summary",
+    "TOTAL_TRANSACTIONS": "Total Transactions",
+    "TOTAL_RECHARGE_AMOUNT": "Total Recharge Amount",
+    "TOTAL_BALANCE_ADDED": "Total Balance Added",
+    "QUICK_ACTIONS": "Quick Actions",
+    "ADD_BALANCE": "Add Balance",
+    "MAKE_RECHARGE": "Make Recharge",
+    "VIEW_DETAILED_REPORT": "View Detailed Report",
+    "EXPORT_DATA": "Export Data",
+    "GO_BACK": "Go Back",
+    "REFRESH": "Refresh",
+    "YES": "Yes",
+    "NO": "No",
+    "NO_TRANSACTIONS_FOUND": "No transactions found",
+    "LAST_UPDATED": "Last Updated",
+    "PROVIDER_INFO":"Provider Info"
 }

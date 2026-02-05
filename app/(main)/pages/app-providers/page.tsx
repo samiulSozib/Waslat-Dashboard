@@ -25,6 +25,7 @@ import { Provider } from '@/types/interface';
 import { InputSwitch } from 'primereact/inputswitch';
 import { MultiSelect } from 'primereact/multiselect';
 import { Accordion, AccordionTab } from 'primereact/accordion';
+import { useRouter } from 'next/navigation';
 
 const ProviderPage = () => {
     let emptyProvider: Provider = {
@@ -87,6 +88,9 @@ const ProviderPage = () => {
     const [newCredentialKey, setNewCredentialKey] = useState('');
     const [newCredentialValue, setNewCredentialValue] = useState('');
 
+    const router = useRouter();
+
+
     const capabilityOptions = [
         { label: t('PROVIDER.CAPABILITIES.TOPUP'), value: 'topup' },
         { label: t('PROVIDER.CAPABILITIES.INTERNET'), value: 'internet' },
@@ -95,7 +99,7 @@ const ProviderPage = () => {
         { label: t('PROVIDER.CAPABILITIES.PRODUCTS'), value: 'products' },
         { label: t('PROVIDER.CAPABILITIES.VOICE_BUNDLES'), value: 'voice' },
         { label: t('PROVIDER.CAPABILITIES.SMS_BUNDLES'), value: 'sms' }
-        
+
     ];
 
 
@@ -455,6 +459,7 @@ const ProviderPage = () => {
 
                                         {/* Action Buttons */}
                                         <div className="col-12 mt-3 flex justify-content-between gap-2">
+
                                             <Button
                                                 label={t('RESET')}
                                                 icon="pi pi-times"
@@ -601,6 +606,13 @@ const ProviderPage = () => {
     const actionBodyTemplate = (rowData: Provider) => {
         return (
             <>
+                <Button
+                    icon="pi pi-eye"
+                    rounded
+                    severity="info"
+                    className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
+                    onClick={() => router.push(`/pages/app-providers/view/${rowData.id}`)}
+                />
                 <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editProvider(rowData)} />
                 <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteProvider(rowData)} />
             </>

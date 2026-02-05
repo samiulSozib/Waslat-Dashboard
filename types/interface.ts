@@ -1013,3 +1013,38 @@ export interface WithdrawRequest {
   }
 }
 
+export interface ApiInfoProvider {
+  id: number;
+  code: string;
+  name: string;
+  has_credentials: boolean;
+}
+
+export interface ApiInfoAccountInfo {
+  balance: number;
+  currency: string;
+  last_updated: string; // Format: "YYYY-MM-DD HH:mm:ss"
+}
+
+export interface ApiInfoUser {
+  uid: string;
+  name: string;
+  balance: number;
+  lang: string;
+}
+
+export interface ApiInfoTransaction {
+  id: number;
+  phone: string;
+  created_at: string; // ISO format: "YYYY-MM-DDTHH:mm:ss.sssZ"
+  finalAmount: number;
+  type: string; // Could be more specific like 'recharge' | 'balance' | etc.
+  b_name: string;
+}
+
+export interface AccountData {
+  provider: ApiInfoProvider;
+  account_info: ApiInfoAccountInfo;
+  user: ApiInfoUser;
+  recent_transactions: ApiInfoTransaction[];
+}
