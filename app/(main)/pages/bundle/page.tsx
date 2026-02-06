@@ -1255,27 +1255,28 @@ const BundlePage = () => {
                                     <Dropdown
     id="provider"
     value={selectedProviderBundle}
-    options={rawInternets.filter((item: RawInternet) => {
-        // If no service is selected, show all options
-         if (!bundle.service) return true;
+    // options={rawInternets.filter((item: RawInternet) => {
+    //     // If no service is selected, show all options
+    //      if (!bundle.service) return true;
         
-        // Get the company name from the selected service
-        const serviceCompanyName = bundle.service?.company?.company_name;
-        //const serviceCompanyName = bundle.service?.service_category?.category_name;
+    //     // Get the company name from the selected service
+    //     const serviceCompanyName = bundle.service?.company?.company_name;
+    //     //const serviceCompanyName = bundle.service?.service_category?.category_name;
         
-        // Get the operator from rawInternet meta
-        const rawInternetOperator = item.meta?.operator || item.operator;
+    //     // Get the operator from rawInternet meta
+    //     const rawInternetOperator = item.meta?.operator || item.operator;
         
-        // If either is missing, don't include
-        if (!serviceCompanyName || !rawInternetOperator) return false;
+    //     // If either is missing, don't include
+    //     if (!serviceCompanyName || !rawInternetOperator) return false;
         
-        // Check if operator matches service company name (case insensitive)
-        const serviceNameLower = serviceCompanyName.toLowerCase();
-        const operatorLower = rawInternetOperator.toLowerCase();
+    //     // Check if operator matches service company name (case insensitive)
+    //     const serviceNameLower = serviceCompanyName.toLowerCase();
+    //     const operatorLower = rawInternetOperator.toLowerCase();
         
-        return serviceNameLower.includes(operatorLower) || 
-               operatorLower.includes(serviceNameLower);
-    })}
+    //     return serviceNameLower.includes(operatorLower) || 
+    //            operatorLower.includes(serviceNameLower);
+    // })}
+    options={rawInternets}
     onChange={(e) => {
         console.log(e.value);
         setSelectedProviderBundle(e.value);
