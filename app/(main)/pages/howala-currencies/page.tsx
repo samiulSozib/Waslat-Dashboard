@@ -93,15 +93,15 @@ const CurrencyPage = () => {
         }
 
         // Validate same currency
-        if (currency.from_currency.id === currency.to_currency.id) {
-            toast.current?.show({
-                severity: 'error',
-                summary: t('ERROR'),
-                detail: t('HAWALA.CURRENCY.ERROR.SAME_CURRENCY'),
-                life: 3000
-            });
-            return;
-        }
+        // if (currency.from_currency.id === currency.to_currency.id) {
+        //     toast.current?.show({
+        //         severity: 'error',
+        //         summary: t('ERROR'),
+        //         detail: t('HAWALA.CURRENCY.ERROR.SAME_CURRENCY'),
+        //         life: 3000
+        //     });
+        //     return;
+        // }
 
         if (currency.id && currency.id !== 0) {
             dispatch(_editHawalaCurrency(currency.id, currency, toast, t));
