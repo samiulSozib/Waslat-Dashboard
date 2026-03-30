@@ -1926,5 +1926,121 @@
     "NO": "نه",
     "NO_TRANSACTIONS_FOUND": "هیڅ معامله ونه موندل شوه",
     "LAST_UPDATED": "وروستی تازه کول",
-    "PROVIDER_INFO": "د عرضه کوونکي معلومات"
+    "PROVIDER_INFO": "د عرضه کوونکي معلومات",
+
+  "API_KEYS": "د API کیلي",
+  "API_KEY": "د API کیلي",
+  "CREATE_API_KEY": "د API کیلي جوړول",
+  "EDIT_API_KEY": "د API کیلي سمول",
+  "DELETE_API_KEY": "د API کیلي ړنګول",
+  "API_KEY_DETAILS": "د API کیلي توضیحات",
+  "API_KEY_NAME": "د API کیلي نوم",
+  "API_KEY_VALUE": "د API کیلي ارزښت",
+  "API_KEY_SECRET": "د API کیلي راز",
+  "API_KEY_COPIED": "د API کیلي کلپ بورډ ته کاپي شوه",
+  "API_KEY_REGENERATED": "د API کیلي په بریالیتوب سره بیا جوړه شوه",
+  "API_KEY_REGENERATE": "د API کیلي بیا جوړول",
+  "API_KEY_REGENERATE_CONFIRM": "ایا تاسو ډاډه یاست چې غواړئ دا د API کیلي بیا جوړه کړئ؟ زوړ کیلي به سمدلاسه باطله شي.",
+
+  "API_KEY_CREATED": "د API کیلي په بریالیتوب سره جوړه شوه",
+  "API_KEY_CREATE_FAILED": "د API کیلي جوړول ناکام شول",
+  "API_KEY_UPDATED": "د API کیلي په بریالیتوب سره تازه شوه",
+  "API_KEY_UPDATE_FAILED": "د API کیلي تازه کول ناکام شول",
+  "API_KEY_DELETED": "د API کیلي په بریالیتوب سره ړنګه شوه",
+  "API_KEY_DELETE_FAILED": "د API کیلي ړنګول ناکام شول",
+  "API_KEY_DELETE_CONFIRM": "ایا تاسو ډاډه یاست چې غواړئ دا د API کیلي ړنګه کړئ؟ دا عمل بیرته نه شي ګرځول کیدی.",
+
+  "API_KEY_ACTIVATED": "د API کیلي په بریالیتوب سره فعاله شوه",
+  "API_KEY_DEACTIVATED": "د API کیلي په بریالیتوب سره غیرفعاله شوه",
+  "API_KEY_STATUS_TOGGLE_FAILED": "د API کیلي حالت بدلول ناکام شول",
+  "API_KEY_REGENERATE_FAILED": "د API کیلي بیا جوړول ناکام شول",
+  "FETCH_API_KEY_FAILED": "د API کیلي توضیحات راوړل ناکام شول",
+
+  "ALLOWED_IPS": "اجازه ورکړل شوي IP پتې",
+  "ALLOWED_IPS_HELP": "هغه IP پتې دننه کړئ چې د دې API کیلي کارولو اجازه لري. د ټولو IP پتو اجازه ورکولو لپاره له * څخه کار واخلئ.",
+  "ADD_IP": "IP اضافه کول",
+  "IP_ADDRESS": "IP پته",
+  "IP_ADDRESS_PLACEHOLDER": "بېلګه: 192.168.1.1 یا *",
+  "INVALID_IP": "د IP پته بڼه ناسمه ده",
+  "RATE_LIMIT": "د کچې محدودیت",
+  "RATE_LIMIT_HELP": "په یوه دقیقه کې د غوښتنو اعظمي شمېر",
+  "REQUESTS_PER_MINUTE": "په یوه دقیقه کې غوښتنې",
+  "EXPIRES_AT": "پای موده",
+  "EXPIRES_AT_HELP": "د پای مودې لپاره خالي پرېږدئ",
+  "LAST_USED_AT": "وروستی کارول",
+  "NEVER_USED": "هیڅکله نه دی کارول شوی",
+
+  "API_KEY_INFO": "د API کیلي معلومات",
+  "COPY_KEY": "د API کیلي کاپي کول",
+  "SHOW_KEY": "د API کیلي ښودل",
+  "HIDE_KEY": "د API کیلي پټول",
+  "WARNING_KEY_SHOWN": "ډاډ ترلاسه کړئ چې خپل د API کیلي اوس کاپي کړئ. تاسو به بیا د دې لیدو وړتیا ونه لرئ!",
+
+  "NO_API_KEYS": "د API کیلي ونه موندل شوې",
+  "CREATE_FIRST_API_KEY": "خپله لومړنۍ د API کیلي جوړه کړئ",
+  "API_KEY_CREATED_AT": "په جوړه شوه",
+  "API_KEY_UPDATED_AT": "په تازه شوه",
+
+  "RESELLER_INFO": "د بیا پلورونکي معلومات",
+  "RESELLER_EMAIL": "د بیا پلورونکي بریښنالیک",
+  "RESELLER_BALANCE": "د بیا پلورونکي پاتې پیسې",
+  "RESELLER_CODE": "د بیا پلورونکي کوډ",
+
+  "API_KEY_PERMISSIONS": "د API کیلي اجازې",
+  "PERMISSION_READ": "لوستل",
+  "PERMISSION_WRITE": "لیکل",
+  "PERMISSION_DELETE": "ړنګول",
+
+  "API_KEY_STATS": "د API کیلي احصایې",
+  "TOTAL_REQUESTS": "ټولې غوښتنې",
+  "REQUESTS_LAST_24H": "غوښتنې (وروستي ۲۴ ساعته)",
+  "LAST_REQUEST_AT": "وروستۍ غوښتنه",
+
+  "API_KEY_SECURITY": "امنیت",
+  "REGENERATE_WARNING": "ستاسو د API کیلي بیا جوړول به سمدلاسه زوړ کیلي باطل کړي. هره هغه غوښتنلیک چې زوړ کیلي کاروي به کار بند کړي.",
+  "DELETE_WARNING": "د دې API کیلي ړنګول به د هر هغه غوښتنلیک لپاره لاسرسی په دایمي توګه لرې کړي چې دا کاروي.",
+
+  "FILTER_BY_RESELLER": "د بیا پلورونکي له مخې فلټر کول",
+  "SEARCH_API_KEYS": "د API کیلي لټون...",
+
+  "EXPORT_API_KEYS": "د API کیلي صادرول",
+  "IMPORT_API_KEYS": "د API کیلي واردول",
+
+  "API_KEY_USAGE": "د API کیلي کارول",
+  "API_KEY_DOCUMENTATION": "د API کیلي اسناد",
+  "VIEW_DOCS": "اسناد لیدل",
+
+  "RATE_LIMIT_EXCEEDED": "د کچې محدودیت څخه تېر شوی",
+  "IP_NOT_ALLOWED": "IP پته اجازه نلري",
+  "API_KEY_EXPIRED": "د API کیلي پای موده تېره شوې ده",
+  "API_KEY_INACTIVE": "د API کیلي غیرفعاله ده",
+  "INVALID_API_KEY": "د API کیلي ناسمه ده",
+
+  "LAST_USED": "وروستی کارول",
+  "EXPIRED": "پای موده تېره شوې",
+  "NOT_EXPIRED": "پای موده نه ده تېره شوې",
+  "EXPIRATION": "پای موده",
+  "CREATED_AT": "په جوړه شوه",
+  "PLEASE_SELECT_RESELLER": "مهرباني وکړئ یو بیا پلورونکی وټاکئ",
+  "FILTER_BY_EXPIRATION": "د پای مودې له مخې فلټر کول",
+  "ALL": "ټول",
+  "PLEASE_ENTER_API_KEY_NAME": "مهرباني وکړئ د API کیلي نوم دننه کړئ",
+  "SUBMIT": "سپارل",
+  "REGENERATE": "بیا جوړول",
+  "NEVER": "هیڅکله",
+  "UNKNOWN": "نامعلوم",
+  "CONFIRM_DELETE": "د ړنګولو تایید",
+  "CONFIRM_REGENERATE": "د بیا جوړولو تایید",
+
+  "DATA_TABLE": {
+    "TABLE": {
+      "PAGINATOR": {
+        "SHOWING": "د {first} څخه تر {last} پورې د {totalRecords} داخلې ښودل کیږي"
+      },
+      "NO_DATA": "هیڅ معلومات ونه موندل شول"
+    }
+  }
+
+
+
 }

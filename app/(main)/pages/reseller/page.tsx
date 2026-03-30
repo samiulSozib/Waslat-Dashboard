@@ -116,7 +116,9 @@ const ResellerPage = () => {
     const [filters, setFilters] = useState({
         filter_status: null as string | null,
         filter_startdate: null as string | null,
-        filter_enddate: null as string | null
+        filter_enddate: null as string | null,
+        filter_has_loan: null as string | null // Add this line
+
     });
     const [activeFilters, setActiveFilters] = useState({});
     const [refreshing, setRefreshing] = useState(false);
@@ -384,6 +386,22 @@ const ResellerPage = () => {
                                             style={{ width: '100%' }}
                                         />
                                     </div>
+                                    {/* <div className="col-12">
+                                        <label htmlFor="loanFilter" style={{ fontSize: '0.875rem' }}>
+                                            {t('RESELLER.TABLE.COLUMN.LOANAMOUNT')}
+                                        </label>
+                                        <Dropdown
+                                            id="loanFilter"
+                                            options={[
+                                                { label: t('HAS_LOAN'), value: '1' },
+                                                { label: t('NO_LOAN'), value: '0' }
+                                            ]}
+                                            value={filters.filter_has_loan}
+                                            onChange={(e) => setFilters({ ...filters, filter_has_loan: e.value })}
+                                            placeholder={t('SELECT_LOAN_STATUS')}
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div> */}
                                     <div className="col-12">
                                         <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
                                             {t('START_DATE')}
@@ -405,7 +423,8 @@ const ResellerPage = () => {
                                                 setFilters({
                                                     filter_status: null,
                                                     filter_startdate: null,
-                                                    filter_enddate: null
+                                                    filter_enddate: null,
+                                                    filter_has_loan: null
                                                 });
                                             }}
                                         />
@@ -571,7 +590,7 @@ const ResellerPage = () => {
         return (
             <>
                 <span className="p-column-title">Loan Amount</span>
-                <span style={{ color: 'red' }}>{loanAmount>0?loanAmount:0}</span>
+                <span style={{ color: 'red' }}>{loanAmount > 0 ? loanAmount : 0}</span>
             </>
         );
     };

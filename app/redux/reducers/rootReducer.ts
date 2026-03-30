@@ -44,6 +44,7 @@ import notificationReducer from './notificationReducer';
 import { withdrawPoliciesReducer } from './withdrawPolicyReducer';
 import { withdrawRequestsReducer } from './withdrawalRequestReducer';
 import {providerInfoReducer} from './provideInfoReducer'
+import {apiKeyReducer} from './apiKeyReducer'
 
 const rootReducer=combineReducers({
     currenciesReducer:currenciesReducer,
@@ -90,7 +91,8 @@ const rootReducer=combineReducers({
     notificationReducer:notificationReducer,
     withdrawPoliciesReducer:withdrawPoliciesReducer,
     withdrawRequestsReducer:withdrawRequestsReducer,
-    providerInfoReducer:providerInfoReducer
+    providerInfoReducer:providerInfoReducer,
+    apiKeyReducer:apiKeyReducer
 })
 
 

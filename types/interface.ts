@@ -287,20 +287,20 @@ export interface PaymentMethod {
     status: number;
     created_at: string;
     updated_at: string;
-    
+
     // New fields from migration (nullable)
     bank_name?: string | null;
     account_holder_name?: string | null;
     card_number?: string | null;
     account_number?: string | null;
     sheba_number?: string | null;
-    
-    
-    
+
+
+
     // New notes field from migration
     notes?: string | null;
-    
-   
+
+
 }
 
 export interface Supplier {
@@ -893,7 +893,7 @@ export interface RawInternet {
     meta?:Meta
 }
 export interface RawBundles{
-    
+
     id:string;
     title:string;
     desc:string;
@@ -1047,4 +1047,18 @@ export interface AccountData {
   account_info: ApiInfoAccountInfo;
   user: ApiInfoUser;
   recent_transactions: ApiInfoTransaction[];
+}
+
+export interface ApiKey {
+  id: number;
+  key: string;
+  name: string;
+  is_active: boolean;
+  expires_at: string; // ISO format: "YYYY-MM-DDTHH:mm:ss.000000Z"
+  last_used_at: string | null; // ISO format or null if never used
+  allowed_ips: string[];
+  rate_limit: number;
+  created_at: string; // ISO format: "YYYY-MM-DDTHH:mm:ss.000000Z"
+  updated_at: string; // ISO format: "YYYY-MM-DDTHH:mm:ss.000000Z"
+  reseller: Reseller|null;
 }

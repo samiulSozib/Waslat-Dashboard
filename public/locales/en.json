@@ -1927,5 +1927,142 @@
     "NO": "No",
     "NO_TRANSACTIONS_FOUND": "No transactions found",
     "LAST_UPDATED": "Last Updated",
-    "PROVIDER_INFO":"Provider Info"
+    "PROVIDER_INFO":"Provider Info",
+
+
+
+
+  "API_KEYS": "API Keys",
+  "API_KEY": "API Key",
+  "CREATE_API_KEY": "Create API Key",
+  "EDIT_API_KEY": "Edit API Key",
+  "DELETE_API_KEY": "Delete API Key",
+  "API_KEY_DETAILS": "API Key Details",
+  "API_KEY_NAME": "API Key Name",
+  "API_KEY_VALUE": "API Key Value",
+  "API_KEY_SECRET": "API Key Secret",
+  "API_KEY_COPIED": "API Key copied to clipboard",
+  "API_KEY_REGENERATED": "API Key regenerated successfully",
+  "API_KEY_REGENERATE": "Regenerate API Key",
+  "API_KEY_REGENERATE_CONFIRM": "Are you sure you want to regenerate this API key? The old key will be immediately invalidated.",
+
+  "API_KEY_CREATED": "API Key created successfully",
+  "API_KEY_CREATE_FAILED": "Failed to create API key",
+  "API_KEY_UPDATED": "API Key updated successfully",
+  "API_KEY_UPDATE_FAILED": "Failed to update API key",
+  "API_KEY_DELETED": "API Key deleted successfully",
+  "API_KEY_DELETE_FAILED": "Failed to delete API key",
+  "API_KEY_DELETE_CONFIRM": "Are you sure you want to delete this API key? This action cannot be undone.",
+
+  "API_KEY_ACTIVATED": "API Key activated successfully",
+  "API_KEY_DEACTIVATED": "API Key deactivated successfully",
+  "API_KEY_STATUS_TOGGLE_FAILED": "Failed to change API key status",
+  "API_KEY_REGENERATE_FAILED": "Failed to regenerate API key",
+  "FETCH_API_KEY_FAILED": "Failed to fetch API key details",
+
+  "ALLOWED_IPS": "Allowed IPs",
+  "ALLOWED_IPS_HELP": "Enter IP addresses that are allowed to use this API key. Use * to allow all IPs.",
+  "ADD_IP": "Add IP",
+  "IP_ADDRESS": "IP Address",
+  "IP_ADDRESS_PLACEHOLDER": "e.g., 192.168.1.1 or *",
+  "INVALID_IP": "Invalid IP address format",
+  "RATE_LIMIT": "Rate Limit",
+  "RATE_LIMIT_HELP": "Maximum number of requests per minute",
+  "REQUESTS_PER_MINUTE": "requests per minute",
+  "EXPIRES_AT": "Expires At",
+  "EXPIRES_AT_HELP": "Leave empty for no expiration",
+  "LAST_USED_AT": "Last Used",
+  "NEVER_USED": "Never used",
+
+
+  "API_KEY_INFO": "API Key Information",
+  "COPY_KEY": "Copy API Key",
+  "SHOW_KEY": "Show API Key",
+  "HIDE_KEY": "Hide API Key",
+  "WARNING_KEY_SHOWN": "Make sure to copy your API key now. You won't be able to see it again!",
+
+  "NO_API_KEYS": "No API keys found",
+  "CREATE_FIRST_API_KEY": "Create your first API key",
+  "API_KEY_CREATED_AT": "Created at",
+  "API_KEY_UPDATED_AT": "Updated at",
+
+  "RESELLER_INFO": "Reseller Information",
+  "RESELLER_EMAIL": "Reseller Email",
+  "RESELLER_BALANCE": "Reseller Balance",
+  "RESELLER_CODE": "Reseller Code",
+
+  "API_KEY_PERMISSIONS": "API Key Permissions",
+  "PERMISSION_READ": "Read",
+  "PERMISSION_WRITE": "Write",
+  "PERMISSION_DELETE": "Delete",
+
+  "API_KEY_STATS": "API Key Statistics",
+  "TOTAL_REQUESTS": "Total Requests",
+  "REQUESTS_LAST_24H": "Requests (Last 24h)",
+  "LAST_REQUEST_AT": "Last Request",
+
+  "API_KEY_SECURITY": "Security",
+  "REGENERATE_WARNING": "Regenerating your API key will invalidate the old key immediately. Any applications using the old key will stop working.",
+  "DELETE_WARNING": "Deleting this API key will permanently remove access for any applications using it.",
+
+  "FILTER_BY_RESELLER": "Filter by Reseller",
+  "SEARCH_API_KEYS": "Search API keys...",
+
+  "EXPORT_API_KEYS": "Export API Keys",
+  "IMPORT_API_KEYS": "Import API Keys",
+
+  "API_KEY_USAGE": "API Key Usage",
+  "API_KEY_DOCUMENTATION": "API Key Documentation",
+  "VIEW_DOCS": "View Documentation",
+
+  "RATE_LIMIT_EXCEEDED": "Rate limit exceeded",
+  "IP_NOT_ALLOWED": "IP address not allowed",
+  "API_KEY_EXPIRED": "API Key has expired",
+  "API_KEY_INACTIVE": "API Key is inactive",
+  "INVALID_API_KEY": "Invalid API Key",
+
+
+
+  "LAST_USED": "Last Used",
+
+  "EXPIRED": "Expired",
+  "NOT_EXPIRED": "Not Expired",
+  "EXPIRATION": "Expiration",
+
+
+
+  "CREATED_AT": "Created At",
+
+
+  "PLEASE_SELECT_RESELLER": "Please select a reseller",
+
+
+  "FILTER_BY_EXPIRATION": "Filter by Expiration",
+
+  "ALL": "All",
+
+  "PLEASE_ENTER_API_KEY_NAME": "Please enter API key name",
+
+
+  "SUBMIT": "Submit",
+  "REGENERATE": "Regenerate",
+  "NEVER": "Never",
+  "UNKNOWN": "Unknown",
+
+  "CONFIRM_DELETE": "Confirm Delete",
+  "CONFIRM_REGENERATE": "Confirm Regenerate",
+
+  "DATA_TABLE": {
+    "TABLE": {
+      "PAGINATOR": {
+        "SHOWING": "Showing {first} to {last} of {totalRecords} entries"
+      },
+      "NO_DATA": "No data found"
+    }
+  }
+
+
+
+
+
 }

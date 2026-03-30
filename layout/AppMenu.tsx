@@ -258,6 +258,11 @@ const AppMenu = () => {
                     icon: 'pi pi-fw pi-question-circle',
                     to: '/pages/withdrawal-request'
                 },
+                {
+                    label: t('MENU.API_KEYS'),
+                    icon: 'pi pi-fw pi-question-circle',
+                    to: '/pages/api-keys'
+                },
             ]
         }
     ];

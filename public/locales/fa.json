@@ -1925,5 +1925,121 @@
     "NO": "خیر",
     "NO_TRANSACTIONS_FOUND": "تراکنشی یافت نشد",
     "LAST_UPDATED": "آخرین بروزرسانی",
-    "PROVIDER_INFO": "اطلاعات ارائه‌دهنده"
+    "PROVIDER_INFO": "اطلاعات ارائه‌دهنده",
+
+  "API_KEYS": "کلیدهای API",
+  "API_KEY": "کلید API",
+  "CREATE_API_KEY": "ایجاد کلید API",
+  "EDIT_API_KEY": "ویرایش کلید API",
+  "DELETE_API_KEY": "حذف کلید API",
+  "API_KEY_DETAILS": "جزئیات کلید API",
+  "API_KEY_NAME": "نام کلید API",
+  "API_KEY_VALUE": "مقدار کلید API",
+  "API_KEY_SECRET": "رمز کلید API",
+  "API_KEY_COPIED": "کلید API در کلیپ‌بورد کپی شد",
+  "API_KEY_REGENERATED": "کلید API با موفقیت بازسازی شد",
+  "API_KEY_REGENERATE": "بازسازی کلید API",
+  "API_KEY_REGENERATE_CONFIRM": "آیا از بازسازی این کلید API مطمئن هستید؟ کلید قدیمی بلافاصله غیرفعال خواهد شد.",
+
+  "API_KEY_CREATED": "کلید API با موفقیت ایجاد شد",
+  "API_KEY_CREATE_FAILED": "ایجاد کلید API انجام نشد",
+  "API_KEY_UPDATED": "کلید API با موفقیت به‌روزرسانی شد",
+  "API_KEY_UPDATE_FAILED": "به‌روزرسانی کلید API انجام نشد",
+  "API_KEY_DELETED": "کلید API با موفقیت حذف شد",
+  "API_KEY_DELETE_FAILED": "حذف کلید API انجام نشد",
+  "API_KEY_DELETE_CONFIRM": "آیا از حذف این کلید API مطمئن هستید؟ این عمل قابل بازگشت نیست.",
+
+  "API_KEY_ACTIVATED": "کلید API با موفقیت فعال شد",
+  "API_KEY_DEACTIVATED": "کلید API با موفقیت غیرفعال شد",
+  "API_KEY_STATUS_TOGGLE_FAILED": "تغییر وضعیت کلید API انجام نشد",
+  "API_KEY_REGENERATE_FAILED": "بازسازی کلید API انجام نشد",
+  "FETCH_API_KEY_FAILED": "دریافت جزئیات کلید API انجام نشد",
+
+  "ALLOWED_IPS": "آیپی‌های مجاز",
+  "ALLOWED_IPS_HELP": "آدرس‌های آیپی مجاز برای استفاده از این کلید API را وارد کنید. برای مجاز کردن همه آیپی‌ها از * استفاده کنید.",
+  "ADD_IP": "افزودن آیپی",
+  "IP_ADDRESS": "آدرس آیپی",
+  "IP_ADDRESS_PLACEHOLDER": "مثال: 192.168.1.1 یا *",
+  "INVALID_IP": "فرمت آدرس آیپی نامعتبر است",
+  "RATE_LIMIT": "محدودیت نرخ",
+  "RATE_LIMIT_HELP": "حداکثر تعداد درخواست در دقیقه",
+  "REQUESTS_PER_MINUTE": "درخواست در دقیقه",
+  "EXPIRES_AT": "تاریخ انقضا",
+  "EXPIRES_AT_HELP": "برای عدم انقضا خالی بگذارید",
+  "LAST_USED_AT": "آخرین استفاده",
+  "NEVER_USED": "هرگز استفاده نشده",
+
+  "API_KEY_INFO": "اطلاعات کلید API",
+  "COPY_KEY": "کپی کلید API",
+  "SHOW_KEY": "نمایش کلید API",
+  "HIDE_KEY": "مخفی کردن کلید API",
+  "WARNING_KEY_SHOWN": "حتماً کلید API خود را الان کپی کنید. دیگر قادر به دیدن آن نخواهید بود!",
+
+  "NO_API_KEYS": "هیچ کلید API یافت نشد",
+  "CREATE_FIRST_API_KEY": "اولین کلید API خود را ایجاد کنید",
+  "API_KEY_CREATED_AT": "ایجاد شده در",
+  "API_KEY_UPDATED_AT": "به‌روزرسانی شده در",
+
+  "RESELLER_INFO": "اطلاعات رسیلر",
+  "RESELLER_EMAIL": "ایمیل رسیلر",
+  "RESELLER_BALANCE": "موجودی رسیلر",
+  "RESELLER_CODE": "کد رسیلر",
+
+  "API_KEY_PERMISSIONS": "مجوزهای کلید API",
+  "PERMISSION_READ": "خواندن",
+  "PERMISSION_WRITE": "نوشتن",
+  "PERMISSION_DELETE": "حذف",
+
+  "API_KEY_STATS": "آمار کلید API",
+  "TOTAL_REQUESTS": "کل درخواست‌ها",
+  "REQUESTS_LAST_24H": "درخواست‌ها (۲۴ ساعت گذشته)",
+  "LAST_REQUEST_AT": "آخرین درخواست",
+
+  "API_KEY_SECURITY": "امنیت",
+  "REGENERATE_WARNING": "بازسازی کلید API شما بلافاصله کلید قدیمی را غیرفعال می‌کند. هر برنامه‌ای که از کلید قدیمی استفاده کند از کار خواهد افتاد.",
+  "DELETE_WARNING": "حذف این کلید API دسترسی را برای هر برنامه‌ای که از آن استفاده می‌کند به طور دائم حذف می‌کند.",
+
+  "FILTER_BY_RESELLER": "فیلتر بر اساس رسیلر",
+  "SEARCH_API_KEYS": "جستجوی کلیدهای API...",
+
+  "EXPORT_API_KEYS": "خروجی کلیدهای API",
+  "IMPORT_API_KEYS": "ورودی کلیدهای API",
+
+  "API_KEY_USAGE": "استفاده از کلید API",
+  "API_KEY_DOCUMENTATION": "مستندات کلید API",
+  "VIEW_DOCS": "مشاهده مستندات",
+
+  "RATE_LIMIT_EXCEEDED": "محدودیت نرخ رد شده است",
+  "IP_NOT_ALLOWED": "آدرس آیپی مجاز نیست",
+  "API_KEY_EXPIRED": "کلید API منقضی شده است",
+  "API_KEY_INACTIVE": "کلید API غیرفعال است",
+  "INVALID_API_KEY": "کلید API نامعتبر است",
+
+  "LAST_USED": "آخرین استفاده",
+  "EXPIRED": "منقضی شده",
+  "NOT_EXPIRED": "منقضی نشده",
+  "EXPIRATION": "انقضا",
+  "CREATED_AT": "ایجاد شده در",
+  "PLEASE_SELECT_RESELLER": "لطفاً یک رسیلر انتخاب کنید",
+  "FILTER_BY_EXPIRATION": "فیلتر بر اساس انقضا",
+  "ALL": "همه",
+  "PLEASE_ENTER_API_KEY_NAME": "لطفاً نام کلید API را وارد کنید",
+  "SUBMIT": "ارسال",
+  "REGENERATE": "بازسازی",
+  "NEVER": "هرگز",
+  "UNKNOWN": "ناشناخته",
+  "CONFIRM_DELETE": "تأیید حذف",
+  "CONFIRM_REGENERATE": "تأیید بازسازی",
+
+  "DATA_TABLE": {
+    "TABLE": {
+      "PAGINATOR": {
+        "SHOWING": "نمایش {first} تا {last} از {totalRecords} ورودی"
+      },
+      "NO_DATA": "داده‌ای یافت نشد"
+    }
+  }
+
+
+
 }
