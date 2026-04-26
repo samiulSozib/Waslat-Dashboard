@@ -26,16 +26,17 @@ import { InputSwitch } from 'primereact/inputswitch';
 import { InputNumber } from 'primereact/inputnumber';
 import { ColorPicker } from 'primereact/colorpicker';
 import { fetchAppSettings, updateAppSettings } from '@/app/redux/actions/appSettingsActions';
-import { AppSettings, Currency, SupportContacts } from '@/types/interface';
+import { AppSettings, Currency, Provider, SupportContacts } from '@/types/interface';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Sidebar } from 'primereact/sidebar';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
-import { 
-  _fetchSupportContacts, 
-  _addSupportContact, 
-  _editSupportContact, 
-  _deleteSupportContact 
+import {
+  _fetchSupportContacts,
+  _addSupportContact,
+  _editSupportContact,
+  _deleteSupportContact
 } from '@/app/redux/actions/supportContactActions';
+import { _fetchProviders } from '@/app/redux/actions/providerActions';
 
 const emptySettings: AppSettings = {
     is_instant_confirm: false,
@@ -95,6 +96,8 @@ const emptySettings: AppSettings = {
     afg_custom_recharge_selling_price_adjust_mode: "percentage",
     afg_custom_recharge_selling_price_adjust_value: 0,
     setaragan_admin_buying_price_percentage: 0,
+    custom_recharge_api_provider_id: null, // Add this line
+
 };
 
 const emptySupportContact: SupportContacts = {
@@ -118,7 +121,7 @@ const AppSettingsPage = () => {
     const [activeTab, setActiveTab] = useState('general');
     const [mobileNavVisible, setMobileNavVisible] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
-    
+
     // Support Contacts States
     const [supportContacts, setSupportContacts] = useState<SupportContacts[]>([]);
     const [supportContactDialog, setSupportContactDialog] = useState(false);
@@ -132,11 +135,16 @@ const AppSettingsPage = () => {
     const { loading: supportContactsLoading, supportContacts: reduxSupportContacts } = useSelector((state: any) => state.supportContactReducer);
     const { t } = useTranslation();
     const { currencies } = useSelector((state: any) => state.currenciesReducer);
+    const { providers, pagination } = useSelector((state: any) => state.providerReducer);
+
+
 
     useEffect(() => {
         dispatch(fetchAppSettings());
         dispatch(_fetchCurrencies());
         dispatch(_fetchSupportContacts());
+        dispatch(_fetchProviders());
+
 
         // Check if device is mobile
         const checkIsMobile = () => {
@@ -156,6 +164,17 @@ const AppSettingsPage = () => {
             setSupportContacts(reduxSupportContacts);
         }
     }, [reduxSupportContacts]);
+
+    useEffect(() => {
+    if (providers && providers.length > 0 && settings.custom_recharge_api_provider_id) {
+        console.log('Providers loaded:', providers);
+        console.log('Selected provider ID:', settings.custom_recharge_api_provider_id);
+        const found = providers.find((p: Provider) => p.id === settings.custom_recharge_api_provider_id);
+        console.log('Found provider:', found);
+    }
+}, [providers, settings.custom_recharge_api_provider_id]);
+
+
 
     const selectedCurrency = currencies?.find((currency: Currency) =>
         currency.code === settings.default_currency
@@ -198,7 +217,7 @@ const AppSettingsPage = () => {
             });
             return;
         }
-
+        console.log(settings)
         dispatch(updateAppSettings(settings, toast, t));
         setSettingsDialog(false);
         setSubmitted(false);
@@ -300,12 +319,23 @@ const AppSettingsPage = () => {
         );
     };
 
+    // Add this provider dropdown template function
+const providerDropdownTemplate = (option: Provider) => {
+    if (!option) return t('SELECT_PROVIDER');
+    return (
+        <div className="flex justify-content-between align-items-center">
+            <span>{option.name}</span>
+            <span className="text-sm text-500">{option.code}</span>
+        </div>
+    );
+};
+
     const renderSupportContactsTab = () => {
         return (
             <div className="grid">
                 <div className="col-12">
                     <div className="card">
-                        <Toolbar className="mb-4" 
+                        <Toolbar className="mb-4"
                             left={
                                 <Button
                                     label={t('SUPPORT_CONTACT.ADD_NEW')}
@@ -316,7 +346,7 @@ const AppSettingsPage = () => {
                                 />
                             }
                         />
-                        
+
                         <DataTable
                             value={supportContacts}
                             loading={supportContactsLoading}
@@ -1152,6 +1182,30 @@ const AppSettingsPage = () => {
                                     {t('APP_SETTINGS.SETARAGAN_ADMIN_BUYING_PRICE_NOTE')}
                                 </small>
                             </div>
+                            <div className="field">
+    <label htmlFor="custom_recharge_api_provider_id" className="font-bold text-sm md:text-base">
+        {t('APP_SETTINGS.CUSTOM_RECHARGE_API_PROVIDER')}
+    </label>
+    <Dropdown
+    value={settings.custom_recharge_api_provider_id ?? null}
+    options={providers}
+    onChange={(e) => {
+        setSettings(prev => ({
+            ...prev,
+            custom_recharge_api_provider_id: e.value ?? null
+        }));
+    }}
+    optionLabel="name"
+    optionValue="id"
+    placeholder="Select Provider"
+    className="w-full"
+    filter
+    showClear
+/>
+    <small className="text-sm text-500">
+        {t('APP_SETTINGS.CUSTOM_RECHARGE_API_PROVIDER_DESC')}
+    </small>
+</div>
                         </div>
 
                         <div className="col-12">

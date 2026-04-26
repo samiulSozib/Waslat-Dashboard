@@ -1671,7 +1671,10 @@
         "RECHARGE_MODE_DESC": "حالت تنظیم: درصدی یا مبلغ ثابت",
         "RECHARGE_VALUE_DESC": "مقدار تنظیم (درصد یا مبلغ ثابت)",
         "SELLING_PRICE_ADJUST_DESC": "تنظیم قیمت فروش برای نمایش به مشتری",
-        "SETARAGAN_ADMIN_BUYING_PRICE_DESC": "درصدی از قیمت پایه برای خرید ادمین"
+        "SETARAGAN_ADMIN_BUYING_PRICE_DESC": "درصدی از قیمت پایه برای خرید ادمین",
+        "CUSTOM_RECHARGE_API_PROVIDER": "ارائه‌دهنده API شارژ سفارشی",
+  "SELECT_RECHARGE_PROVIDER": "یک ارائه‌دهنده شارژ را انتخاب کنید",
+  "CUSTOM_RECHARGE_API_PROVIDER_DESC": "ارائه‌دهنده API را برای انجام عملیات شارژ سفارشی انتخاب کنید"
     },
     "SUPPORT_CONTACT": {
         "TITLE": "مخاطبین پشتیبانی",

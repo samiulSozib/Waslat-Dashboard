@@ -1671,7 +1671,10 @@
         "RECHARGE_MODE_DESC": "Adjust Mode: Whether to adjust by percentage or fixed amount",
         "RECHARGE_VALUE_DESC": "Adjust Value: The value to adjust by (percentage or fixed amount)",
         "SELLING_PRICE_ADJUST_DESC": "Selling Price Adjust: Adjust the final selling price shown to customers",
-        "SETARAGAN_ADMIN_BUYING_PRICE_DESC": "Setaragan Admin Buying Price: Percentage of the base price for admin purchases"
+        "SETARAGAN_ADMIN_BUYING_PRICE_DESC": "Setaragan Admin Buying Price: Percentage of the base price for admin purchases",
+        "CUSTOM_RECHARGE_API_PROVIDER": "Custom Recharge API Provider",
+    "SELECT_RECHARGE_PROVIDER": "Select a recharge provider",
+    "CUSTOM_RECHARGE_API_PROVIDER_DESC": "Select the API provider to handle custom recharge operations"
     },
     "SUPPORT_CONTACT": {
         "TITLE": "Support Contacts",

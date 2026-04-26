@@ -766,6 +766,8 @@ export interface AppSettings {
     afg_custom_recharge_selling_price_adjust_mode?: string,
     afg_custom_recharge_selling_price_adjust_value?: number,
     setaragan_admin_buying_price_percentage?: number,
+    custom_recharge_api_provider_id: number|null, // Add this line
+
 }
 
 
