@@ -40,43 +40,43 @@ const getAuthToken = () => {
 // Fetch Bundle List
 export const _fetchBundleList =
     (page: number = 1, search: string = '', filters = {}) =>
-    async (dispatch: Dispatch) => {
-        dispatch({ type: FETCH_BUNDLE_LIST_REQUEST });
-        try {
-            const token = getAuthToken();
-            const queryParams = new URLSearchParams();
+        async (dispatch: Dispatch) => {
+            dispatch({ type: FETCH_BUNDLE_LIST_REQUEST });
+            try {
+                const token = getAuthToken();
+                const queryParams = new URLSearchParams();
 
-            queryParams.append('page', String(page));
-            queryParams.append('search', search);
+                queryParams.append('page', String(page));
+                queryParams.append('search', search);
 
-            Object.entries(filters).forEach(([key, value]) => {
-                if (value !== null && value !== undefined && value !== '') {
-                    queryParams.append(key, String(value));
-                }
-            });
+                Object.entries(filters).forEach(([key, value]) => {
+                    if (value !== null && value !== undefined && value !== '') {
+                        queryParams.append(key, String(value));
+                    }
+                });
 
-            const queryString = queryParams.toString();
+                const queryString = queryParams.toString();
 
-            const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/bundles?${queryString}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            //console.log(response)
-            dispatch({
-                type: FETCH_BUNDLE_LIST_SUCCESS,
-                payload: {
-                    data: response.data.data.bundles,
-                    pagination: response.data.payload.pagination
-                }
-            });
-        } catch (error: any) {
-            dispatch({
-                type: FETCH_BUNDLE_LIST_FAIL,
-                payload: error.message
-            });
-        }
-    };
+                const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/bundles?${queryString}`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                //console.log(response)
+                dispatch({
+                    type: FETCH_BUNDLE_LIST_SUCCESS,
+                    payload: {
+                        data: response.data.data.bundles,
+                        pagination: response.data.payload.pagination
+                    }
+                });
+            } catch (error: any) {
+                dispatch({
+                    type: FETCH_BUNDLE_LIST_FAIL,
+                    payload: error.message
+                });
+            }
+        };
 
 // Add Bundle
 export const _addBundle = (newBundleData: Bundle, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
@@ -250,40 +250,40 @@ export const _setProvider =
         toast: React.RefObject<Toast>,
         t: (key: string) => string
     ) =>
-    async (dispatch: Dispatch) => {
-        dispatch({ type: SET_PROVIDER_REQUEST });
-        try {
-            const token = getAuthToken();
-            const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/bundles/${bundleId}/set-provider`, providerData, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
+        async (dispatch: Dispatch) => {
+            dispatch({ type: SET_PROVIDER_REQUEST });
+            try {
+                const token = getAuthToken();
+                const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/bundles/${bundleId}/set-provider`, providerData, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
 
-            dispatch({
-                type: SET_PROVIDER_SUCCESS,
-                payload: { id: bundleId, ...response.data.data.bundle }
-            });
+                dispatch({
+                    type: SET_PROVIDER_SUCCESS,
+                    payload: { id: bundleId, ...response.data.data.bundle }
+                });
 
-            toast.current?.show({
-                severity: 'success',
-                summary: t('SUCCESS'),
-                detail: t('PROVIDER_SET_SUCCESS'),
-                life: 3000
-            });
-        } catch (error: any) {
-            dispatch({
-                type: SET_PROVIDER_FAIL,
-                payload: error.message
-            });
-            toast.current?.show({
-                severity: 'error',
-                summary: t('ERROR'),
-                detail: t('PROVIDER_SET_FAILED'),
-                life: 3000
-            });
-        }
-    };
+                toast.current?.show({
+                    severity: 'success',
+                    summary: t('SUCCESS'),
+                    detail: t('PROVIDER_SET_SUCCESS'),
+                    life: 3000
+                });
+            } catch (error: any) {
+                dispatch({
+                    type: SET_PROVIDER_FAIL,
+                    payload: error.message
+                });
+                toast.current?.show({
+                    severity: 'error',
+                    summary: t('ERROR'),
+                    detail: t('PROVIDER_SET_FAILED'),
+                    life: 3000
+                });
+            }
+        };
 
 // Unset Provider
 export const _unsetProvider = (bundleId: number, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
@@ -328,164 +328,164 @@ export const _unsetProvider = (bundleId: number, toast: React.RefObject<Toast>, 
 
 
 // Bundle Price Adjustment Preview
-export const _bundlePriceAdjustmentPreview = 
-    (payload: PriceAdjustmentPayload, toast: React.RefObject<Toast>, t: (key: string) => string) => 
-    async (dispatch: Dispatch) => {
-        dispatch({ type: BUNDLE_PRICE_ADJUSTMENT_PREVIEW_REQUEST });
-        try {
-            const token = getAuthToken();
-            
-            // Remove confirmation for preview
-            const previewPayload = { ...payload };
-            delete previewPayload.confirmation;
+export const _bundlePriceAdjustmentPreview =
+    (payload: PriceAdjustmentPayload, toast: React.RefObject<Toast>, t: (key: string) => string) =>
+        async (dispatch: Dispatch) => {
+            dispatch({ type: BUNDLE_PRICE_ADJUSTMENT_PREVIEW_REQUEST });
+            try {
+                const token = getAuthToken();
 
-            const response = await axios.post(
-                `${process.env.NEXT_PUBLIC_BASE_URL}/bundles/bulk-update-prices`,
-                previewPayload,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+                // Remove confirmation for preview
+                const previewPayload = { ...payload };
+                delete previewPayload.confirmation;
+
+                const response = await axios.post(
+                    `${process.env.NEXT_PUBLIC_BASE_URL}/bundles/bulk-update-prices`,
+                    previewPayload,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
                     }
-                }
-            );
+                );
 
-            dispatch({
-                type: BUNDLE_PRICE_ADJUSTMENT_PREVIEW_SUCCESS,
-                payload: response.data.data.preview
-            });
+                dispatch({
+                    type: BUNDLE_PRICE_ADJUSTMENT_PREVIEW_SUCCESS,
+                    payload: response.data.data.preview
+                });
 
-            toast.current?.show({
-                severity: 'success',
-                summary: t('SUCCESS'),
-                detail: t('PREVIEW_GENERATED_SUCCESSFULLY'),
-                life: 3000
-            });
+                toast.current?.show({
+                    severity: 'success',
+                    summary: t('SUCCESS'),
+                    detail: t('PREVIEW_GENERATED_SUCCESSFULLY'),
+                    life: 3000
+                });
 
-            return response.data.data.preview;
-        } catch (error: any) {
-            dispatch({
-                type: BUNDLE_PRICE_ADJUSTMENT_PREVIEW_FAIL,
-                payload: error.response?.data?.message || error.message
-            });
+                return response.data.data.preview;
+            } catch (error: any) {
+                dispatch({
+                    type: BUNDLE_PRICE_ADJUSTMENT_PREVIEW_FAIL,
+                    payload: error.response?.data?.message || error.message
+                });
 
-            toast.current?.show({
-                severity: 'error',
-                summary: t('ERROR'),
-                detail: error.response?.data?.message || t('PREVIEW_GENERATION_FAILED'),
-                life: 3000
-            });
-        }
-    };
+                toast.current?.show({
+                    severity: 'error',
+                    summary: t('ERROR'),
+                    detail: error.response?.data?.message || t('PREVIEW_GENERATION_FAILED'),
+                    life: 3000
+                });
+            }
+        };
 
 // Bundle Price Adjustment Update
-export const _bundlePriceAdjustmentUpdate = 
-    (payload: PriceAdjustmentPayload, toast: React.RefObject<Toast>, t: (key: string) => string) => 
-    async (dispatch: Dispatch) => {
-        dispatch({ type: BUNDLE_PRICE_ADJUSTMENT_UPDATE_REQUEST });
-        try {
-            const token = getAuthToken();
+export const _bundlePriceAdjustmentUpdate =
+    (payload: PriceAdjustmentPayload, toast: React.RefObject<Toast>, t: (key: string) => string) =>
+        async (dispatch: Dispatch) => {
+            dispatch({ type: BUNDLE_PRICE_ADJUSTMENT_UPDATE_REQUEST });
+            try {
+                const token = getAuthToken();
 
-            const response = await axios.post(
-                `${process.env.NEXT_PUBLIC_BASE_URL}/bundles/bulk-update-prices`,
-                {
-                    ...payload,
-                    confirmation: true
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+                const response = await axios.post(
+                    `${process.env.NEXT_PUBLIC_BASE_URL}/bundles/bulk-update-prices`,
+                    {
+                        ...payload,
+                        confirmation: true
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
                     }
-                }
-            );
+                );
 
-            dispatch({
-                type: BUNDLE_PRICE_ADJUSTMENT_UPDATE_SUCCESS,
-                payload: response.data.data.updated_bundles
-            });
+                dispatch({
+                    type: BUNDLE_PRICE_ADJUSTMENT_UPDATE_SUCCESS,
+                    payload: response.data.data.updated_bundles
+                });
 
-            // Refresh the bundle list to get updated prices
-            //dispatch(_fetchBundleList(1, ''));
+                // Refresh the bundle list to get updated prices
+                //dispatch(_fetchBundleList(1, ''));
 
-            toast.current?.show({
-                severity: 'success',
-                summary: t('SUCCESS'),
-                detail: t('PRICES_UPDATED_SUCCESSFULLY'),
-                life: 5000
-            });
+                toast.current?.show({
+                    severity: 'success',
+                    summary: t('SUCCESS'),
+                    detail: t('PRICES_UPDATED_SUCCESSFULLY'),
+                    life: 5000
+                });
 
-            return response.data.data.updated_bundles;
-        } catch (error: any) {
-            dispatch({
-                type: BUNDLE_PRICE_ADJUSTMENT_UPDATE_FAIL,
-                payload: error.response?.data?.message || error.message
-            });
+                return response.data.data.updated_bundles;
+            } catch (error: any) {
+                dispatch({
+                    type: BUNDLE_PRICE_ADJUSTMENT_UPDATE_FAIL,
+                    payload: error.response?.data?.message || error.message
+                });
 
-            toast.current?.show({
-                severity: 'error',
-                summary: t('ERROR'),
-                detail: error.response?.data?.message || t('PRICE_UPDATE_FAILED'),
-                life: 3000
-            });
-        }
-    };
+                toast.current?.show({
+                    severity: 'error',
+                    summary: t('ERROR'),
+                    detail: error.response?.data?.message || t('PRICE_UPDATE_FAILED'),
+                    life: 3000
+                });
+            }
+        };
 
 
-    // bulk Bundle Price Update
-export const _blukbundlePriceUpdate = 
-    (payload: BulkBundlePricePayload, toast: React.RefObject<Toast>, t: (key: string) => string) => 
-    async (dispatch: Dispatch) => {
-        dispatch({ type: BULK_BUNDLE_PRICE_UPDATE_REQUEST });
-        try {
-            const token = getAuthToken();
-            //console.log(payload)
-            //return
+// bulk Bundle Price Update
+export const _blukbundlePriceUpdate =
+    (payload: BulkBundlePricePayload, toast: React.RefObject<Toast>, t: (key: string) => string) =>
+        async (dispatch: Dispatch) => {
+            dispatch({ type: BULK_BUNDLE_PRICE_UPDATE_REQUEST });
+            try {
+                const token = getAuthToken();
+                //console.log(payload)
+                //return
 
-            const response = await axios.post(
-                `${process.env.NEXT_PUBLIC_BASE_URL}/bundles/bulk-update-selling-prices`,
-                {
-                    ...payload,
-                    confirmation: true
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+                const response = await axios.post(
+                    `${process.env.NEXT_PUBLIC_BASE_URL}/bundles/bulk-update-selling-prices`,
+                    {
+                        ...payload,
+                        confirmation: true
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
                     }
-                }
-            );
+                );
 
-            dispatch({
-                type: BULK_BUNDLE_PRICE_UPDATE_SUCCESS,
-                payload: response.data.data
-            });
+                dispatch({
+                    type: BULK_BUNDLE_PRICE_UPDATE_SUCCESS,
+                    payload: response.data.data
+                });
 
-            // Refresh the bundle list to get updated prices
-            //dispatch(_fetchBundleList(1, ''));
+                // Refresh the bundle list to get updated prices
+                //dispatch(_fetchBundleList(1, ''));
 
-            toast.current?.show({
-                severity: 'success',
-                summary: t('SUCCESS'),
-                detail: t('PRICES_UPDATED_SUCCESSFULLY'),
-                life: 5000
-            });
+                toast.current?.show({
+                    severity: 'success',
+                    summary: t('SUCCESS'),
+                    detail: t('PRICES_UPDATED_SUCCESSFULLY'),
+                    life: 5000
+                });
 
-            return response.data.data.updated_bundles;
-        } catch (error: any) {
-            dispatch({
-                type: BULK_BUNDLE_PRICE_UPDATE_FAIL,
-                payload: error.response?.data?.message || error.message
-            });
+                return response.data.data.updated_bundles;
+            } catch (error: any) {
+                dispatch({
+                    type: BULK_BUNDLE_PRICE_UPDATE_FAIL,
+                    payload: error.response?.data?.message || error.message
+                });
 
-            toast.current?.show({
-                severity: 'error',
-                summary: t('ERROR'),
-                detail: error.response?.data?.message || t('PRICE_UPDATE_FAILED'),
-                life: 3000
-            });
-        }
-    };
+                toast.current?.show({
+                    severity: 'error',
+                    summary: t('ERROR'),
+                    detail: error.response?.data?.message || t('PRICE_UPDATE_FAILED'),
+                    life: 3000
+                });
+            }
+        };
 
 // Clear Price Adjustment Preview
 export const _clearPriceAdjustmentPreview = () => (dispatch: Dispatch) => {

@@ -892,7 +892,11 @@ export interface RawInternet {
     amount_rial: number;
     gross_price_rial: number;
     internet_type: string;
-    meta?:Meta
+    meta?:Meta;
+    price?:number;
+    stock?:number;
+    description?:string;
+
 }
 export interface RawBundles{
 
@@ -1063,4 +1067,25 @@ export interface ApiKey {
   created_at: string; // ISO format: "YYYY-MM-DDTHH:mm:ss.000000Z"
   updated_at: string; // ISO format: "YYYY-MM-DDTHH:mm:ss.000000Z"
   reseller: Reseller|null;
+}
+
+
+// interfaces/providerProductsInterface.ts
+export interface Category {
+    id: number;
+    name: string;
+    icon: string | null;
+    product_count: number;
+    is_auto: boolean;
+    purchase_type: 'voucher' | 'recharge';
+}
+
+export interface Product {
+    id: number;
+    name: string;
+    description: string;
+    category_id: number;
+    category_title: string;
+    price: number;
+    stock: number;
 }

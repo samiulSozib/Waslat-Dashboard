@@ -2063,8 +2063,15 @@
       "NO_DATA": "No data found"
     }
   },
-  "MENU.API_KEYS":"Api Keys"
+  "MENU.API_KEYS":"Api Keys",
 
+  "CATEGORIES":"Categories",
+  "SEARCH_CATEGORIES":"Search categories...",
+  "SEARCH_CATEGORY":"Search category...",
+  "PRODUCTS":"Products",
+  "SEARCH_PRODUCTS":"Search products...",
+  "SEARCH_PRODUCT":"Search product...",
+  "SELECT_PRODUCT":"Select Product..."
 
 
 

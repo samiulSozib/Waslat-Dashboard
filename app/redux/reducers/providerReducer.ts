@@ -1,4 +1,4 @@
-import { Pagination, Provider } from "@/types/interface";
+import { Category, Pagination, Product, Provider } from "@/types/interface";
 import {
     FETCH_PROVIDERS_REQUEST,
     FETCH_PROVIDERS_SUCCESS,
@@ -15,21 +15,43 @@ import {
     TOGGLE_PROVIDER_REQUEST,
     TOGGLE_PROVIDER_SUCCESS,
     TOGGLE_PROVIDER_FAIL,
+    FETCH_PROVIDER_CATEGORIES_REQUEST,
+    FETCH_PROVIDER_CATEGORIES_SUCCESS,
+    FETCH_PROVIDER_CATEGORIES_FAIL,
+    FETCH_CATEGORY_PRODUCTS_SUCCESS,
+    FETCH_CATEGORY_PRODUCTS_REQUEST,
+    FETCH_CATEGORY_PRODUCTS_FAIL,
+    CLEAR_SELECTED_CATEGORY,
+    CLEAR_PROVIDER_PRODUCTS_DATA,
 } from '../constants/providerConstants'
 
+
+
+
+// First, update your ProviderState interface to include the new state:
 interface ProviderState {
     loading: boolean;
     providers: Provider[];
     error: string | null;
     pagination: Pagination | null;
-
+    // Add these new properties
+    categories: Category[];
+    selectedCategoryProducts: Product[];
+    selectedCategoryName: string | null;
+    selectedPurchaseType: string | null;
 }
 
+// Update your initialState:
 const initialState: ProviderState = {
     loading: false,
     providers: [],
     error: null,
-    pagination: null
+    pagination: null,
+    // Add these new properties
+    categories: [],
+    selectedCategoryProducts: [],
+    selectedCategoryName: null,
+    selectedPurchaseType: null,
 };
 
 export const providerReducer = (state = initialState, action: any): ProviderState => {
@@ -112,6 +134,70 @@ export const providerReducer = (state = initialState, action: any): ProviderStat
                 ...state,
                 loading: false,
                 error: action.payload,
+            };
+
+            // Add new cases for categories and products
+        case FETCH_PROVIDER_CATEGORIES_REQUEST:
+            return {
+                ...state,
+                loading: true,
+                error: null,
+            };
+
+        case FETCH_PROVIDER_CATEGORIES_SUCCESS:
+            return {
+                ...state,
+                loading: false,
+                categories: action.payload,
+                error: null,
+            };
+
+        case FETCH_PROVIDER_CATEGORIES_FAIL:
+            return {
+                ...state,
+                loading: false,
+                error: action.payload,
+            };
+
+        case FETCH_CATEGORY_PRODUCTS_REQUEST:
+            return {
+                ...state,
+                loading: true,
+                error: null,
+            };
+
+        case FETCH_CATEGORY_PRODUCTS_SUCCESS:
+            return {
+                ...state,
+                loading: false,
+                selectedCategoryProducts: action.payload.products,
+                selectedCategoryName: action.payload.categoryName,
+                selectedPurchaseType: action.payload.purchaseType,
+                error: null,
+            };
+
+        case FETCH_CATEGORY_PRODUCTS_FAIL:
+            return {
+                ...state,
+                loading: false,
+                error: action.payload,
+            };
+
+        case CLEAR_SELECTED_CATEGORY:
+            return {
+                ...state,
+                selectedCategoryProducts: [],
+                selectedCategoryName: null,
+                selectedPurchaseType: null,
+            };
+
+        case CLEAR_PROVIDER_PRODUCTS_DATA:
+            return {
+                ...state,
+                categories: [],
+                selectedCategoryProducts: [],
+                selectedCategoryName: null,
+                selectedPurchaseType: null,
             };
 
         default:

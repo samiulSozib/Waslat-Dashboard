@@ -2042,7 +2042,14 @@
       "NO_DATA": "داده‌ای یافت نشد"
     }
   },
-  "MENU.API_KEYS": "کلیدهای API"
+  "MENU.API_KEYS": "کلیدهای API",
+  "CATEGORIES": "الفئات",
+  "SEARCH_CATEGORIES": "ابحث عن الفئات...",
+  "SEARCH_CATEGORY": "ابحث عن فئة...",
+  "PRODUCTS": "المنتجات",
+  "SEARCH_PRODUCTS": "ابحث عن المنتجات...",
+  "SEARCH_PRODUCT": "ابحث عن منتج...",
+  "SELECT_PRODUCT": "اختر المنتج..."
 
 
 

@@ -16,6 +16,14 @@ import {
     TOGGLE_PROVIDER_REQUEST,
     TOGGLE_PROVIDER_SUCCESS,
     TOGGLE_PROVIDER_FAIL,
+    FETCH_PROVIDER_CATEGORIES_REQUEST,
+    FETCH_PROVIDER_CATEGORIES_SUCCESS,
+    FETCH_PROVIDER_CATEGORIES_FAIL,
+    FETCH_CATEGORY_PRODUCTS_REQUEST,
+    FETCH_CATEGORY_PRODUCTS_SUCCESS,
+    FETCH_CATEGORY_PRODUCTS_FAIL,
+    CLEAR_SELECTED_CATEGORY,
+    CLEAR_PROVIDER_PRODUCTS_DATA,
 } from "../constants/providerConstants";
 import { Provider } from "@/types/interface";
 import { Toast } from "primereact/toast";
@@ -25,7 +33,7 @@ const getAuthToken = () => {
 };
 
 // Fetch Providers
-export const _fetchProviders = (page: number = 1,search:string='',filters={}) => async (dispatch: Dispatch) => {
+export const _fetchProviders = (page: number = 1, search: string = '', filters = {}) => async (dispatch: Dispatch) => {
     dispatch({ type: FETCH_PROVIDERS_REQUEST });
     try {
         const token = getAuthToken();
@@ -49,12 +57,12 @@ export const _fetchProviders = (page: number = 1,search:string='',filters={}) =>
 
 
         dispatch({
-              type: FETCH_PROVIDERS_SUCCESS,
-              payload: {
+            type: FETCH_PROVIDERS_SUCCESS,
+            payload: {
                 data: response.data.data.providers,
                 pagination: response.data.payload.pagination,
-              },
-            });
+            },
+        });
         // Optional success toast for fetch operation
         // toast.current?.show({
         //     severity: "success",
@@ -77,7 +85,7 @@ export const _addProvider = (provider: Provider, toast: React.RefObject<Toast>, 
             provider,
             { headers: { Authorization: `Bearer ${token}` } }
         );
-        const newData = {...provider, id: response.data.data.provider.id};
+        const newData = { ...provider, id: response.data.data.provider.id };
         dispatch({ type: ADD_PROVIDER_SUCCESS, payload: newData });
         toast.current?.show({
             severity: "success",
@@ -106,7 +114,7 @@ export const _editProvider = (id: number, updatedData: Provider, toast: React.Re
             updatedData,
             { headers: { Authorization: `Bearer ${token}` } }
         );
-        const newData = {...updatedData, id: response.data.data.provider.id};
+        const newData = { ...updatedData, id: response.data.data.provider.id };
         dispatch({ type: EDIT_PROVIDER_SUCCESS, payload: newData });
         toast.current?.show({
             severity: "success",
@@ -153,74 +161,155 @@ export const _deleteProvider = (id: number, toast: React.RefObject<Toast>, t: (k
 
 // Delete Selected Providers
 export const _deleteSelectedProviders = async (
-  providerIds: number[],
-  toast: React.RefObject<Toast>,
-  t: (key: string) => string
+    providerIds: number[],
+    toast: React.RefObject<Toast>,
+    t: (key: string) => string
 ) => {
-  const token = getAuthToken();
+    const token = getAuthToken();
 
-  try {
-    for (const id of providerIds) {
-      await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/api-providers/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    try {
+        for (const id of providerIds) {
+            await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/api-providers/${id}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+        }
+
+        toast.current?.show({
+            severity: 'success',
+            summary: t('SUCCESS'),
+            detail: t('PROVIDERS_DELETED'),
+            life: 3000,
+        });
+    } catch (error: any) {
+        toast.current?.show({
+            severity: 'error',
+            summary: t('ERROR'),
+            detail: t('PROVIDERS_DELETE_FAILED'),
+            life: 3000,
+        });
     }
-
-    toast.current?.show({
-      severity: 'success',
-      summary: t('SUCCESS'),
-      detail: t('PROVIDERS_DELETED'),
-      life: 3000,
-    });
-  } catch (error: any) {
-    toast.current?.show({
-      severity: 'error',
-      summary: t('ERROR'),
-      detail: t('PROVIDERS_DELETE_FAILED'),
-      life: 3000,
-    });
-  }
 };
 
 
 
 // Toggle Provider
 export const _toggleProvider = (
-  id: number,
-  isActive: boolean,
-  toast: React.RefObject<Toast>,
-  t: (key: string) => string
+    id: number,
+    isActive: boolean,
+    toast: React.RefObject<Toast>,
+    t: (key: string) => string
 ) => async (dispatch: Dispatch) => {
-  dispatch({ type: TOGGLE_PROVIDER_REQUEST });
-  try {
-    const token = getAuthToken();
-    const response = await axios.patch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api-providers/${id}/toggle`,
-      { is_active: isActive },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    dispatch({ type: TOGGLE_PROVIDER_REQUEST });
+    try {
+        const token = getAuthToken();
+        const response = await axios.patch(
+            `${process.env.NEXT_PUBLIC_BASE_URL}/api-providers/${id}/toggle`,
+            { is_active: isActive },
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-    const updatedProvider = response.data.data.provider;
+        const updatedProvider = response.data.data.provider;
 
-    dispatch({ type: TOGGLE_PROVIDER_SUCCESS, payload: updatedProvider });
+        dispatch({ type: TOGGLE_PROVIDER_SUCCESS, payload: updatedProvider });
 
-    toast.current?.show({
-      severity: 'success',
-      summary: t('SUCCESS'),
-      detail: updatedProvider.is_active
-        ? t('PROVIDER_ACTIVATED')
-        : t('PROVIDER_DEACTIVATED'),
-      life: 3000,
-    });
-  } catch (error: any) {
-    dispatch({ type: TOGGLE_PROVIDER_FAIL, payload: error.message });
-    toast.current?.show({
-      severity: 'error',
-      summary: t('ERROR'),
-      detail: t('PROVIDER_TOGGLE_FAILED'),
-      life: 3000,
-    });
-  }
+        toast.current?.show({
+            severity: 'success',
+            summary: t('SUCCESS'),
+            detail: updatedProvider.is_active
+                ? t('PROVIDER_ACTIVATED')
+                : t('PROVIDER_DEACTIVATED'),
+            life: 3000,
+        });
+    } catch (error: any) {
+        dispatch({ type: TOGGLE_PROVIDER_FAIL, payload: error.message });
+        toast.current?.show({
+            severity: 'error',
+            summary: t('ERROR'),
+            detail: t('PROVIDER_TOGGLE_FAILED'),
+            life: 3000,
+        });
+    }
+};
+
+
+// Fetch categories for a specific provider (like mzr)
+export const fetchProviderCategories = (providerCode: string) => async (dispatch: Dispatch) => {
+    dispatch({ type: FETCH_PROVIDER_CATEGORIES_REQUEST });
+    try {
+        const token = getAuthToken();
+        const response = await axios.get(
+            `${process.env.NEXT_PUBLIC_BASE_URL}/api-providers/${providerCode}/categories`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json',
+                },
+            }
+        );
+
+        const categories = response.data.data.categories;
+
+        dispatch({
+            type: FETCH_PROVIDER_CATEGORIES_SUCCESS,
+            payload: categories,
+        });
+
+        return categories;
+    } catch (error: any) {
+        dispatch({
+            type: FETCH_PROVIDER_CATEGORIES_FAIL,
+            payload: error.response?.data?.message || error.message,
+        });
+        throw error;
+    }
+};
+
+// Fetch products for a specific category
+export const fetchCategoryProducts = (providerCode: string, categoryId: number) => async (dispatch: Dispatch) => {
+    dispatch({ type: FETCH_CATEGORY_PRODUCTS_REQUEST });
+    try {
+        const token = getAuthToken();
+        const response = await axios.get(
+            `${process.env.NEXT_PUBLIC_BASE_URL}/api-providers/${providerCode}/categories/${categoryId}/products`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json',
+                },
+            }
+        );
+
+        const products = response.data.data.products;
+        const categoryName = response.data.data.category_name;
+        const purchaseType = response.data.data.purchase_type;
+
+        dispatch({
+            type: FETCH_CATEGORY_PRODUCTS_SUCCESS,
+            payload: {
+                products,
+                categoryName,
+                purchaseType,
+            },
+        });
+
+        return { products, categoryName, purchaseType };
+    } catch (error: any) {
+        dispatch({
+            type: FETCH_CATEGORY_PRODUCTS_FAIL,
+            payload: error.response?.data?.message || error.message,
+        });
+        throw error;
+    }
+};
+
+// Clear selected category data
+export const clearSelectedCategory = () => (dispatch: Dispatch) => {
+    dispatch({ type: CLEAR_SELECTED_CATEGORY });
+};
+
+// Clear all provider products data
+export const clearProviderProductsData = () => (dispatch: Dispatch) => {
+    dispatch({ type: CLEAR_PROVIDER_PRODUCTS_DATA });
 };

@@ -2043,7 +2043,14 @@
       "NO_DATA": "هیڅ معلومات ونه موندل شول"
     }
   },
-  "MENU.API_KEYS": "د API کیلي"
+  "MENU.API_KEYS": "د API کیلي",
+  "CATEGORIES": "دسته‌بندی‌ها",
+  "SEARCH_CATEGORIES": "جستجوی دسته‌بندی‌ها...",
+  "SEARCH_CATEGORY": "جستجوی دسته‌بندی...",
+  "PRODUCTS": "محصولات",
+  "SEARCH_PRODUCTS": "جستجوی محصولات...",
+  "SEARCH_PRODUCT": "جستجوی محصول...",
+  "SELECT_PRODUCT": "انتخاب محصول..."
 
 
 
