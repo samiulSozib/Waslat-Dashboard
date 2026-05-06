@@ -902,7 +902,7 @@ const BundlePage = () => {
                         className="p-fluid"
                         footer={companyDialogFooter}
                         onHide={hideDialog}
-                        responsive
+                        
                         breakpoints={{ '960px': '95vw', '640px': '95vw' }}
                     >
                         <div className="card" style={{ padding: '20px' }}>

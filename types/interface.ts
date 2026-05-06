@@ -69,17 +69,41 @@ export interface Bundle {
 }
 
 export interface ApiBinding {
-    product_type: string;
-    operator: string;
-    internet_type: string;
-    sim_type: string;
-    product_id: number | string;
-    table_id: number | string;
-    name: string;
-    days: number | string;
-    volume: number | string;
-    unit: string;
-    periodicity: string;
+    // product_type: string;
+    // operator: string;
+    // internet_type: string;
+    // sim_type: string;
+    // product_id: number | string;
+    // table_id: number | string;
+    // name: string;
+    // days: number | string;
+    // volume: number | string;
+    // unit: string;
+    // periodicity: string;
+    // Common properties (optional)
+    product_type?: string;
+    product_id?: number | string;
+    name?: string;
+    price?: number | string;
+    stock?: number;
+    description?: string;
+
+    // Non-MZR provider properties
+    operator?: string;
+    internet_type?: string;
+    sim_type?: string;
+    table_id?: number | string;
+    days?: number | string;
+    volume?: number | string;
+    unit?: string;
+    periodicity?: string;
+
+    // MZR provider properties
+    category_id?: number;
+    category_name?: string;
+
+    // Allow any additional properties for flexibility
+    [key: string]: any;
 }
 
 export interface PaginationLink {
