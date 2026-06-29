@@ -443,7 +443,7 @@
 //         return (
 //             <>
 //                 <span className="p-column-title">{t('VOUCHER.TABLE.COLUMN.STATUS')}</span>
-//                 <Tag severity={statusInfo.severity} value={statusInfo.label} />
+//                 {/* <Tag severity={statusInfo.severity} value={statusInfo.label} /> */}
 //             </>
 //         );
 //     };
@@ -1103,23 +1103,23 @@
 //                                         options={bundleStats}
 //                                         onChange={(e) => {
 //                                             const selectedBundle = e.value;
-//                                             if (selectedBundle) {
-//                                                 setVoucher((prev) => ({
-//                                                     ...prev,
-//                                                     bundle: {
-//                                                         ...prev.bundle,
-//                                                         service: {
-//                                                             ...prev.bundle.service,
-//                                                             id: selectedBundle.id,
-//                                                             service_category_id: selectedBundle.service
-//                                                                 ?.service_category_id || '',
-//                                                             company_id: selectedBundle.service?.company_id || '',
-//                                                         },
-//                                                     },
-//                                                     bundle_title: selectedBundle.bundle_title || '',
-//                                                     company_name: selectedBundle.company_name || '',
-//                                                 }));
-//                                             }
+//                                             // if (selectedBundle) {
+//                                             //     setVoucher((prev) => ({
+//                                             //         ...prev,
+//                                             //         bundle: {
+//                                             //             ...prev.bundle,
+//                                             //             service: {
+//                                             //                 ...prev.bundle.service,
+//                                             //                 id: selectedBundle.id,
+//                                             //                 service_category_id: selectedBundle.service
+//                                             //                     ?.service_category_id || '',
+//                                             //                 company_id: selectedBundle.service?.company_id || '',
+//                                             //             },
+//                                             //         },
+//                                             //         bundle_title: selectedBundle.bundle_title || '',
+//                                             //         company_name: selectedBundle.company_name || '',
+//                                             //     }));
+//                                             // }
 //                                         }}
 //                                         optionLabel="bundle_title"
 //                                         placeholder={t('VOUCHER.FORM.SELECT_BUNDLE')}
@@ -1637,3 +1637,17 @@
 // };
 
 // export default withAuth(VoucherPage);
+
+
+import React from 'react'
+
+const page = () => {
+  return (
+    <div>
+
+    </div>
+  )
+}
+
+export default page
+
