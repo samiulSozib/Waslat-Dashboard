@@ -1,72 +1,72 @@
 // singleProviderReducer.ts
 import { Internet, Pagination, RawBundles, RawInternet, SingleProvider } from '@/types/interface';
 import {
-  FETCH_SINGLE_PROVIDER_REQUEST,
-  FETCH_SINGLE_PROVIDER_SUCCESS,
-  FETCH_SINGLE_PROVIDER_FAIL,
-  CLEAR_SINGLE_PROVIDER
+    FETCH_SINGLE_PROVIDER_REQUEST,
+    FETCH_SINGLE_PROVIDER_SUCCESS,
+    FETCH_SINGLE_PROVIDER_FAIL,
+    CLEAR_SINGLE_PROVIDER
 } from '../constants/singleProviderConstant';
 
 interface SingleProviderState {
-  loading: boolean;
-  provider: SingleProvider | null;
-  internets: Internet[];
-  rawInternets:RawInternet[],
-  rawBundles:RawBundles[],
-  error: string | null;
-  pagination: Pagination | null;
+    loading: boolean;
+    provider: SingleProvider | null;
+    internets: Internet[];
+    rawInternets: RawInternet[],
+    rawBundles: RawBundles[],
+    error: string | null;
+    pagination: Pagination | null;
 }
 
 const initialState: SingleProviderState = {
-  loading: false,
-  provider: null,
-  internets: [],
-  rawInternets:[],
-  rawBundles:[],
-  error: null,
-  pagination: null
+    loading: false,
+    provider: null,
+    internets: [],
+    rawInternets: [],
+    rawBundles: [],
+    error: null,
+    pagination: null
 };
 
 export const singleProviderReducer = (
-  state = initialState,
-  action: any
+    state = initialState,
+    action: any
 ): SingleProviderState => {
-  switch (action.type) {
-    case FETCH_SINGLE_PROVIDER_REQUEST:
-      return {
-        ...state,
-        loading: true,
-        error: null,
-      };
+    switch (action.type) {
+        case FETCH_SINGLE_PROVIDER_REQUEST:
+            return {
+                ...state,
+                loading: true,
+                error: null,
+            };
 
-    case FETCH_SINGLE_PROVIDER_SUCCESS:
-      return {
-        ...state,
-        loading: false,
-        provider: action.payload.provider,
-        internets: action.payload.internets,
-        rawInternets:action.payload.rawInternets,
-        rawBundles:action.payload.rawBundles,
-        pagination: action.payload.pagination,
-        error: null,
-      };
+        case FETCH_SINGLE_PROVIDER_SUCCESS:
+            return {
+                ...state,
+                loading: false,
+                provider: action.payload.provider,
+                internets: action.payload.internets,
+                rawInternets: action.payload.rawInternets,
+                rawBundles: action.payload.rawBundles,
+                pagination: action.payload.pagination,
+                error: null,
+            };
 
-    case FETCH_SINGLE_PROVIDER_FAIL:
-      return {
-        ...state,
-        loading: false,
-        error: action.payload,
-        provider: null,
-        internets: [],
-        rawInternets:[],
-        rawBundles:[],
-        pagination: null,
-      };
+        case FETCH_SINGLE_PROVIDER_FAIL:
+            return {
+                ...state,
+                loading: false,
+                error: action.payload,
+                provider: null,
+                internets: [],
+                rawInternets: [],
+                rawBundles: [],
+                pagination: null,
+            };
 
-    case CLEAR_SINGLE_PROVIDER:
-      return initialState;
+        case CLEAR_SINGLE_PROVIDER:
+            return initialState;
 
-    default:
-      return state;
-  }
+        default:
+            return state;
+    }
 };

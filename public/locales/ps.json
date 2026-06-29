@@ -2050,9 +2050,93 @@
   "PRODUCTS": "محصولات",
   "SEARCH_PRODUCTS": "جستجوی محصولات...",
   "SEARCH_PRODUCT": "جستجوی محصول...",
-  "SELECT_PRODUCT": "انتخاب محصول..."
+  "SELECT_PRODUCT": "انتخاب محصول...",
 
 
+
+  "APP_SETTINGS": {
+    "TELEGRAM": "ټیلیګرام",
+    "TELEGRAM_SETTINGS": "د ټیلیګرام تنظیمات",
+    "TELEGRAM_ENABLED": "د ټیلیګرام خبرتیاوې فعالې کړئ",
+    "TELEGRAM_SEND_PAYMENTS": "د تادیاتو خبرتیاوې واستوئ",
+    "TELEGRAM_PAYMENT_CHAT_IDS": "د تادیې چیټ ID",
+    "TELEGRAM_SEND_BALANCES": "د بیلانس خبرتیاوې واستوئ",
+    "TELEGRAM_BALANCE_CHAT_IDS": "د بیلانس چیټ ID",
+    "TELEGRAM_SEND_TRANSACTIONS": "د معاملاتو خبرتیاوې واستوئ",
+    "TELEGRAM_TRANSACTION_CHAT_IDS": "د معاملې چیټ ID",
+    "TELEGRAM_SEND_VOUCHERS": "د ووچر خبرتیاوې واستوئ",
+    "TELEGRAM_VOUCHER_CHAT_IDS": "د ووچر چیټ ID",
+    "SELECT_CHAT_IDS": "د ټیلیګرام چیټ انتخاب کړئ",
+    "TELEGRAM_SELECT_CHAT_HELP": "له لیست څخه د ټیلیګرام ګروپ چیټ ID انتخاب کړئ",
+    "AVAILABLE_TELEGRAM_CHAT_IDS": "موجود ټیلیګرام چیټ ID ګانې"
+  },
+
+  "VOUCHER": {
+    "TABLE": {
+      "CREATEVOUCHER": "ووچر جوړ کړئ",
+      "DELETE_SELECTED": "انتخاب شوي حذف کړئ",
+      "COLUMN": {
+        "CODE": "د ووچر کوډ",
+        "BUNDLE": "بنډل",
+        "COMPANY": "شرکت",
+        "PROVIDER": "چمتو کوونکی",
+        "STATUS": "حالت",
+        "EXPIRES": "د ختمېدو نېټه",
+        "NOTES": "یادښتونه"
+      }
+    },
+    "FORM": {
+      "CODE": "د ووچر کوډ",
+      "BUNDLE": "بنډل",
+      "PROVIDER": "چمتو کوونکی",
+      "EXPIRES_AT": "د ختمېدو نېټه",
+      "NOTES": "یادښتونه",
+      "METADATA": "میټاډیټا",
+      "ENTER_CODE": "د ووچر کوډ داخل کړئ",
+      "ENTER_PROVIDER": "د چمتو کوونکي نوم داخل کړئ",
+      "SELECT_EXPIRY": "د ختمېدو نېټه انتخاب کړئ",
+      "ENTER_NOTES": "یادښت داخل کړئ",
+      "ENTER_METADATA_JSON": "میټاډیټا د JSON په ډول داخل کړئ",
+      "METADATA_HELP": "معتبر JSON داخل کړئ",
+      "SELECT_BUNDLE": "یو بنډل انتخاب کړئ",
+      "SELECT_STATUS": "حالت انتخاب کړئ"
+    },
+    "STATUS": {
+      "ALL": "ټول",
+      "AVAILABLE": "موجود",
+      "USED": "استعمال شوی",
+      "RESERVED": "ساتل شوی",
+      "EXPIRED": "ختم شوی"
+    },
+    "STATS": {
+      "TOTAL": "ټول",
+      "AVAILABLE": "موجود",
+      "USED": "استعمال شوی",
+      "RESERVED": "ساتل شوی",
+      "EXPIRED": "ختم شوی"
+    },
+    "FILTER": {
+      "STATUS": "حالت",
+      "BUNDLE": "بنډل",
+      "PROVIDER": "چمتو کوونکی",
+      "SELECT_STATUS": "حالت انتخاب کړئ",
+      "SELECT_BUNDLE": "بنډل انتخاب کړئ",
+      "ENTER_PROVIDER": "د چمتو کوونکي نوم داخل کړئ"
+    },
+    "BULK_IMPORT": "ډله‌ییز واردول",
+    "ADD_TO_LIST": "لیست ته اضافه کړئ",
+    "IMPORT": "واردول",
+    "IMPORT_SUMMARY": "د واردولو لنډیز",
+    "TOTAL": "ټول",
+    "IMPORTED": "وارد شوی",
+    "FAILED": "ناکام",
+    "ERRORS": "خطاګانې",
+    "NO_VOUCHERS_ADDED": "تر اوسه کوم ووچر اضافه شوی نه دی",
+    "VOUCHERS_LIST": "د ووچرونو لیست",
+    "NO_NOTES": "هیڅ یادښت نشته",
+    "CREATE": "ووچر جوړ کړئ",
+    "EDIT": "ووچر سم کړئ"
+  }
 
 
 }

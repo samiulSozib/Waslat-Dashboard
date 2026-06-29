@@ -792,6 +792,17 @@ export interface AppSettings {
     setaragan_admin_buying_price_percentage?: number,
     custom_recharge_api_provider_id: number | null, // Add this line
 
+     // New Telegram Settings
+    telegram_enabled: boolean;
+    telegram_send_payments: boolean;
+    telegram_payment_chat_ids: string[];
+    telegram_send_balances: boolean;
+    telegram_balance_chat_ids: string[];
+    telegram_send_transactions: boolean;
+    telegram_transaction_chat_ids: string[];
+    telegram_send_vouchers: boolean;
+    telegram_voucher_chat_ids: string[];
+
 }
 
 
@@ -1112,4 +1123,275 @@ export interface Product {
     category_title: string;
     price: number;
     stock: number;
+}
+
+
+// ============================
+// Base/Common Interfaces
+// ============================
+
+export interface ServiceCategory {
+    id: number;
+    category_name: string;
+    type: string;
+}
+
+
+
+
+
+
+// ============================
+// Voucher Related Interfaces
+// ============================
+
+export interface Voucher {
+    id?: number;
+    company_name: string;
+    bundle_title: string;
+    bundle: Bundle;
+    voucher_code?: string;
+    provider?: string;
+    expires_at?: string;
+    notes?: string;
+    metadata?: any;
+    status?: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface VoucherStatistics {
+    total: number;
+    available: number;
+    used: number;
+    reserved: number;
+    expired: number;
+}
+
+export interface VoucherPagination {
+    current_page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+}
+
+export interface VoucherListResponse {
+    success: boolean;
+    code: number;
+    message: string;
+    data: {
+        vouchers: Voucher[];
+        statistics: VoucherStatistics;
+        pagination: VoucherPagination;
+    };
+    payload: any[];
+}
+
+export interface SingleVoucherResponse {
+    success: boolean;
+    code: number;
+    message: string;
+    data: {
+        voucher: Voucher;
+    };
+    payload: any[];
+}
+
+// ============================
+// Create/Update Voucher
+// ============================
+
+export interface CreateVoucherPayload {
+    bundle_id: number;
+    voucher_code: string;
+    provider: string;
+    expires_at: string;
+    notes?: string;
+    metadata?: {
+        region?: string;
+        source?: string;
+        [key: string]: any;
+    };
+}
+
+export interface UpdateVoucherPayload {
+    voucher_code?: string;
+    notes?: string;
+    expires_at?: string;
+    metadata?: any;
+    status?: string;
+}
+
+// ============================
+// Bulk Import Interfaces
+// ============================
+
+export interface BulkImportVoucher {
+    code: string;
+    expires_at: string;
+    notes?: string;
+    metadata?: {
+        region?: string;
+        batch?: string;
+        [key: string]: any;
+    };
+}
+
+export interface BulkImportPayload {
+    bundle_id: number;
+    provider: string;
+    vouchers: BulkImportVoucher[];
+}
+
+export interface BulkImportSummary {
+    total: number;
+    imported: number;
+    failed: number;
+    errors?: Array<{
+        index: number;
+        code: string;
+        error: string;
+    }>;
+}
+
+export interface BulkImportResponse {
+    success: boolean;
+    code: number;
+    message: string;
+    data: {
+        vouchers: Voucher[];
+        summary: BulkImportSummary;
+    };
+    payload: any[];
+}
+
+// ============================
+// Social Companies Interfaces
+// ============================
+
+export interface SocialCompany {
+    id: number;
+    company_name: string;
+    company_logo: string;
+    country_id: string;
+    telegram_chat_id: string;
+    deleted_at: string | null;
+    created_at: string;
+    updated_at: string;
+    input_form_schema: any | null;
+    performed_by: any | null;
+    services_count: string;
+    total_vouchers: number;
+    available_vouchers: number;
+}
+
+export interface SocialCompaniesResponse {
+    success: boolean;
+    code: number;
+    message: string;
+    data: {
+        companies: SocialCompany[];
+    };
+    payload: any[];
+}
+
+// ============================
+// Bundle Stats Interfaces
+// ============================
+
+export interface BundleService {
+    id: number;
+    service_category_id: string;
+    company_id: string;
+    telegram_chat_id: string | null;
+    deleted_at: string | null;
+    created_at: string;
+    updated_at: string;
+    input_form_schema: any | null;
+    performed_by: any | null;
+    company: Company;
+    service_category: ServiceCategory;
+}
+
+export interface BundleStat {
+    id: number;
+    bundle_code: string;
+    service_id: string;
+    bundle_title: string;
+    bundle_description: string;
+    bundle_type: string;
+    validity_type: string;
+    admin_buying_price: string;
+    buying_price: string;
+    selling_price: string;
+    required_credit_amount_to_activate_bundle: string | null;
+    discount_amount: string;
+    discounted_price: string | null;
+    discount_type: string | null;
+    discount_source_id: string | null;
+    discount_source_type: string | null;
+    amount: string | null;
+    bundle_image_url: string | null;
+    currency_id: string;
+    expired_date: string | null;
+    deleted_at: string | null;
+    created_at: string;
+    updated_at: string;
+    performed_by: any | null;
+    api_provider_id: string | null;
+    api_provider_bundle_id: string | null;
+    api_binding: any | null;
+    total: string;
+    available: string;
+    used: string;
+    reserved: string;
+    company_name: string;
+    category_type: string;
+    service: BundleService;
+}
+
+export interface BundleStatsResponse {
+    success: boolean;
+    code: number;
+    message: string;
+    data: {
+        bundles: BundleStat[];
+    };
+    payload: any[];
+}
+
+// ============================
+// Voucher Filter/Query Params
+// ============================
+
+export interface VoucherQueryParams {
+    bundle_id?: number;
+    page?: number;
+    items_per_page?: number;
+    status?: 'available' | 'used' | 'reserved' | 'expired' | 'all';
+    search?: string;
+    provider?: string;
+}
+
+// ============================
+// Redux State Interfaces
+// ============================
+
+export interface BulkImportState {
+    loading: boolean;
+    success: boolean;
+    error: string | null;
+    summary: BulkImportSummary | null;
+}
+
+export interface VoucherState {
+    vouchers: Voucher[];
+    currentVoucher: Voucher | null;
+    statistics: VoucherStatistics | null;
+    pagination: VoucherPagination | null;
+    socialCompanies: SocialCompany[];
+    bundleStats: BundleStat[];
+    loading: boolean;
+    error: string | null;
+    bulkImport: BulkImportState;
 }

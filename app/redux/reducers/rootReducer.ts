@@ -45,6 +45,7 @@ import { withdrawPoliciesReducer } from './withdrawPolicyReducer';
 import { withdrawRequestsReducer } from './withdrawalRequestReducer';
 import {providerInfoReducer} from './provideInfoReducer'
 import {apiKeyReducer} from './apiKeyReducer'
+import voucherReducer from './voucherReducer'
 
 const rootReducer=combineReducers({
     currenciesReducer:currenciesReducer,
@@ -92,7 +93,8 @@ const rootReducer=combineReducers({
     withdrawPoliciesReducer:withdrawPoliciesReducer,
     withdrawRequestsReducer:withdrawRequestsReducer,
     providerInfoReducer:providerInfoReducer,
-    apiKeyReducer:apiKeyReducer
+    apiKeyReducer:apiKeyReducer,
+    voucherReducer:voucherReducer
 })
 
 

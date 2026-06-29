@@ -273,21 +273,36 @@ const BundlePage = () => {
                 api_provider_id: selectedProvider.id,
                 api_provider_bundle_id: selectedProviderBundle.id,
                 api_binding: {
+                    // product_type: selectedCategory.purchase_type,
+                    // category_id: selectedCategory.id,
+                    // category_name: selectedCategory.name,
+                    // product_id: selectedProviderBundle.id,
+                    // product_name: selectedProviderBundle.name,
+                    // price: selectedProviderBundle.price,
+                    // stock: selectedProviderBundle.stock,
+                    // description: selectedProviderBundle.description,
+
                     product_type: selectedCategory.purchase_type,
-                    category_id: selectedCategory.id,
-                    category_name: selectedCategory.name,
+                    operator: selectedProviderBundle.operator,
+                    internet_type: selectedProviderBundle.internet_type,
+                    sim_type: selectedProviderBundle.sim_type,
                     product_id: selectedProviderBundle.id,
-                    product_name: selectedProviderBundle.name,
-                    price: selectedProviderBundle.price,
-                    stock: selectedProviderBundle.stock,
-                    description: selectedProviderBundle.description
+                    table_id: selectedProviderBundle.table_id,
+                    name: selectedProviderBundle.name,
+                    days: selectedProviderBundle.days,
+                    volume: selectedProviderBundle.volume,
+                    unit: selectedProviderBundle.unit,
+                    periodicity: selectedProviderBundle.periodicity
                 }
             };
+
+            console.log(providerData)
 
             if (bundle.id && bundle.id !== 0) {
                 dispatch(_editBundle(bundle.id, bundle, toast, t))
                     .then((newBundle) => {
                         if (newBundle) {
+                            console.log(providerData)
                             dispatch(_setProvider(newBundle.id, providerData, toast, t));
                         }
                     })
@@ -298,6 +313,7 @@ const BundlePage = () => {
                 dispatch(_addBundle(bundle, toast, t))
                     .then((newBundle) => {
                         if (newBundle) {
+                            console.log(providerData)
                             dispatch(_setProvider(newBundle.id, providerData, toast, t));
                         }
                     })
@@ -311,6 +327,7 @@ const BundlePage = () => {
             const providerData = {
                 api_provider_id: selectedProvider.id,
                 api_provider_bundle_id: selectedProviderBundle.id,
+
                 api_binding: {
                     product_type: selectedProviderBundle.product_type,
                     operator: selectedProviderBundle.operator,
@@ -326,10 +343,13 @@ const BundlePage = () => {
                 }
             };
 
+            console.log(providerData)
+
             if (bundle.id && bundle.id !== 0) {
                 dispatch(_editBundle(bundle.id, bundle, toast, t))
                     .then((newBundle) => {
                         if (newBundle) {
+                            console.log(providerData)
                             dispatch(_setProvider(newBundle.id, providerData, toast, t));
                         }
                     })
@@ -340,6 +360,7 @@ const BundlePage = () => {
                 dispatch(_addBundle(bundle, toast, t))
                     .then((newBundle) => {
                         if (newBundle) {
+                            console.log(providerData)
                             dispatch(_setProvider(newBundle.id, providerData, toast, t));
                         }
                     })
@@ -902,7 +923,7 @@ const BundlePage = () => {
                         className="p-fluid"
                         footer={companyDialogFooter}
                         onHide={hideDialog}
-                        
+
                         breakpoints={{ '960px': '95vw', '640px': '95vw' }}
                     >
                         <div className="card" style={{ padding: '20px' }}>

@@ -2049,8 +2049,92 @@
   "PRODUCTS": "المنتجات",
   "SEARCH_PRODUCTS": "ابحث عن المنتجات...",
   "SEARCH_PRODUCT": "ابحث عن منتج...",
-  "SELECT_PRODUCT": "اختر المنتج..."
+  "SELECT_PRODUCT": "اختر المنتج...",
 
+
+  "APP_SETTINGS": {
+    "TELEGRAM": "تلگرام",
+    "TELEGRAM_SETTINGS": "تنظیمات تلگرام",
+    "TELEGRAM_ENABLED": "فعال‌سازی اعلان‌های تلگرام",
+    "TELEGRAM_SEND_PAYMENTS": "ارسال اعلان‌های پرداخت",
+    "TELEGRAM_PAYMENT_CHAT_IDS": "شناسه چت پرداخت",
+    "TELEGRAM_SEND_BALANCES": "ارسال اعلان‌های موجودی",
+    "TELEGRAM_BALANCE_CHAT_IDS": "شناسه چت موجودی",
+    "TELEGRAM_SEND_TRANSACTIONS": "ارسال اعلان‌های تراکنش",
+    "TELEGRAM_TRANSACTION_CHAT_IDS": "شناسه چت تراکنش",
+    "TELEGRAM_SEND_VOUCHERS": "ارسال اعلان‌های ووچر",
+    "TELEGRAM_VOUCHER_CHAT_IDS": "شناسه چت ووچر",
+    "SELECT_CHAT_IDS": "انتخاب چت تلگرام",
+    "TELEGRAM_SELECT_CHAT_HELP": "یک شناسه گروه تلگرام را از لیست انتخاب کنید",
+    "AVAILABLE_TELEGRAM_CHAT_IDS": "شناسه‌های موجود چت تلگرام"
+  },
+
+  "VOUCHER": {
+    "TABLE": {
+      "CREATEVOUCHER": "ایجاد ووچر",
+      "DELETE_SELECTED": "حذف انتخاب شده",
+      "COLUMN": {
+        "CODE": "کد ووچر",
+        "BUNDLE": "بسته",
+        "COMPANY": "شرکت",
+        "PROVIDER": "ارائه‌دهنده",
+        "STATUS": "وضعیت",
+        "EXPIRES": "تاریخ انقضا",
+        "NOTES": "یادداشت‌ها"
+      }
+    },
+    "FORM": {
+      "CODE": "کد ووچر",
+      "BUNDLE": "بسته",
+      "PROVIDER": "ارائه‌دهنده",
+      "EXPIRES_AT": "تاریخ انقضا",
+      "NOTES": "یادداشت‌ها",
+      "METADATA": "متادیتا",
+      "ENTER_CODE": "کد ووچر را وارد کنید",
+      "ENTER_PROVIDER": "نام ارائه‌دهنده را وارد کنید",
+      "SELECT_EXPIRY": "تاریخ انقضا را انتخاب کنید",
+      "ENTER_NOTES": "یادداشت را وارد کنید",
+      "ENTER_METADATA_JSON": "متادیتا را به صورت JSON وارد کنید",
+      "METADATA_HELP": "یک شیء JSON معتبر وارد کنید",
+      "SELECT_BUNDLE": "یک بسته انتخاب کنید",
+      "SELECT_STATUS": "وضعیت را انتخاب کنید"
+    },
+    "STATUS": {
+      "ALL": "همه",
+      "AVAILABLE": "در دسترس",
+      "USED": "استفاده شده",
+      "RESERVED": "رزرو شده",
+      "EXPIRED": "منقضی شده"
+    },
+    "STATS": {
+      "TOTAL": "مجموع",
+      "AVAILABLE": "در دسترس",
+      "USED": "استفاده شده",
+      "RESERVED": "رزرو شده",
+      "EXPIRED": "منقضی شده"
+    },
+    "FILTER": {
+      "STATUS": "وضعیت",
+      "BUNDLE": "بسته",
+      "PROVIDER": "ارائه‌دهنده",
+      "SELECT_STATUS": "انتخاب وضعیت",
+      "SELECT_BUNDLE": "انتخاب بسته",
+      "ENTER_PROVIDER": "نام ارائه‌دهنده را وارد کنید"
+    },
+    "BULK_IMPORT": "وارد کردن گروهی",
+    "ADD_TO_LIST": "افزودن به لیست",
+    "IMPORT": "وارد کردن",
+    "IMPORT_SUMMARY": "خلاصه وارد کردن",
+    "TOTAL": "مجموع",
+    "IMPORTED": "وارد شده",
+    "FAILED": "ناموفق",
+    "ERRORS": "خطاها",
+    "NO_VOUCHERS_ADDED": "هنوز ووچری اضافه نشده است",
+    "VOUCHERS_LIST": "لیست ووچرها",
+    "NO_NOTES": "بدون یادداشت",
+    "CREATE": "ایجاد ووچر",
+    "EDIT": "ویرایش ووچر"
+  }
 
 
 

@@ -1,5 +1,3 @@
-
-
 /* eslint-disable @next/next/no-img-element */
 'use client';
 import { Button } from 'primereact/button';
@@ -26,17 +24,20 @@ import { InputSwitch } from 'primereact/inputswitch';
 import { InputNumber } from 'primereact/inputnumber';
 import { ColorPicker } from 'primereact/colorpicker';
 import { fetchAppSettings, updateAppSettings } from '@/app/redux/actions/appSettingsActions';
-import { AppSettings, Currency, Provider, SupportContacts } from '@/types/interface';
+import { AppSettings, Currency, Provider, SupportContacts, TelegramChat } from '@/types/interface';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Sidebar } from 'primereact/sidebar';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import {
-  _fetchSupportContacts,
-  _addSupportContact,
-  _editSupportContact,
-  _deleteSupportContact
+    _fetchSupportContacts,
+    _addSupportContact,
+    _editSupportContact,
+    _deleteSupportContact
 } from '@/app/redux/actions/supportContactActions';
 import { _fetchProviders } from '@/app/redux/actions/providerActions';
+import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
+import { Chips } from 'primereact/chips';
+import { MultiSelect } from 'primereact/multiselect';
 
 const emptySettings: AppSettings = {
     is_instant_confirm: false,
@@ -96,8 +97,17 @@ const emptySettings: AppSettings = {
     afg_custom_recharge_selling_price_adjust_mode: "percentage",
     afg_custom_recharge_selling_price_adjust_value: 0,
     setaragan_admin_buying_price_percentage: 0,
-    custom_recharge_api_provider_id: null, // Add this line
-
+    custom_recharge_api_provider_id: null,
+    // New Telegram settings
+    telegram_enabled: false,
+    telegram_send_payments: false,
+    telegram_payment_chat_ids: [],
+    telegram_send_balances: false,
+    telegram_balance_chat_ids: [],
+    telegram_send_transactions: false,
+    telegram_transaction_chat_ids: [],
+    telegram_send_vouchers: false,
+    telegram_voucher_chat_ids: []
 };
 
 const emptySupportContact: SupportContacts = {
@@ -135,16 +145,15 @@ const AppSettingsPage = () => {
     const { loading: supportContactsLoading, supportContacts: reduxSupportContacts } = useSelector((state: any) => state.supportContactReducer);
     const { t } = useTranslation();
     const { currencies } = useSelector((state: any) => state.currenciesReducer);
-    const { providers, pagination } = useSelector((state: any) => state.providerReducer);
-
-
+    const { providers } = useSelector((state: any) => state.providerReducer);
+    const { telegramChatIds } = useSelector((state: any) => state.telegramReducer);
 
     useEffect(() => {
         dispatch(fetchAppSettings());
         dispatch(_fetchCurrencies());
         dispatch(_fetchSupportContacts());
         dispatch(_fetchProviders());
-
+        dispatch(_fetchTelegramList());
 
         // Check if device is mobile
         const checkIsMobile = () => {
@@ -164,17 +173,6 @@ const AppSettingsPage = () => {
             setSupportContacts(reduxSupportContacts);
         }
     }, [reduxSupportContacts]);
-
-    useEffect(() => {
-    if (providers && providers.length > 0 && settings.custom_recharge_api_provider_id) {
-        console.log('Providers loaded:', providers);
-        console.log('Selected provider ID:', settings.custom_recharge_api_provider_id);
-        const found = providers.find((p: Provider) => p.id === settings.custom_recharge_api_provider_id);
-        console.log('Found provider:', found);
-    }
-}, [providers, settings.custom_recharge_api_provider_id]);
-
-
 
     const selectedCurrency = currencies?.find((currency: Currency) =>
         currency.code === settings.default_currency
@@ -217,7 +215,6 @@ const AppSettingsPage = () => {
             });
             return;
         }
-        console.log(settings)
         dispatch(updateAppSettings(settings, toast, t));
         setSettingsDialog(false);
         setSubmitted(false);
@@ -318,17 +315,6 @@ const AppSettingsPage = () => {
             </div>
         );
     };
-
-    // Add this provider dropdown template function
-const providerDropdownTemplate = (option: Provider) => {
-    if (!option) return t('SELECT_PROVIDER');
-    return (
-        <div className="flex justify-content-between align-items-center">
-            <span>{option.name}</span>
-            <span className="text-sm text-500">{option.code}</span>
-        </div>
-    );
-};
 
     const renderSupportContactsTab = () => {
         return (
@@ -474,7 +460,7 @@ const providerDropdownTemplate = (option: Provider) => {
                                     onValueChange={(e) => setSettings({ ...settings, exchange_rate_usd_afn: e.value || 0 })}
                                     mode="decimal"
                                     minFractionDigits={4}
-                                    disabled={!settings.default_currency} // Disable if no currency selected
+                                    disabled={!settings.default_currency}
                                 />
                                 {selectedCurrency && (
                                     <small className="text-sm text-500">
@@ -482,7 +468,6 @@ const providerDropdownTemplate = (option: Provider) => {
                                     </small>
                                 )}
                             </div>
-
 
                             <div className="field">
                                 <label htmlFor="website_url" className="font-bold text-sm md:text-base">
@@ -1182,30 +1167,31 @@ const providerDropdownTemplate = (option: Provider) => {
                                     {t('APP_SETTINGS.SETARAGAN_ADMIN_BUYING_PRICE_NOTE')}
                                 </small>
                             </div>
+
                             <div className="field">
-    <label htmlFor="custom_recharge_api_provider_id" className="font-bold text-sm md:text-base">
-        {t('APP_SETTINGS.CUSTOM_RECHARGE_API_PROVIDER')}
-    </label>
-    <Dropdown
-    value={settings.custom_recharge_api_provider_id ?? null}
-    options={providers}
-    onChange={(e) => {
-        setSettings(prev => ({
-            ...prev,
-            custom_recharge_api_provider_id: e.value ?? null
-        }));
-    }}
-    optionLabel="name"
-    optionValue="id"
-    placeholder="Select Provider"
-    className="w-full"
-    filter
-    showClear
-/>
-    <small className="text-sm text-500">
-        {t('APP_SETTINGS.CUSTOM_RECHARGE_API_PROVIDER_DESC')}
-    </small>
-</div>
+                                <label htmlFor="custom_recharge_api_provider_id" className="font-bold text-sm md:text-base">
+                                    {t('APP_SETTINGS.CUSTOM_RECHARGE_API_PROVIDER')}
+                                </label>
+                                <Dropdown
+                                    value={settings.custom_recharge_api_provider_id ?? null}
+                                    options={providers}
+                                    onChange={(e) => {
+                                        setSettings(prev => ({
+                                            ...prev,
+                                            custom_recharge_api_provider_id: e.value ?? null
+                                        }));
+                                    }}
+                                    optionLabel="name"
+                                    optionValue="id"
+                                    placeholder="Select Provider"
+                                    className="w-full"
+                                    filter
+                                    showClear
+                                />
+                                <small className="text-sm text-500">
+                                    {t('APP_SETTINGS.CUSTOM_RECHARGE_API_PROVIDER_DESC')}
+                                </small>
+                            </div>
                         </div>
 
                         <div className="col-12">
@@ -1235,7 +1221,316 @@ const providerDropdownTemplate = (option: Provider) => {
                     </div>
                 );
 
-            case 'support-contacts':
+
+// ... inside the component
+
+case 'telegram':
+    // Helper function to safely get chat IDs as array
+    const getChatIds = (value: string[] | null | undefined): string[] => {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+        return [];
+    };
+
+    // Helper function to convert chat ID strings to objects for dropdown
+    const getChatObjects = (chatIds: string[] | null | undefined): TelegramChat[] => {
+        const ids = getChatIds(chatIds);
+        return ids
+            .map((id: string) => telegramChatIds.find((chat: TelegramChat) => String(chat.chat_id) === id))
+            .filter((chat): chat is TelegramChat => chat !== undefined);
+    };
+
+    return (
+        <div className="grid p-fluid">
+            <div className="col-12">
+                <div className="field">
+                    <label className="font-bold text-sm md:text-base">
+                        {t('APP_SETTINGS.TELEGRAM_SETTINGS')}
+                    </label>
+                    <div className="flex flex-column gap-3 mt-2">
+                        <div className="flex align-items-center">
+                            <InputSwitch
+                                checked={settings.telegram_enabled || false}
+                                onChange={(e) => setSettings({ ...settings, telegram_enabled: e.value })}
+                            />
+                            <label className="ml-2 text-sm md:text-base">{t('APP_SETTINGS.TELEGRAM_ENABLED')}</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid">
+                    {/* Payments Section */}
+                    <div className="col-12 md:col-6">
+                        <div className="field p-3 border-1 surface-border border-round">
+                            <div className="flex align-items-center mb-2">
+                                <InputSwitch
+                                    checked={settings.telegram_send_payments || false}
+                                    onChange={(e) => setSettings({ ...settings, telegram_send_payments: e.value })}
+                                />
+                                <label className="ml-2 font-bold">{t('APP_SETTINGS.TELEGRAM_SEND_PAYMENTS')}</label>
+                            </div>
+                            <div className="field">
+                                <label htmlFor="payment_chat_ids" className="text-sm font-bold">
+                                    {t('APP_SETTINGS.TELEGRAM_PAYMENT_CHAT_IDS')}
+                                </label>
+                                <MultiSelect
+                                    id="payment_chat_ids"
+                                    value={getChatObjects(settings.telegram_payment_chat_ids)}
+                                    options={telegramChatIds}
+                                    onChange={(e) => {
+                                        const selectedChats = e.value || [];
+                                        const chatIds = selectedChats.map((chat: TelegramChat) => String(chat.chat_id));
+                                        setSettings({
+                                            ...settings,
+                                            telegram_payment_chat_ids: chatIds
+                                        });
+                                    }}
+                                    optionLabel="group_name"
+                                    placeholder={t('APP_SETTINGS.SELECT_CHAT_IDS')}
+                                    className="w-full"
+                                    filter
+                                    showClear
+                                    display="chip"
+                                    filterBy="group_name,chat_id"
+                                />
+                                {/* Show selected chats below multiselect (optional, since display="chip" shows them inside) */}
+                                {getChatIds(settings.telegram_payment_chat_ids).length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {getChatIds(settings.telegram_payment_chat_ids).map((chatId: string) => {
+                                            const chat = telegramChatIds.find((c: TelegramChat) => String(c.chat_id) === chatId);
+                                            return chat ? (
+                                                <span key={chatId} className="p-2 surface-100 border-round text-sm flex align-items-center gap-2">
+                                                    {chat.group_name} ({chat.chat_id})
+                                                    <i
+                                                        className="pi pi-times cursor-pointer text-red-500"
+                                                        style={{ fontSize: '12px' }}
+                                                        onClick={() => {
+                                                            setSettings({
+                                                                ...settings,
+                                                                telegram_payment_chat_ids: getChatIds(settings.telegram_payment_chat_ids).filter(
+                                                                    (id: string) => id !== chatId
+                                                                )
+                                                            });
+                                                        }}
+                                                    />
+                                                </span>
+                                            ) : null;
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Balances Section */}
+                    <div className="col-12 md:col-6">
+                        <div className="field p-3 border-1 surface-border border-round">
+                            <div className="flex align-items-center mb-2">
+                                <InputSwitch
+                                    checked={settings.telegram_send_balances || false}
+                                    onChange={(e) => setSettings({ ...settings, telegram_send_balances: e.value })}
+                                />
+                                <label className="ml-2 font-bold">{t('APP_SETTINGS.TELEGRAM_SEND_BALANCES')}</label>
+                            </div>
+                            <div className="field">
+                                <label htmlFor="balance_chat_ids" className="text-sm font-bold">
+                                    {t('APP_SETTINGS.TELEGRAM_BALANCE_CHAT_IDS')}
+                                </label>
+                                <MultiSelect
+                                    id="balance_chat_ids"
+                                    value={getChatObjects(settings.telegram_balance_chat_ids)}
+                                    options={telegramChatIds}
+                                    onChange={(e) => {
+                                        const selectedChats = e.value || [];
+                                        const chatIds = selectedChats.map((chat: TelegramChat) => String(chat.chat_id));
+                                        setSettings({
+                                            ...settings,
+                                            telegram_balance_chat_ids: chatIds
+                                        });
+                                    }}
+                                    optionLabel="group_name"
+                                    placeholder={t('APP_SETTINGS.SELECT_CHAT_IDS')}
+                                    className="w-full"
+                                    filter
+                                    showClear
+                                    display="chip"
+                                    filterBy="group_name,chat_id"
+                                />
+                                {getChatIds(settings.telegram_balance_chat_ids).length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {getChatIds(settings.telegram_balance_chat_ids).map((chatId: string) => {
+                                            const chat = telegramChatIds.find((c: TelegramChat) => String(c.chat_id) === chatId);
+                                            return chat ? (
+                                                <span key={chatId} className="p-2 surface-100 border-round text-sm flex align-items-center gap-2">
+                                                    {chat.group_name} ({chat.chat_id})
+                                                    <i
+                                                        className="pi pi-times cursor-pointer text-red-500"
+                                                        style={{ fontSize: '12px' }}
+                                                        onClick={() => {
+                                                            setSettings({
+                                                                ...settings,
+                                                                telegram_balance_chat_ids: getChatIds(settings.telegram_balance_chat_ids).filter(
+                                                                    (id: string) => id !== chatId
+                                                                )
+                                                            });
+                                                        }}
+                                                    />
+                                                </span>
+                                            ) : null;
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Transactions Section */}
+                    <div className="col-12 md:col-6">
+                        <div className="field p-3 border-1 surface-border border-round">
+                            <div className="flex align-items-center mb-2">
+                                <InputSwitch
+                                    checked={settings.telegram_send_transactions || false}
+                                    onChange={(e) => setSettings({ ...settings, telegram_send_transactions: e.value })}
+                                />
+                                <label className="ml-2 font-bold">{t('APP_SETTINGS.TELEGRAM_SEND_TRANSACTIONS')}</label>
+                            </div>
+                            <div className="field">
+                                <label htmlFor="transaction_chat_ids" className="text-sm font-bold">
+                                    {t('APP_SETTINGS.TELEGRAM_TRANSACTION_CHAT_IDS')}
+                                </label>
+                                <MultiSelect
+                                    id="transaction_chat_ids"
+                                    value={getChatObjects(settings.telegram_transaction_chat_ids)}
+                                    options={telegramChatIds}
+                                    onChange={(e) => {
+                                        const selectedChats = e.value || [];
+                                        const chatIds = selectedChats.map((chat: TelegramChat) => String(chat.chat_id));
+                                        setSettings({
+                                            ...settings,
+                                            telegram_transaction_chat_ids: chatIds
+                                        });
+                                    }}
+                                    optionLabel="group_name"
+                                    placeholder={t('APP_SETTINGS.SELECT_CHAT_IDS')}
+                                    className="w-full"
+                                    filter
+                                    showClear
+                                    display="chip"
+                                    filterBy="group_name,chat_id"
+                                />
+                                {getChatIds(settings.telegram_transaction_chat_ids).length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {getChatIds(settings.telegram_transaction_chat_ids).map((chatId: string) => {
+                                            const chat = telegramChatIds.find((c: TelegramChat) => String(c.chat_id) === chatId);
+                                            return chat ? (
+                                                <span key={chatId} className="p-2 surface-100 border-round text-sm flex align-items-center gap-2">
+                                                    {chat.group_name} ({chat.chat_id})
+                                                    <i
+                                                        className="pi pi-times cursor-pointer text-red-500"
+                                                        style={{ fontSize: '12px' }}
+                                                        onClick={() => {
+                                                            setSettings({
+                                                                ...settings,
+                                                                telegram_transaction_chat_ids: getChatIds(settings.telegram_transaction_chat_ids).filter(
+                                                                    (id: string) => id !== chatId
+                                                                )
+                                                            });
+                                                        }}
+                                                    />
+                                                </span>
+                                            ) : null;
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Vouchers Section */}
+                    <div className="col-12 md:col-6">
+                        <div className="field p-3 border-1 surface-border border-round">
+                            <div className="flex align-items-center mb-2">
+                                <InputSwitch
+                                    checked={settings.telegram_send_vouchers || false}
+                                    onChange={(e) => setSettings({ ...settings, telegram_send_vouchers: e.value })}
+                                />
+                                <label className="ml-2 font-bold">{t('APP_SETTINGS.TELEGRAM_SEND_VOUCHERS')}</label>
+                            </div>
+                            <div className="field">
+                                <label htmlFor="voucher_chat_ids" className="text-sm font-bold">
+                                    {t('APP_SETTINGS.TELEGRAM_VOUCHER_CHAT_IDS')}
+                                </label>
+                                <MultiSelect
+                                    id="voucher_chat_ids"
+                                    value={getChatObjects(settings.telegram_voucher_chat_ids)}
+                                    options={telegramChatIds}
+                                    onChange={(e) => {
+                                        const selectedChats = e.value || [];
+                                        const chatIds = selectedChats.map((chat: TelegramChat) => String(chat.chat_id));
+                                        setSettings({
+                                            ...settings,
+                                            telegram_voucher_chat_ids: chatIds
+                                        });
+                                    }}
+                                    optionLabel="group_name"
+                                    placeholder={t('APP_SETTINGS.SELECT_CHAT_IDS')}
+                                    className="w-full"
+                                    filter
+                                    showClear
+                                    display="chip"
+                                    filterBy="group_name,chat_id"
+                                />
+                                {getChatIds(settings.telegram_voucher_chat_ids).length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {getChatIds(settings.telegram_voucher_chat_ids).map((chatId: string) => {
+                                            const chat = telegramChatIds.find((c: TelegramChat) => String(c.chat_id) === chatId);
+                                            return chat ? (
+                                                <span key={chatId} className="p-2 surface-100 border-round text-sm flex align-items-center gap-2">
+                                                    {chat.group_name} ({chat.chat_id})
+                                                    <i
+                                                        className="pi pi-times cursor-pointer text-red-500"
+                                                        style={{ fontSize: '12px' }}
+                                                        onClick={() => {
+                                                            setSettings({
+                                                                ...settings,
+                                                                telegram_voucher_chat_ids: getChatIds(settings.telegram_voucher_chat_ids).filter(
+                                                                    (id: string) => id !== chatId
+                                                                )
+                                                            });
+                                                        }}
+                                                    />
+                                                </span>
+                                            ) : null;
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Available Telegram Chat IDs Info - Same as CompanyPage */}
+                {telegramChatIds && telegramChatIds.length > 0 && (
+                    <div className="field mt-3">
+                        <label className="font-bold text-sm md:text-base">
+                            {t('APP_SETTINGS.AVAILABLE_TELEGRAM_CHAT_IDS')}
+                        </label>
+                        <div className="p-3 border-1 surface-border border-round">
+                            <div className="flex flex-wrap gap-2">
+                                {telegramChatIds.map((chat: TelegramChat) => (
+                                    <span key={chat.id} className="p-2 surface-100 border-round text-sm">
+                                        {chat.chat_id} ({chat.group_name})
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    case 'support-contacts':
                 return renderSupportContactsTab();
 
             default:
@@ -1290,6 +1585,14 @@ const providerDropdownTemplate = (option: Provider) => {
                 className={`p-button-text ${activeTab === 'recharge' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
                 onClick={() => {
                     setActiveTab('recharge');
+                    setMobileNavVisible(false);
+                }}
+            />
+            <Button
+                label={t('APP_SETTINGS.TELEGRAM')}
+                className={`p-button-text ${activeTab === 'telegram' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
+                onClick={() => {
+                    setActiveTab('telegram');
                     setMobileNavVisible(false);
                 }}
             />
@@ -1370,8 +1673,8 @@ const providerDropdownTemplate = (option: Provider) => {
                     >
                         <div className="card" style={{ padding: '20px', maxHeight: '60vh', overflowY: 'auto' }}>
                             <TabView
-                                activeIndex={['general', 'contact', 'branding', 'limits', 'integration', 'recharge', 'support-contacts'].indexOf(activeTab)}
-                                onTabChange={(e) => setActiveTab(['general', 'contact', 'branding', 'limits', 'integration', 'recharge', 'support-contacts'][e.index])}
+                                activeIndex={['general', 'contact', 'branding', 'limits', 'integration', 'recharge', 'telegram', 'support-contacts'].indexOf(activeTab)}
+                                onTabChange={(e) => setActiveTab(['general', 'contact', 'branding', 'limits', 'integration', 'recharge', 'telegram', 'support-contacts'][e.index])}
                             >
                                 <TabPanel header={t('APP_SETTINGS.GENERAL')}>
                                     {activeTab === 'general' && renderTabContent()}
@@ -1390,6 +1693,9 @@ const providerDropdownTemplate = (option: Provider) => {
                                 </TabPanel>
                                 <TabPanel header={t('APP_SETTINGS.RECHARGE')}>
                                     {activeTab === 'recharge' && renderTabContent()}
+                                </TabPanel>
+                                <TabPanel header={t('APP_SETTINGS.TELEGRAM')}>
+                                    {activeTab === 'telegram' && renderTabContent()}
                                 </TabPanel>
                                 <TabPanel header={t('SUPPORT_CONTACT.TITLE')}>
                                     {activeTab === 'support-contacts' && renderTabContent()}

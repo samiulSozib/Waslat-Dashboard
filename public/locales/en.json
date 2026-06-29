@@ -2071,8 +2071,92 @@
   "PRODUCTS":"Products",
   "SEARCH_PRODUCTS":"Search products...",
   "SEARCH_PRODUCT":"Search product...",
-  "SELECT_PRODUCT":"Select Product..."
+  "SELECT_PRODUCT":"Select Product...",
 
+  "APP_SETTINGS": {
+    "TELEGRAM": "Telegram",
+    "TELEGRAM_SETTINGS": "Telegram Settings",
+    "TELEGRAM_ENABLED": "Enable Telegram Notifications",
+    "TELEGRAM_SEND_PAYMENTS": "Send Payment Notifications",
+    "TELEGRAM_PAYMENT_CHAT_IDS": "Payment Chat ID",
+    "TELEGRAM_SEND_BALANCES": "Send Balance Notifications",
+    "TELEGRAM_BALANCE_CHAT_IDS": "Balance Chat ID",
+    "TELEGRAM_SEND_TRANSACTIONS": "Send Transaction Notifications",
+    "TELEGRAM_TRANSACTION_CHAT_IDS": "Transaction Chat ID",
+    "TELEGRAM_SEND_VOUCHERS": "Send Voucher Notifications",
+    "TELEGRAM_VOUCHER_CHAT_IDS": "Voucher Chat ID",
+    "SELECT_CHAT_IDS": "Select Telegram Chat",
+    "TELEGRAM_SELECT_CHAT_HELP": "Select a Telegram group chat ID from the list",
+    "AVAILABLE_TELEGRAM_CHAT_IDS": "Available Telegram Chat IDs"
+  },
+
+
+  "VOUCHER": {
+    "TABLE": {
+      "CREATEVOUCHER": "Create Voucher",
+      "DELETE_SELECTED": "Delete Selected",
+      "COLUMN": {
+        "CODE": "Voucher Code",
+        "BUNDLE": "Bundle",
+        "COMPANY": "Company",
+        "PROVIDER": "Provider",
+        "STATUS": "Status",
+        "EXPIRES": "Expires At",
+        "NOTES": "Notes"
+      }
+    },
+    "FORM": {
+      "CODE": "Voucher Code",
+      "BUNDLE": "Bundle",
+      "PROVIDER": "Provider",
+      "EXPIRES_AT": "Expiry Date",
+      "NOTES": "Notes",
+      "METADATA": "Metadata",
+      "ENTER_CODE": "Enter voucher code",
+      "ENTER_PROVIDER": "Enter provider name",
+      "SELECT_EXPIRY": "Select expiry date",
+      "ENTER_NOTES": "Enter notes",
+      "ENTER_METADATA_JSON": "Enter metadata as JSON",
+      "METADATA_HELP": "Enter valid JSON object for metadata",
+      "SELECT_BUNDLE": "Select a bundle",
+      "SELECT_STATUS": "Select status"
+    },
+    "STATUS": {
+      "ALL": "All",
+      "AVAILABLE": "Available",
+      "USED": "Used",
+      "RESERVED": "Reserved",
+      "EXPIRED": "Expired"
+    },
+    "STATS": {
+      "TOTAL": "Total",
+      "AVAILABLE": "Available",
+      "USED": "Used",
+      "RESERVED": "Reserved",
+      "EXPIRED": "Expired"
+    },
+    "FILTER": {
+      "STATUS": "Status",
+      "BUNDLE": "Bundle",
+      "PROVIDER": "Provider",
+      "SELECT_STATUS": "Select status",
+      "SELECT_BUNDLE": "Select bundle",
+      "ENTER_PROVIDER": "Enter provider"
+    },
+    "BULK_IMPORT": "Bulk Import",
+    "ADD_TO_LIST": "Add to List",
+    "IMPORT": "Import",
+    "IMPORT_SUMMARY": "Import Summary",
+    "TOTAL": "Total",
+    "IMPORTED": "Imported",
+    "FAILED": "Failed",
+    "ERRORS": "Errors",
+    "NO_VOUCHERS_ADDED": "No vouchers added yet",
+    "VOUCHERS_LIST": "Vouchers List",
+    "NO_NOTES": "No notes",
+    "CREATE": "Create Voucher",
+    "EDIT": "Edit Voucher"
+  }
 
 
 }

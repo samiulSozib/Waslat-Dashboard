@@ -254,6 +254,8 @@ export const _setProvider =
             dispatch({ type: SET_PROVIDER_REQUEST });
             try {
                 const token = getAuthToken();
+                console.log(token)
+                console.log(providerData)
                 const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/bundles/${bundleId}/set-provider`, providerData, {
                     headers: {
                         Authorization: `Bearer ${token}`
