@@ -51,8 +51,11 @@ export const _fetchSingleProvider = (
             payload: {
                 provider: response.data.data.provider,
                 internets: response.data.data.internet,
-                rawInternets:response.data.data.raw.internet,
+                //rawInternets:response.data.data.raw.internet,
                 //rawInternets: response.data.data.categories[0].bundles,
+                rawInternets: code === "iimobile"
+                ? response.data.data.categories?.[0]?.bundles
+                : response.data.data.raw.internet,
                 rawBundles: response.data.data.bundles,
 
                 pagination: response.data.payload?.pagination || null,

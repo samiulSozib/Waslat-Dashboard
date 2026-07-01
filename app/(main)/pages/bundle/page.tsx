@@ -1332,6 +1332,7 @@ const BundlePage = () => {
                                                             <div className="flex flex-col">
                                                                 <span className="font-semibold text-sm">{option.name}</span>
                                                                 <span className="text-xs text-gray-600">Price: {option.price}</span>
+
                                                             </div>
                                                         );
                                                     }}
@@ -1375,10 +1376,45 @@ const BundlePage = () => {
                                             )}
                                             valueTemplate={(option) => {
                                                 if (!option) return t('SEARCH_BUNDLE');
+
                                                 return (
-                                                    <div className="flex flex-col">
-                                                        <span className="font-semibold text-sm">{option.name || option.title}</span>
-                                                        <span className="text-xs text-gray-600">{option.operator}</span>
+                                                    <div className="flex flex-col gap-1 justify-center items-center">
+                                                        <span className="font-semibold text-sm">
+                                                            {option.name || option.title}
+                                                        </span>
+
+                                                        <span className="text-xs text-gray-600">
+                                                            {option.operator}
+                                                        </span>
+
+                                                        <span className="text-xs text-gray-600">
+                                                            {option.currency}
+                                                        </span>
+
+                                                        <span className="text-xs text-gray-600">
+                                                            {option.category}
+                                                        </span>
+
+                                                        <span className="text-xs text-gray-600">
+                                                            {option.validity}
+                                                        </span>
+
+                                                        <span className="text-xs text-gray-600">
+                                                            {option.price}
+                                                        </span>
+
+                                                        <span className="text-xs text-gray-600">
+                                                            {option.voulume}
+                                                        </span>
+                                                        <span className="text-xs text-gray-600">
+                                                            {option.unit}
+                                                        </span>
+                                                        <span className="text-xs text-gray-600">
+                                                            {option.sim_type}
+                                                        </span>
+                                                        <span className="text-xs text-gray-600">
+                                                            {option.internet_type}
+                                                        </span>
                                                     </div>
                                                 );
                                             }}
