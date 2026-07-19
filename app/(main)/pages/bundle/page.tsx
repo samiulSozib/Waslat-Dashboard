@@ -59,6 +59,8 @@ const BundlePage = () => {
         api_binding: null
     };
 
+
+
     const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
     const [selectedCapability, setSelectedCapability] = useState('');
     const [selectedProviderBundle, setSelectedProviderBundle] = useState<RawInternet | null>(null);
@@ -273,20 +275,20 @@ const BundlePage = () => {
                 api_provider_id: selectedProvider.id,
                 api_provider_bundle_id: selectedProviderBundle.id,
                 api_binding: {
-                    // product_type: selectedCategory.purchase_type,
-                    // category_id: selectedCategory.id,
-                    // category_name: selectedCategory.name,
-                    // product_id: selectedProviderBundle.id,
-                    // product_name: selectedProviderBundle.name,
-                    // price: selectedProviderBundle.price,
-                    // stock: selectedProviderBundle.stock,
-                    // description: selectedProviderBundle.description,
-
                     product_type: selectedCategory.purchase_type,
+                    category_id: selectedCategory.id,
+                    category_name: selectedCategory.name,
+                    product_id: selectedProviderBundle.id,
+                    product_name: selectedProviderBundle.name,
+                    price: selectedProviderBundle.price,
+                    stock: selectedProviderBundle.stock,
+                    description: selectedProviderBundle.description,
+
+                    // product_type: selectedCategory.purchase_type,
                     operator: selectedProviderBundle.operator,
                     internet_type: selectedProviderBundle.internet_type,
                     sim_type: selectedProviderBundle.sim_type,
-                    product_id: selectedProviderBundle.id,
+                    // product_id: selectedProviderBundle.id,
                     table_id: selectedProviderBundle.table_id,
                     name: selectedProviderBundle.name,
                     days: selectedProviderBundle.days,

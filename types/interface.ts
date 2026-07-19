@@ -144,6 +144,7 @@ export interface Telegram_Chat_Id {
 export interface Company {
     id: number;
     company_name: string;
+    company_code:string;
     company_logo: File | string;
     country_id: number | null;
     telegram_chat_id: Telegram_Chat_Id | null;

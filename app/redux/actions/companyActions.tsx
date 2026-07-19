@@ -82,6 +82,7 @@ export const _addCompany = (newCompany: Company,toast: React.RefObject<Toast>,t:
     const formData = new FormData();
 
     formData.append('company_name', newCompany.company_name);
+    formData.append('company_code',newCompany.company_code);
 
     if (newCompany.company_logo && typeof newCompany.company_logo !== 'string') {
         formData.append('company_logo', newCompany.company_logo);
@@ -142,6 +143,8 @@ export const _editCompany = (updatedCompany: Company,toast: React.RefObject<Toas
     const formData = new FormData();
 
     formData.append('company_name', updatedCompany.company_name);
+        formData.append('company_code',updatedCompany.company_code);
+
 
     if (updatedCompany.company_logo && typeof updatedCompany.company_logo !== 'string') {
         formData.append('company_logo', updatedCompany.company_logo);

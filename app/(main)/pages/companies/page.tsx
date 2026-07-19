@@ -1,37 +1,37 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _addCompany, _deleteCompany, _deleteSelectedCompanies, _editCompany, _fetchCompanies } from '@/app/redux/actions/companyActions';
+import { _fetchCountries } from '@/app/redux/actions/countriesActions';
+import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { Company, Country } from '@/types/interface';
+import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { FileUpload } from 'primereact/fileupload';
 import { InputText } from 'primereact/inputtext';
+import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
-import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { _fetchCompanies, _deleteCompany, _addCompany, _editCompany, _deleteSelectedCompanies } from '@/app/redux/actions/companyActions';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { _fetchCountries } from '@/app/redux/actions/countriesActions';
-import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
-import { AppDispatch } from '@/app/redux/store';
-import { Company, Country, CustomField } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
-import { customCellStyle, customCellStyleImage } from '../../utilities/customRow';
-import i18n from '@/i18n';
-import { isRTL } from '../../utilities/rtlUtil';
-import { Badge } from 'primereact/badge';
 import { CustomFields } from '../../components/CustomFields';
+import { customCellStyleImage } from '../../utilities/customRow';
 import { parseInputFormSchema, stringifyInputFormSchema } from '../../utilities/parseInputFormSchema';
+import { isRTL } from '../../utilities/rtlUtil';
 
 const CompanyPage = () => {
     let emptyCompany: Company = {
         id: 0,
         company_name: '',
+        company_code:'',
         company_logo: '',
         country_id: null,
         telegram_chat_id: null,
@@ -229,6 +229,15 @@ const CompanyPage = () => {
         );
     };
 
+        const codeBodyTemplate = (rowData: Company) => {
+        return (
+            <>
+                <span className="p-column-title">Company Code</span>
+                {rowData.company_code}
+            </>
+        );
+    };
+
     const imageBodyTemplate = (rowData: Company) => {
         return (
             <>
@@ -352,6 +361,13 @@ const CompanyPage = () => {
 
                             body={nameBodyTemplate}
                         ></Column>
+                        <Column
+                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="company_code"
+                            header={t('COMPANY_CODE')}
+
+                            body={codeBodyTemplate}
+                        ></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('COMPANY.TABLE.COLUMN.LOGO')} body={imageBodyTemplate}></Column>
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
@@ -407,6 +423,33 @@ const CompanyPage = () => {
                                     })}
                                 />
                                 {submitted && !company.company_name && (
+                                    <small className="p-invalid" style={{ color: 'red' }}>
+                                        {t('THIS_FIELD_IS_REQUIRED')}
+                                    </small>
+                                )}
+                            </div>
+
+                            <div className="field">
+                                <label htmlFor="name" style={{ fontWeight: 'bold' }}>
+                                    {t('COMPANY_CODE')}
+                                </label>
+                                <InputText
+                                    id="company_code"
+                                    value={company?.company_code}
+                                    onChange={(e) =>
+                                        setCompany((prevCompany) => ({
+                                            ...prevCompany,
+                                            company_code: e.target.value
+                                        }))
+                                    }
+                                    required
+                                    autoFocus
+                                    placeholder={t('COMPANY_CODE_PLACEHOLDER')}
+                                    className={classNames({
+                                        'p-invalid': submitted && !company.company_code
+                                    })}
+                                />
+                                {submitted && !company.company_code && (
                                     <small className="p-invalid" style={{ color: 'red' }}>
                                         {t('THIS_FIELD_IS_REQUIRED')}
                                     </small>
