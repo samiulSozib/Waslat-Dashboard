@@ -301,6 +301,9 @@ const BundlePage = () => {
             console.log(providerData)
 
             if (bundle.id && bundle.id !== 0) {
+                if(selectedProvider){
+                    bundle.api_provider_id=selectedProvider.id
+                }
                 dispatch(_editBundle(bundle.id, bundle, toast, t))
                     .then((newBundle) => {
                         if (newBundle) {
@@ -312,6 +315,9 @@ const BundlePage = () => {
                         console.error('Edit bundle failed:', err);
                     });
             } else {
+                if(selectedProvider){
+                    bundle.api_provider_id=selectedProvider.id
+                }
                 dispatch(_addBundle(bundle, toast, t))
                     .then((newBundle) => {
                         if (newBundle) {
@@ -348,6 +354,9 @@ const BundlePage = () => {
             console.log(providerData)
 
             if (bundle.id && bundle.id !== 0) {
+                if(selectedProvider){
+                    bundle.api_provider_id=selectedProvider.id
+                }
                 dispatch(_editBundle(bundle.id, bundle, toast, t))
                     .then((newBundle) => {
                         if (newBundle) {
@@ -359,6 +368,9 @@ const BundlePage = () => {
                         console.error('Edit bundle failed:', err);
                     });
             } else {
+                if(selectedProvider){
+                    bundle.api_provider_id=selectedProvider.id
+                }
                 dispatch(_addBundle(bundle, toast, t))
                     .then((newBundle) => {
                         if (newBundle) {
@@ -371,6 +383,9 @@ const BundlePage = () => {
                     });
             }
         } else {
+            if(selectedProvider){
+                    bundle.api_provider_id=selectedProvider.id
+                }
             // Save without provider binding
             if (bundle.id && bundle.id !== 0) {
                 dispatch(_editBundle(bundle.id, bundle, toast, t));

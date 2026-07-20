@@ -92,7 +92,8 @@ export const _addBundle = (newBundleData: Bundle, toast: React.RefObject<Toast>,
             buying_price: newBundleData.buying_price,
             selling_price: newBundleData.selling_price,
             currency_id: newBundleData.currency?.id,
-            amount: newBundleData.amount
+            amount: newBundleData.amount,
+            api_provider_id:newBundleData.api_provider_id
         };
         const token = getAuthToken();
         const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/bundles`, body, {
@@ -141,7 +142,8 @@ export const _editBundle = (bundleId: number, updatedBundleData: Bundle, toast: 
             buying_price: updatedBundleData.buying_price,
             selling_price: updatedBundleData.selling_price,
             currency_id: updatedBundleData.currency?.id,
-            amount: updatedBundleData.amount
+            amount: updatedBundleData.amount,
+            api_provider_id:updatedBundleData.api_provider_id
         };
         const token = getAuthToken();
         const response = await axios.put(`${process.env.NEXT_PUBLIC_BASE_URL}/bundles/${bundleId}`, body, {
