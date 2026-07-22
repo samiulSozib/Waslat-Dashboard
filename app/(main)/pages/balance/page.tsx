@@ -87,24 +87,86 @@ const BalancePage = () => {
     const [verifyDialog, setVerifyDialog] = useState(false);
     const [rejectDialog, setRejectDialog] = useState(false);
 
+    // useEffect(() => {
+    //     dispatch(_fetchBalances(1, searchTag, activeFilters));
+    //     dispatch(_fetchCurrencies());
+    //     dispatch(_fetchResellers(1, '', '', 10000));
+    //     dispatch(_fetchPaymentMethods());
+    // }, [dispatch, searchTag, activeFilters]);
+
+    // useEffect(() => {
+    //     const timer = setTimeout(() => {
+    //         if (resellerSearchTerm) {
+    //             dispatch(_fetchResellers(1, resellerSearchTerm));
+    //         } else {
+    //             dispatch(_fetchResellers(1, ''));
+    //         }
+    //     }, 300); // Debounce for 300ms
+
+    //     return () => clearTimeout(timer);
+    // }, [resellerSearchTerm, dispatch]);
+
+    // Near your other useEffect hooks (around line 95-105)
+
+    // 1. Always fetch balances when search or filters change
     useEffect(() => {
         dispatch(_fetchBalances(1, searchTag, activeFilters));
-        dispatch(_fetchCurrencies());
-        dispatch(_fetchResellers(1, '', '', 10000));
-        dispatch(_fetchPaymentMethods());
     }, [dispatch, searchTag, activeFilters]);
 
+    // 2. Fetch dropdown data when add/edit dialog opens
+    useEffect(() => {
+        if (balanceDialog) {
+            // Fetch all required dropdown data
+            if (currencies.length === 0) {
+                dispatch(_fetchCurrencies());
+            }
+            if (resellers.length === 0) {
+                dispatch(_fetchResellers(1, '', '', 10000));
+            }
+            if (paymentMethods.length === 0) {
+                dispatch(_fetchPaymentMethods());
+            }
+        }
+    }, [balanceDialog, dispatch, currencies.length, resellers.length, paymentMethods.length]);
+
+    // 3. Fetch filter dropdown data when filter dialog opens (if needed)
+    useEffect(() => {
+        if (filterDialogVisible) {
+            // Only need currencies for filter dropdown (if you add currency filter later)
+            if (currencies.length === 0) {
+                dispatch(_fetchCurrencies());
+            }
+            // Transaction types are static - no API call needed
+        }
+    }, [filterDialogVisible, dispatch, currencies.length]);
+
+    // Keep the existing reseller search debounce
     useEffect(() => {
         const timer = setTimeout(() => {
             if (resellerSearchTerm) {
                 dispatch(_fetchResellers(1, resellerSearchTerm));
-            } else {
+            } else if (balanceDialog) {
+                // Only fetch if dialog is open
                 dispatch(_fetchResellers(1, ''));
             }
-        }, 300); // Debounce for 300ms
+        }, 300);
 
         return () => clearTimeout(timer);
-    }, [resellerSearchTerm, dispatch]);
+    }, [resellerSearchTerm, dispatch, balanceDialog]);
+
+    // Keep the click outside detection
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (target.closest('.p-dropdown-panel')) return;
+            if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
+                setFilterDialogVisible(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [filterDialogVisible]);
 
     // Add this useEffect to handle auto-opening the dialog
     const searchParams = useSearchParams(); // Add this
@@ -803,35 +865,62 @@ const BalancePage = () => {
                                     {/* Reseller */}
                                     <div className="field">
                                         <label htmlFor="reseller">{t('BALANCE.FORM.INPUT.RESELLER')} *</label>
-                                        <Dropdown
-                                            id="reseller"
-                                            value={balance.reseller}
-                                            options={resellers}
-                                            onChange={(e) => {
-                                                setBalance((prev) => ({
-                                                    ...prev,
-                                                    reseller: e.value
-                                                }));
-                                            }}
-                                            optionLabel="reseller_name"
-                                            filter
-                                            filterBy="reseller_name"
-                                            filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                            showFilterClear
-                                            placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
-                                            className="w-full"
-                                            panelClassName="min-w-[20rem]"
-                                            onFilter={(e) => {
-                                                setResellerSearchTerm(e.filter);
-                                            }}
-                                            filterIcon
-                                        />
+                                       <Dropdown
+                                        id="reseller"
+                                        value={balance.reseller}
+                                        options={resellers}
+                                        onChange={(e) => {
+                                            setBalance((prev) => ({
+                                                ...prev,
+                                                reseller: e.value
+                                            }));
+                                        }}
+                                        optionLabel="reseller_name"
+                                        filter
+                                        filterBy="reseller_name,contact_name,phone" // Add multiple fields for searching
+                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                                        showFilterClear
+                                        placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
+                                        className="w-full"
+                                        panelClassName="min-w-[20rem]"
+                                        onFilter={(e) => {
+                                            setResellerSearchTerm(e.filter);
+                                        }}
+                                        filterIcon
+                                        // Add custom item template to show contact name and phone
+                                        itemTemplate={(option) => {
+                                            if (!option) return null;
+                                            return (
+                                                <div className="flex flex-column p-2 gap-1">
+                                                    <div className="font-semibold">{option.contact_name}</div>
+                                                    <div className="text-sm text-gray-600">
+                                                        {option.phone && (
+                                                            <span className="ml-2 text-gray-500">{option.phone}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }}
+                                        // Custom value template to show selected value with contact info
+                                        valueTemplate={(option) => {
+                                            if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
+                                            return (
+                                                <div className="flex flex-column">
+                                                    <small className="text-gray-500 text-xs">
+                                                        {option.contact_name} {option.phone && `${option.phone}`}
+                                                    </small>
+                                                </div>
+                                            );
+                                        }}
+                                    />
                                         {submitted && !balance.reseller && (
                                             <small className="p-invalid" style={{ color: 'red' }}>
                                                 {t('REQUIRED')}
                                             </small>
                                         )}
                                     </div>
+
+
 
                                     {/* Transaction Type */}
                                     <div className="field">

@@ -115,6 +115,24 @@ const BundlePage = () => {
         dispatch(_fetchServiceCategories());
     }, [dispatch, searchTag]);
 
+    // useEffect(() => {
+    //     if (serviceDialog) {
+    //         // Fetch all required dropdown data
+    //         if (currencies.length === 0) {
+    //             dispatch(_fetchCurrencies());
+    //         }
+    //         if (services.length === 0) {
+    //             dispatch(_fetchServiceList());
+    //         }
+    //         if (companies.length === 0) {
+    //             dispatch(_fetchCompanies());
+    //         }
+    //         if (serviceCategories.length === 0) {
+    //             dispatch(_fetchServiceCategories());
+    //         }
+    //     }
+    // }, [serviceDialog, dispatch]);
+
     useEffect(() => {
         const timer = setTimeout(() => {
             if (providerSearchTag) {

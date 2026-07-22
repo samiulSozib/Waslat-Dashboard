@@ -99,24 +99,88 @@ const PaymentPage = () => {
 
 
 
+    // useEffect(() => {
+    //     dispatch(_fetchPayments(1, searchTag, activeFilters));
+    //     dispatch(_fetchResellers(1, '', '', 10000));
+    //     dispatch(_fetchPaymentMethods());
+    //     dispatch(_fetchCurrencies());
+    // }, [dispatch, searchTag, activeFilters]);
+
+    // Near your other useEffect hooks (around line 97-103)
+
+    // 1. Always fetch payments when search or filters change
     useEffect(() => {
         dispatch(_fetchPayments(1, searchTag, activeFilters));
-        dispatch(_fetchResellers(1, '', '', 10000));
-        dispatch(_fetchPaymentMethods());
-        dispatch(_fetchCurrencies());
     }, [dispatch, searchTag, activeFilters]);
 
+    // 2. Fetch dropdown data when add/edit dialog opens
+    useEffect(() => {
+        if (paymentDialog) {
+            // Fetch all required dropdown data
+            if (resellers.length === 0) {
+                dispatch(_fetchResellers(1, '', '', 10000));
+            }
+            if (paymentMethods.length === 0) {
+                dispatch(_fetchPaymentMethods());
+            }
+            if (currencies.length === 0) {
+                dispatch(_fetchCurrencies());
+            }
+        }
+    }, [paymentDialog, dispatch, resellers.length, paymentMethods.length, currencies.length]);
+
+    // 3. Fetch filter dropdown data when filter dialog opens
+    useEffect(() => {
+        if (filterDialogVisible) {
+            // Only need payment methods for filter dropdown
+            if (paymentMethods.length === 0) {
+                dispatch(_fetchPaymentMethods());
+            }
+            if (currencies.length === 0) {
+                dispatch(_fetchCurrencies());
+            }
+        }
+    }, [filterDialogVisible, dispatch, paymentMethods.length, currencies.length]);
+
+    // Keep the existing reseller search debounce
     useEffect(() => {
         const timer = setTimeout(() => {
             if (resellerSearchTerm) {
                 dispatch(_fetchResellers(1, resellerSearchTerm));
-            } else {
+            } else if (paymentDialog) {
+                // Only fetch if dialog is open
                 dispatch(_fetchResellers(1, ''));
             }
-        }, 300); // Debounce for 300ms
+        }, 300);
 
         return () => clearTimeout(timer);
-    }, [resellerSearchTerm, dispatch]);
+    }, [resellerSearchTerm, dispatch, paymentDialog]);
+
+    // Keep the click outside detection
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (target.closest('.p-dropdown-panel')) return;
+            if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
+                setFilterDialogVisible(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [filterDialogVisible]);
+
+    // useEffect(() => {
+    //     const timer = setTimeout(() => {
+    //         if (resellerSearchTerm) {
+    //             dispatch(_fetchResellers(1, resellerSearchTerm));
+    //         } else {
+    //             dispatch(_fetchResellers(1, ''));
+    //         }
+    //     }, 300); // Debounce for 300ms
+
+    //     return () => clearTimeout(timer);
+    // }, [resellerSearchTerm, dispatch]);
 
     // Add this useEffect for click outside detection
     useEffect(() => {
@@ -255,7 +319,7 @@ const PaymentPage = () => {
             console.error('Payment  ID is undefined.');
             return;
         }
-        dispatch(_rollbackedPayment(payment?.id, toast, t,rollbackType));
+        dispatch(_rollbackedPayment(payment?.id, toast, t, rollbackType));
         hideRollbackDialog();
     };
 
@@ -760,30 +824,30 @@ const PaymentPage = () => {
         });
     };
 
-    
-        const [resellerBalance, setResellerBalance] = useState<any>(null);
-        const [resellerPayment, setResellerPayment] = useState<any>(null);
-        const [resellerLoan, setResellerLoan] = useState<any>(null);
 
-        useEffect(() => {
-            if (payment.reseller) {
-                const formattedCurrency = payment.currency?.code || '';
-    
-                const resellerBalanceValue = Number(payment.reseller?.balance ?? 0);
-                const totalSent = Number(payment.reseller?.total_balance_sent ?? 0);
-                const totalReceived = Number(payment.reseller?.total_payments_received ?? 0);
-                const paymentDiff = totalSent - totalReceived;
-    
-                const totalPayments = Number(payment?.reseller?.total_payments_received) || 0;
-                const totalBalance = Number(payment?.reseller?.total_balance_sent) || 0;
-                const availablePaymentAmount = totalPayments - totalBalance;
-    
-                setResellerBalance(`${resellerBalanceValue} ${formattedCurrency}`);
-                //setResellerPayment(`${paymentDiff > 0 ? paymentDiff : 0} ${formattedCurrency}`);
-                setResellerPayment(`${availablePaymentAmount > 0 ? availablePaymentAmount : 0} ${formattedCurrency}`)
-                setResellerLoan(`${paymentDiff > 0 ? paymentDiff : 0} ${formattedCurrency}`);
-            }
-        }, [payment.reseller, payment.currency?.code]);
+    const [resellerBalance, setResellerBalance] = useState<any>(null);
+    const [resellerPayment, setResellerPayment] = useState<any>(null);
+    const [resellerLoan, setResellerLoan] = useState<any>(null);
+
+    useEffect(() => {
+        if (payment.reseller) {
+            const formattedCurrency = payment.currency?.code || '';
+
+            const resellerBalanceValue = Number(payment.reseller?.balance ?? 0);
+            const totalSent = Number(payment.reseller?.total_balance_sent ?? 0);
+            const totalReceived = Number(payment.reseller?.total_payments_received ?? 0);
+            const paymentDiff = totalSent - totalReceived;
+
+            const totalPayments = Number(payment?.reseller?.total_payments_received) || 0;
+            const totalBalance = Number(payment?.reseller?.total_balance_sent) || 0;
+            const availablePaymentAmount = totalPayments - totalBalance;
+
+            setResellerBalance(`${resellerBalanceValue} ${formattedCurrency}`);
+            //setResellerPayment(`${paymentDiff > 0 ? paymentDiff : 0} ${formattedCurrency}`);
+            setResellerPayment(`${availablePaymentAmount > 0 ? availablePaymentAmount : 0} ${formattedCurrency}`)
+            setResellerLoan(`${paymentDiff > 0 ? paymentDiff : 0} ${formattedCurrency}`);
+        }
+    }, [payment.reseller, payment.currency?.code]);
 
     return (
         <div className="grid crud-demo -m-5">
@@ -858,8 +922,8 @@ const PaymentPage = () => {
                         }
                     />
 
-                    <Dialog visible={paymentDialog} style={{ width: '900px', padding: '5px'  }} header={t('PAYMENT.DETAILS.TITLE')} modal className="p-fluid" footer={paymentDialogFooter} onHide={hideDialog}>
-                        
+                    <Dialog visible={paymentDialog} style={{ width: '900px', padding: '5px' }} header={t('PAYMENT.DETAILS.TITLE')} modal className="p-fluid" footer={paymentDialogFooter} onHide={hideDialog}>
+
                         {resellerBalance !== null && resellerPayment !== null && (
                             <div
                                 className="flex flex-wrap justify-between items-center"
@@ -889,7 +953,7 @@ const PaymentPage = () => {
                                 </div>
                             </div>
                         )}
-                        
+
                         <div className="card flex  flex-wrap p-fluid mt-3 gap-4">
                             <div className=" flex-1 col-12 lg:col-6">
                                 <div className="field">
@@ -908,7 +972,7 @@ const PaymentPage = () => {
                                         }}
                                         optionLabel="reseller_name"
                                         filter
-                                        filterBy="reseller_name"
+                                        filterBy="reseller_name,contact_name,phone" // Add multiple fields for searching
                                         filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
                                         showFilterClear
                                         placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
@@ -918,6 +982,31 @@ const PaymentPage = () => {
                                             setResellerSearchTerm(e.filter);
                                         }}
                                         filterIcon
+                                        // Add custom item template to show contact name and phone
+                                        itemTemplate={(option) => {
+                                            if (!option) return null;
+                                            return (
+                                                <div className="flex flex-column p-2 gap-1">
+                                                    <div className="font-semibold">{option.contact_name}</div>
+                                                    <div className="text-sm text-gray-600">
+                                                        {option.phone && (
+                                                            <span className="ml-2 text-gray-500">{option.phone}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }}
+                                        // Custom value template to show selected value with contact info
+                                        valueTemplate={(option) => {
+                                            if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
+                                            return (
+                                                <div className="flex flex-column">
+                                                    <small className="text-gray-500 text-xs">
+                                                        {option.contact_name} {option.phone && `${option.phone}`}
+                                                    </small>
+                                                </div>
+                                            );
+                                        }}
                                     />
 
                                     {submitted && !payment.reseller && (
