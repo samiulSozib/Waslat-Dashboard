@@ -631,6 +631,7 @@ export interface HawalaCurrency {
     to_currency_id: number;
     to_currency: Currency | null,
     amount: number,
+    amount_in_letter:string,
     buy_rate: string | null;
     sell_rate: string | null
     deleted_at: string | null;

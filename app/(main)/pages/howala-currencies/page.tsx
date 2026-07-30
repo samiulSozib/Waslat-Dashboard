@@ -1,32 +1,26 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
+import { _addHawalaCurrency, _deleteHawalaCurrency, _editHawalaCurrency, _fetchHawalaCurrencies } from '@/app/redux/actions/hawalaCurrenciesActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { HawalaCurrency } from '@/types/interface';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
+import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { _fetchCountries } from '@/app/redux/actions/countriesActions';
-import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
-import { AppDispatch } from '@/app/redux/store';
-import { Currency, HawalaCurrency } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import { _addCurrency, _deleteCurrency, _editCurrency, _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+import withAuth from '../../authGuard';
 import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
-import { _addHawalaCurrency, _deleteHawalaCurrency, _editHawalaCurrency, _fetchHawalaCurrencies } from '@/app/redux/actions/hawalaCurrenciesActions';
-import { hawalaCurrenciesReducer } from '../../../redux/reducers/hawalaCurrenciesReducer';
-import { currenciesReducer } from '../../../redux/reducers/currenciesReducer';
-import { _fetchCustomerPricing } from '@/app/redux/actions/customerPricingActions';
 
 const CurrencyPage = () => {
     let emptyCurrency: HawalaCurrency = {
@@ -36,6 +30,7 @@ const CurrencyPage = () => {
         to_currency: null,
         to_currency_id: 0,
         amount: 0,
+        amount_in_letter:'',
         sell_rate: '',
         buy_rate: '',
         deleted_at: '',
@@ -205,6 +200,15 @@ const CurrencyPage = () => {
         );
     };
 
+        const amountInLetterBodyTemplate = (rowData: HawalaCurrency) => {
+        return (
+            <>
+                <span className="p-column-title">Amount</span>
+                {rowData.amount_in_letter}
+            </>
+        );
+    };
+
     const sellRateBodyTemplate = (rowData: HawalaCurrency) => {
         return (
             <>
@@ -289,7 +293,7 @@ const CurrencyPage = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         // header={header}
                         responsiveLayout="scroll"
@@ -315,6 +319,13 @@ const CurrencyPage = () => {
                             header={t('HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT')}
                             sortable
                             body={amountBodyTemplate}
+                        ></Column>
+                          <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="amount"
+                            header={t('HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER')}
+                            sortable
+                            body={amountInLetterBodyTemplate}
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
@@ -460,20 +471,48 @@ const CurrencyPage = () => {
                                         </small>
                                     )}
                                 </div>
+                                <div className="field">
+                                    <label htmlFor="symbol" style={{ fontWeight: 'bold' }}>
+                                        {t('HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER')}
+                                    </label>
+                                    <InputText
+                                        id="amount_in_letter"
+                                        value={currency.amount_in_letter?.toString() ?? ''}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setCurrency((prevCurrency) => ({
+                                                ...prevCurrency,
+                                                amount_in_letter: value
+                                            }));
+                                        }}
+                                        required
+                                        autoFocus
+                                        placeholder={t('HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER')}
+                                        className={classNames({
+                                            'p-invalid': submitted && (!currency.amount_in_letter)
+                                        })}
+                                    />
+
+                                    {submitted && !currency.amount_in_letter && (
+                                        <small className="p-invalid" style={{ color: 'red' }}>
+                                            {t('THIS_FIELD_IS_REQUIRED')}
+                                        </small>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </Dialog>
 
                     <Dialog visible={deleteCurrencyDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCurrencyDialogFooter} onHide={hideDeleteCurrencyDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {currency && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')}</span>}
                         </div>
                     </Dialog>
 
                     <Dialog visible={deleteCurrencysDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteCurrencysDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {currency && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>

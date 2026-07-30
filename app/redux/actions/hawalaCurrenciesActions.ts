@@ -1,21 +1,21 @@
-import { Dispatch } from "redux";
+import { HawalaCurrency } from "@/types/interface";
 import axios from "axios";
 import { Toast } from "primereact/toast";
+import { Dispatch } from "redux";
 import {
-    FETCH_HAWALA_CURRENCIES_REQUEST,
-    FETCH_HAWALA_CURRENCIES_SUCCESS,
-    FETCH_HAWALA_CURRENCIES_FAILURE,
+    ADD_HAWALA_CURRENCY_FAIL,
     ADD_HAWALA_CURRENCY_REQUEST,
     ADD_HAWALA_CURRENCY_SUCCESS,
-    ADD_HAWALA_CURRENCY_FAIL,
-    EDIT_HAWALA_CURRENCY_REQUEST,
-    EDIT_HAWALA_CURRENCY_SUCCESS,
-    EDIT_HAWALA_CURRENCY_FAIL,
+    DELETE_HAWALA_CURRENCY_FAIL,
     DELETE_HAWALA_CURRENCY_REQUEST,
     DELETE_HAWALA_CURRENCY_SUCCESS,
-    DELETE_HAWALA_CURRENCY_FAIL,
+    EDIT_HAWALA_CURRENCY_FAIL,
+    EDIT_HAWALA_CURRENCY_REQUEST,
+    EDIT_HAWALA_CURRENCY_SUCCESS,
+    FETCH_HAWALA_CURRENCIES_FAILURE,
+    FETCH_HAWALA_CURRENCIES_REQUEST,
+    FETCH_HAWALA_CURRENCIES_SUCCESS,
 } from "../constants/hawalaCurrenciesConstants";
-import { HawalaCurrency } from "@/types/interface";
 
 const getAuthToken = () => {
     return localStorage.getItem("api_token") || "";
@@ -61,6 +61,7 @@ export const _addHawalaCurrency = (currencyData: HawalaCurrency, toast: React.Re
         formData.append('amount',currencyData.amount.toString())
         formData.append('sell_rate', parseInt(currencyData.sell_rate || '0').toString());
         formData.append('buy_rate', parseInt(currencyData.buy_rate || '0').toString());
+        formData.append('amount_in_letter',currencyData.amount_in_letter.toString());
 
 
 
@@ -113,6 +114,7 @@ export const _editHawalaCurrency = (currencyId: number, currencyData: HawalaCurr
         formData.append('amount',currencyData.amount.toString())
         formData.append('sell_rate', parseInt(currencyData.sell_rate || '0').toString());
         formData.append('buy_rate', parseInt(currencyData.buy_rate || '0').toString());
+        formData.append('amount_in_letter',currencyData.amount_in_letter.toString());
         const response = await axios.post(
             `${process.env.NEXT_PUBLIC_BASE_URL}/hawala-currencies/${currencyId}`,
             currencyData,

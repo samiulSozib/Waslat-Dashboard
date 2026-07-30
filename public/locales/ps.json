@@ -2263,7 +2263,10 @@
     "GENERAL": {
       "CANCEL": "لغوه کول"
     }
-  }
+  },
+
+    "HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER": "مبلغ په تورو"
+
 
 
 

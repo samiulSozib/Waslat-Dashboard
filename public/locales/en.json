@@ -2283,8 +2283,8 @@
     "GENERAL": {
       "CANCEL": "Cancel"
     }
-  }
+  },
 
-
+  "HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER":"Amount In Letter"
 
 }

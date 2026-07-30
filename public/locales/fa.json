@@ -2136,7 +2136,7 @@
     "EDIT": "ویرایش ووچر"
   },
 
-  
+
   "COMPANY_CODE": "کد شرکت",
   "COMPANY_CODE_PLACEHOLDER": "کد شرکت را وارد کنید. مثال: AWCC، روشن",
 
@@ -2261,7 +2261,11 @@
     "GENERAL": {
       "CANCEL": "لغو"
     }
-  }
+  },
+
+
+    "HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER": "مبلغ به حروف"
+
 
 
 
