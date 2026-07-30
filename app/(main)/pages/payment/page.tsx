@@ -510,16 +510,54 @@ const PaymentPage = () => {
         );
     };
 
-    const leftToolbarTemplate = () => {
-        return (
-            <div className="flex items-center">
-                <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-                    <i className="pi pi-search" />
-                    <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
-                </span>
-            </div>
-        );
+        const [searchValue, setSearchValue] = useState('');
+
+const leftToolbarTemplate = () => {
+
+    const handleSearch = () => {
+        setSearchTag(searchValue);
     };
+
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    };
+
+    return (
+        <React.Fragment>
+            <div className="flex align-items-center gap-2">
+                <span className="p-input-icon-left">
+                    <i className="pi pi-search" />
+                    <InputText
+                        type="search"
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.currentTarget.value)}
+                        onKeyPress={handleKeyPress}
+                        placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                    />
+                </span>
+                <Button
+                    severity="info"
+                    onClick={handleSearch}
+                    label={t('ECOMMERCE.COMMON.SEARCH')}
+                    className="p-button-sm"
+                />
+                {searchTag && (
+                    <Button
+                        severity="secondary"
+                        onClick={() => {
+                            setSearchTag('');
+                            setSearchValue('');
+                        }}
+                        className="p-button-sm p-button-outlined"
+                        label={t('CLEAR_FILTERS')}
+                    />
+                )}
+            </div>
+        </React.Fragment>
+    );
+};
 
     const resellerNameBodyTemplate = (rowData: Payment) => {
         return (
@@ -987,7 +1025,7 @@ const PaymentPage = () => {
                                             if (!option) return null;
                                             return (
                                                 <div className="flex flex-column p-2 gap-1">
-                                                    <div className="font-semibold">{option.contact_name}</div>
+                                                    <div className="font-semibold">{option.contact_name} || {option.reseller_name}</div>
                                                     <div className="text-sm text-gray-600">
                                                         {option.phone && (
                                                             <span className="ml-2 text-gray-500">{option.phone}</span>
