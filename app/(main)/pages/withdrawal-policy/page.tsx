@@ -1,29 +1,28 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
+import { addWithdrawPolicy, deleteWithdrawPolicy, editWithdrawPolicy, fetchWithdrawPolicies } from '@/app/redux/actions/withdrawPolicyActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { Currency, WithdrawalPolicy } from '@/types/interface';
+import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
+import { InputNumber } from 'primereact/inputnumber';
 import { InputText } from 'primereact/inputtext';
+import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { InputNumber } from 'primereact/inputnumber';
-import { AppDispatch } from '@/app/redux/store';
-import { Currency, WithdrawalPolicy } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+import withAuth from '../../authGuard';
 import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
-import { Badge } from 'primereact/badge';
-import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
-import { addWithdrawPolicy, deleteWithdrawPolicy, editWithdrawPolicy, fetchWithdrawPolicies } from '@/app/redux/actions/withdrawPolicyActions';
 
 const WithdrawalPolicyPage = () => {
     let emptyWithdrawalPolicy: WithdrawalPolicy = {
@@ -131,10 +130,10 @@ const WithdrawalPolicyPage = () => {
             const policyToUpdate = {
                 currency_id: Number(withdrawalPolicy.currency_id),
                 commission_value: Number(withdrawalPolicy.commission_value),
-                commission_type:withdrawalPolicy.commission_type,
+                commission_type: withdrawalPolicy.commission_type,
                 min_withdraw_amount: Number(withdrawalPolicy.min_withdraw_amount),
                 max_withdraw_amount: Number(withdrawalPolicy.max_withdraw_amount),
-                status:withdrawalPolicy.status,
+                status: withdrawalPolicy.status,
             };
             dispatch(editWithdrawPolicy(withdrawalPolicy.id, policyToUpdate, toast, t));
         } else {
@@ -146,7 +145,7 @@ const WithdrawalPolicyPage = () => {
                 commission_value: Number(policyData.commission_value),
                 min_withdraw_amount: Number(policyData.min_withdraw_amount),
                 max_withdraw_amount: Number(policyData.max_withdraw_amount),
-                
+
             };
             dispatch(addWithdrawPolicy(policyToAdd, toast, t));
         }
@@ -164,7 +163,7 @@ const WithdrawalPolicyPage = () => {
             commission_value: Number(policy.commission_value),
             min_withdraw_amount: Number(policy.min_withdraw_amount),
             max_withdraw_amount: Number(policy.max_withdraw_amount),
-            status: policy.status === true 
+            status: policy.status === true
         };
         setWithdrawalPolicy(policyToEdit);
         setWithdrawalPolicyDialog(true);
@@ -245,19 +244,67 @@ const WithdrawalPolicyPage = () => {
         );
     };
 
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <div className="flex items-center">
+    //             <span className="block mt-2 md:mt-0 p-inputicon-left w-full md:w-auto mr-4">
+    //                 <i className="pi pi-search" />
+    //                 <InputText
+    //                     type="search"
+    //                     onInput={(e) => setGlobalFilter(e.currentTarget.value)}
+    //                     placeholder={t('SEARCH')}
+    //                     className="w-full md:w-auto"
+    //                 />
+    //             </span>
+    //         </div>
+    //     );
+    // };
+
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setGlobalFilter(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
-            <div className="flex items-center">
-                <span className="block mt-2 md:mt-0 p-inputicon-left w-full md:w-auto mr-4">
-                    <i className="pi pi-search" />
-                    <InputText
-                        type="search"
-                        onInput={(e) => setGlobalFilter(e.currentTarget.value)}
-                        placeholder={t('SEARCH')}
-                        className="w-full md:w-auto"
+            <React.Fragment>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
                     />
-                </span>
-            </div>
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setGlobalFilter('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
+            </React.Fragment>
         );
     };
 
@@ -321,7 +368,7 @@ const WithdrawalPolicyPage = () => {
     };
 
     const statusBodyTemplate = (rowData: WithdrawalPolicy) => {
-        const isActive = rowData.status === true ;
+        const isActive = rowData.status === true;
         return (
             <>
                 <span className="p-column-title">{t('STATUS')}</span>
@@ -496,7 +543,7 @@ const WithdrawalPolicyPage = () => {
                                     className={classNames({
                                         'p-invalid': submitted && !withdrawalPolicy.currency_id
                                     })}
-                                    
+
                                 />
                                 {submitted && !withdrawalPolicy.currency_id && (
                                     <small className="p-invalid" style={{ color: 'red' }}>

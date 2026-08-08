@@ -1,27 +1,24 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _addSupplier, _deleteSupplier, _editSupplier, _fetchSuppliers } from '@/app/redux/actions/supplierActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { Supplier } from '@/types/interface';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
+import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { _fetchCountries } from '@/app/redux/actions/countriesActions';
-import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
-import { AppDispatch } from '@/app/redux/store';
-import { Supplier } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import { _addSupplier, _deleteSupplier, _editSupplier, _fetchSuppliers } from '@/app/redux/actions/supplierActions';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+import withAuth from '../../authGuard';
 import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
 
 const SupplierPage = () => {
@@ -143,14 +140,62 @@ const SupplierPage = () => {
         );
     };
 
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <div className="flex items-center">
+    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
+    //                 <i className="pi pi-search" />
+    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
+    //             </span>
+    //         </div>
+    //     );
+    // };
+
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setSearchTag(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
-            <div className="flex items-center">
-                <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-                    <i className="pi pi-search" />
-                    <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
-                </span>
-            </div>
+            <React.Fragment>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
+                    />
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setSearchTag('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
+            </React.Fragment>
         );
     };
 
@@ -267,7 +312,7 @@ const SupplierPage = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         // header={header}
                         responsiveLayout="scroll"
@@ -389,7 +434,7 @@ const SupplierPage = () => {
 
                     <Dialog visible={deleteSupplierDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteSupplierDialogFooter} onHide={hideDeleteSupplierDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {supplier && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{supplier.supplier_name}</b>
@@ -400,7 +445,7 @@ const SupplierPage = () => {
 
                     <Dialog visible={deleteSuppliersDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteSuppliersDialogFooter} onHide={hideDeleteSuppliersDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {supplier && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>

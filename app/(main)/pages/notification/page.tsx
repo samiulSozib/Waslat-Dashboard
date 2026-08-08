@@ -1,30 +1,28 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _createNotification, _deleteNotification, _fetchNotifications, _updateNotification } from '@/app/redux/actions/notificationActions';
+import { _fetchResellers } from '@/app/redux/actions/resellerActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { Notification } from '@/types/interface';
+import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
+import { FileUpload } from 'primereact/fileupload';
 import { InputText } from 'primereact/inputtext';
+import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { _fetchNotifications, _createNotification, _updateNotification, _deleteNotification } from '@/app/redux/actions/notificationActions';
-import { AppDispatch } from '@/app/redux/store';
-import { Notification } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
-import { customCellStyle, customCellStyleImage } from '../../utilities/customRow';
-import i18n from '@/i18n';
+import { useDispatch, useSelector } from 'react-redux';
+import withAuth from '../../authGuard';
+import { customCellStyle } from '../../utilities/customRow';
 import { isRTL } from '../../utilities/rtlUtil';
-import { FileUpload } from 'primereact/fileupload';
-import { Badge } from 'primereact/badge';
-import { Calendar } from 'primereact/calendar';
-import { _fetchResellers } from '@/app/redux/actions/resellerActions';
 
 const NotificationPage = () => {
     let emptyNotification: Notification = {
@@ -216,20 +214,68 @@ const NotificationPage = () => {
         );
     };
 
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <div className="flex items-center">
+    //             <Badge value={unreadCount} severity="danger" className="mr-2"></Badge>
+    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
+    //                 <i className="pi pi-search" />
+    //                 <InputText
+    //                     type="search"
+    //                     onInput={(e) => setGlobalFilter(e.currentTarget.value)}
+    //                     placeholder={t('SEARCH')}
+    //                     className="w-full md:w-auto"
+    //                 />
+    //             </span>
+    //         </div>
+    //     );
+    // };
+
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setGlobalFilter(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
-            <div className="flex items-center">
-                <Badge value={unreadCount} severity="danger" className="mr-2"></Badge>
-                <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-                    <i className="pi pi-search" />
-                    <InputText
-                        type="search"
-                        onInput={(e) => setGlobalFilter(e.currentTarget.value)}
-                        placeholder={t('SEARCH')}
-                        className="w-full md:w-auto"
+            <React.Fragment>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
                     />
-                </span>
-            </div>
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setGlobalFilter('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
+            </React.Fragment>
         );
     };
 

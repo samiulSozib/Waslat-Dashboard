@@ -1,32 +1,31 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _fetchCompanies } from '@/app/redux/actions/companyActions';
+import { _addService, _deleteSelectedServices, _deleteService, _editService, _fetchServiceList } from '@/app/redux/actions/serviceActions';
+import { _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
+import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { Company, Service } from '@/types/interface';
+import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
+import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { _fetchCompanies, _deleteCompany, _addCompany, _editCompany } from '@/app/redux/actions/companyActions';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { _addService, _deleteSelectedServices, _deleteService, _editService, _fetchServiceList } from '@/app/redux/actions/serviceActions';
-import { _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
-import { AppDispatch } from '@/app/redux/store';
-import { Company, Service } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
-import { customCellStyleImage } from '../../utilities/customRow';
-import i18n from '@/i18n';
-import { isRTL } from '../../utilities/rtlUtil';
-import { parseInputFormSchema, stringifyInputFormSchema } from '../../utilities/parseInputFormSchema';
-import { Badge } from 'primereact/badge';
+import { useDispatch, useSelector } from 'react-redux';
+import withAuth from '../../authGuard';
 import { CustomFields } from '../../components/CustomFields';
-import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
+import { customCellStyleImage } from '../../utilities/customRow';
+import { parseInputFormSchema, stringifyInputFormSchema } from '../../utilities/parseInputFormSchema';
+import { isRTL } from '../../utilities/rtlUtil';
 
 const Services = () => {
     let emptyService: Service = {
@@ -230,14 +229,62 @@ const Services = () => {
         );
     };
 
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <div className="flex items-center">
+    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
+    //                 <i className="pi pi-search" />
+    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
+    //             </span>
+    //         </div>
+    //     );
+    // };
+
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setSearchTag(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
-            <div className="flex items-center">
-                <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-                    <i className="pi pi-search" />
-                    <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
-                </span>
-            </div>
+            <React.Fragment>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
+                    />
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setSearchTag('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
+            </React.Fragment>
         );
     };
 
@@ -285,14 +332,14 @@ const Services = () => {
         );
     };
 
-        const telegramGroupNameBodyTemplate = (rowData: Service) => {
-            return (
-                <>
-                    <span className="p-column-title">Telegram Group Name</span>
-                    {rowData.telegram_chat_id?.group_name}
-                </>
-            );
-        };
+    const telegramGroupNameBodyTemplate = (rowData: Service) => {
+        return (
+            <>
+                <span className="p-column-title">Telegram Group Name</span>
+                {rowData.telegram_chat_id?.group_name}
+            </>
+        );
+    };
 
     const customFieldsBodyTemplate = (rowData: Service) => {
         const fieldCount = parseInputFormSchema(rowData.input_form_schema).length;
@@ -410,7 +457,7 @@ const Services = () => {
 
                             body={serviceCategoryNameBodyTemplate}
                         ></Column>
-                         <Column
+                        <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="Group Name"
                             header={t('COMPANY.TABLE.COLUMN.CHATGROUPNAME')}

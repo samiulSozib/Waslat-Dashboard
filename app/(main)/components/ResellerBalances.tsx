@@ -1,34 +1,30 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _addBalance, _deleteBalance, _editBalance } from '@/app/redux/actions/balanceActions';
+import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
+import { _fetchPaymentMethods } from '@/app/redux/actions/paymentMethodActions';
+import { _fetchResellers } from '@/app/redux/actions/resellerActions';
+import { fetchResellerBalances } from '@/app/redux/actions/resellerInformationActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { Balance, Currency } from '@/types/interface';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
+import { Paginator } from 'primereact/paginator';
+import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { _fetchCountries } from '@/app/redux/actions/countriesActions';
-import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
-import { AppDispatch } from '@/app/redux/store';
-import { Balance, Currency } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import { _addBalance, _deleteBalance, _editBalance, _fetchBalances } from '@/app/redux/actions/balanceActions';
 import { useTranslation } from 'react-i18next';
-import { _fetchResellers } from '@/app/redux/actions/resellerActions';
-import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
-import { _fetchPaymentMethods } from '@/app/redux/actions/paymentMethodActions';
-import { Calendar } from 'primereact/calendar';
-import i18n from '@/i18n';
-import { isRTL } from '../utilities/rtlUtil';
+import { useDispatch, useSelector } from 'react-redux';
 import { customCellStyle } from '../utilities/customRow';
-import { fetchResellerBalances } from '@/app/redux/actions/resellerInformationActions';
-import { Paginator } from 'primereact/paginator';
 import { generateBalanceExcelFile } from '../utilities/generateExcel';
+import { isRTL } from '../utilities/rtlUtil';
 
 interface ResellerBalancesProps {
     resellerId: number;
@@ -267,13 +263,60 @@ const ResellerBalances = ({ resellerId }: ResellerBalancesProps) => {
         );
     };
 
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <React.Fragment>
+    //             <span className="block mt-2 md:mt-0 p-input-icon-left">
+    //                 <i className="pi pi-search" />
+    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
+    //             </span>
+    //         </React.Fragment>
+    //     );
+    // };
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setSearchTag(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
             <React.Fragment>
-                <span className="block mt-2 md:mt-0 p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
-                </span>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
+                    />
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setSearchTag('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
             </React.Fragment>
         );
     };

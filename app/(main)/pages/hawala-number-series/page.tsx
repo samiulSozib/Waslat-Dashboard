@@ -1,36 +1,34 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _fetchHawalaBranchList } from '@/app/redux/actions/hawalaBranchActions';
+import {
+    _addHawalaNumberSeries,
+    _changeHawalaNumberSeriesStatus,
+    _deleteHawalaNumberSeries,
+    _editHawalaNumberSeries,
+    _fetchHawalaNextNumber,
+    _fetchHawalaNumberSeriesList
+} from '@/app/redux/actions/hawalaSeriesActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { HawalaBranch, HawalaNumberSeries } from '@/types/interface';
 import { Button } from 'primereact/button';
+import { Checkbox } from 'primereact/checkbox';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
+import { Paginator } from 'primereact/paginator';
+import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { ProgressBar } from 'primereact/progressbar';
-import { InputTextarea } from 'primereact/inputtextarea';
-import { Checkbox } from 'primereact/checkbox';
-import { AppDispatch } from '@/app/redux/store';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
 import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
-import { Paginator } from 'primereact/paginator';
 import { isRTL } from '../../utilities/rtlUtil';
-import {
-    _fetchHawalaNumberSeriesList,
-    _addHawalaNumberSeries,
-    _editHawalaNumberSeries,
-    _deleteHawalaNumberSeries,
-    _changeHawalaNumberSeriesStatus,
-    _fetchHawalaNextNumber
-} from '@/app/redux/actions/hawalaSeriesActions';
-import { HawalaBranch, HawalaNumberSeries } from '@/types/interface';
-import { _fetchHawalaBranchList } from '@/app/redux/actions/hawalaBranchActions';
 
 const HawalaNumberSeriesPage = () => {
     let emptyHawalaSeries: HawalaNumberSeries = {
@@ -170,19 +168,67 @@ const HawalaNumberSeriesPage = () => {
         );
     };
 
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <div className="flex items-center">
+    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
+    //                 <i className="pi pi-search" />
+    //                 <InputText
+    //                     type="search"
+    //                     onInput={(e) => setSearchTag(e.currentTarget.value)}
+    //                     placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+    //                     className="w-full md:w-auto"
+    //                 />
+    //             </span>
+    //         </div>
+    //     );
+    // };
+
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setSearchTag(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
-            <div className="flex items-center">
-                <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-                    <i className="pi pi-search" />
-                    <InputText
-                        type="search"
-                        onInput={(e) => setSearchTag(e.currentTarget.value)}
-                        placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        className="w-full md:w-auto"
+            <React.Fragment>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
                     />
-                </span>
-            </div>
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setSearchTag('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
+            </React.Fragment>
         );
     };
 
@@ -244,11 +290,11 @@ const HawalaNumberSeriesPage = () => {
     //             <span className="p-column-title">{t('HAWALA_SERIES.TABLE.NEXT_NUMBER')}</span>
     //             <div className="flex items-center gap-2">
     //                 <span>{rowData.prefix}{rowData.current_number + 1}</span>
-    //                 <Button 
-    //                     icon="pi pi-refresh" 
-    //                     rounded 
-    //                     text 
-    //                     severity="info" 
+    //                 <Button
+    //                     icon="pi pi-refresh"
+    //                     rounded
+    //                     text
+    //                     severity="info"
     //                     size="small"
     //                     onClick={() => fetchNextNumber(rowData.branch_id)}
     //                     tooltip={t('HAWALA_SERIES.FETCH_NEXT_NUMBER')}
@@ -415,11 +461,11 @@ const HawalaNumberSeriesPage = () => {
                             body={currentNumberBodyTemplate}
                             sortable
                         />
-                        {/* <Column 
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} 
-                            field="next_number" 
-                            header={t('HAWALA_SERIES.TABLE.NEXT_NUMBER')} 
-                            body={nextNumberBodyTemplate} 
+                        {/* <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            field="next_number"
+                            header={t('HAWALA_SERIES.TABLE.NEXT_NUMBER')}
+                            body={nextNumberBodyTemplate}
                         /> */}
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}

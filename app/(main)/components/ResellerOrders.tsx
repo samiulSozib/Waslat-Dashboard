@@ -1,31 +1,29 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _fetchCompanies } from '@/app/redux/actions/companyActions';
+import { _changeOrderStatus, _deleteOrder } from '@/app/redux/actions/orderActions';
+import { fetchResellerOrders } from '@/app/redux/actions/resellerInformationActions';
+import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { Order } from '@/types/interface';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
+import { Paginator } from 'primereact/paginator';
+import { ProgressBar } from 'primereact/progressbar';
+import { SplitButton } from 'primereact/splitbutton';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { _fetchCompanies, _deleteCompany, _addCompany, _editCompany } from '@/app/redux/actions/companyActions';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { Paginator } from 'primereact/paginator';
-import { AppDispatch } from '@/app/redux/store';
-import { Order } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import { _changeOrderStatus, _deleteOrder, _fetchOrders } from '@/app/redux/actions/orderActions';
 import { useTranslation } from 'react-i18next';
-import { SplitButton } from 'primereact/splitbutton';
-import i18n from '@/i18n';
-import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
-import { fetchResellerOrders } from '@/app/redux/actions/resellerInformationActions';
-import { isRTL } from '../utilities/rtlUtil';
+import { useDispatch, useSelector } from 'react-redux';
 import { customCellStyle } from '../utilities/customRow';
 import { generateOrderExcelFile } from '../utilities/generateExcel';
+import { isRTL } from '../utilities/rtlUtil';
 
 interface ResellerOrdersProps {
     resellerId: number;
@@ -303,13 +301,61 @@ const ResellerOrders = ({ resellerId }: ResellerOrdersProps) => {
         );
     };
 
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <React.Fragment>
+    //             <span className="block mt-2 md:mt-0 p-input-icon-left">
+    //                 <i className="pi pi-search" />
+    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
+    //             </span>
+    //         </React.Fragment>
+    //     );
+    // };
+
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setSearchTag(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
             <React.Fragment>
-                <span className="block mt-2 md:mt-0 p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
-                </span>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
+                    />
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setSearchTag('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
             </React.Fragment>
         );
     };

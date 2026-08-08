@@ -1,34 +1,31 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _addBundle, _deleteBundle, _editBundle, _fetchBundleList } from '@/app/redux/actions/bundleActions';
+import { _fetchCompanies } from '@/app/redux/actions/companyActions';
+import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
+import { _deleteSelectedTransactions, _fetchMoneyTransactionsList } from '@/app/redux/actions/moneyTransactionsActions';
+import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
+import { _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { Bundle, MoneyTransaction } from '@/types/interface';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
+import { Paginator } from 'primereact/paginator';
+import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { _fetchCompanies, _deleteCompany, _addCompany, _editCompany } from '@/app/redux/actions/companyActions';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { _addService, _deleteService, _editService, _fetchServiceList } from '@/app/redux/actions/serviceActions';
-import { _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
-import { _addBundle, _deleteBundle, _editBundle, _fetchBundleList } from '@/app/redux/actions/bundleActions';
-import { Paginator } from 'primereact/paginator';
-import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
-import { currenciesReducer } from '../../../redux/reducers/currenciesReducer';
-import { AppDispatch } from '@/app/redux/store';
-import { Bundle, MoneyTransaction } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import { _deleteSelectedTransactions, _fetchMoneyTransactionsList } from '@/app/redux/actions/moneyTransactionsActions';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+import withAuth from '../../authGuard';
 import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
-import { isRTL } from '../../utilities/rtlUtil';
 import { generateTransactionExcelFile } from '../../utilities/generateExcel';
+import { isRTL } from '../../utilities/rtlUtil';
 
 const TransactionPage = () => {
     let emptyBundle: Bundle = {
@@ -336,13 +333,61 @@ const TransactionPage = () => {
         );
     };
 
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <React.Fragment>
+    //             <span className="block mt-2 md:mt-0 p-input-icon-left">
+    //                 <i className="pi pi-search" />
+    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
+    //             </span>
+    //         </React.Fragment>
+    //     );
+    // };
+
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setSearchTag(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
             <React.Fragment>
-                <span className="block mt-2 md:mt-0 p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
-                </span>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
+                    />
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setSearchTag('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
             </React.Fragment>
         );
     };
@@ -392,31 +437,31 @@ const TransactionPage = () => {
         );
     };
 
-const bundleTitleBodyTemplate = (rowData: MoneyTransaction) => {
-    const isStatusValid = rowData.order?.status === 1 || rowData.order?.status === "1";
-    
-    return (
-        <>
-            <span className="p-column-title">Bundle Title</span>
-            <span style={{ fontSize: '0.9rem' }}>
-                {isStatusValid ? rowData.order?.bundle?.bundle_title : "X"}
-            </span>
-        </>
-    );
-};
+    const bundleTitleBodyTemplate = (rowData: MoneyTransaction) => {
+        const isStatusValid = rowData.order?.status === 1 || rowData.order?.status === "1";
 
-const recharableAmountBodyTemplate = (rowData: MoneyTransaction) => {
-    const isStatusValid = rowData.order?.status === 1 || rowData.order?.status === "1";
-    
-    return (
-        <>
-            <span className="p-column-title">Rechargeable Amount</span>
-            <span style={{ fontSize: '0.9rem' }}>
-                {isStatusValid ? rowData.order?.rechargeble_account : "X"}
-            </span>
-        </>
-    );
-};
+        return (
+            <>
+                <span className="p-column-title">Bundle Title</span>
+                <span style={{ fontSize: '0.9rem' }}>
+                    {isStatusValid ? rowData.order?.bundle?.bundle_title : "X"}
+                </span>
+            </>
+        );
+    };
+
+    const recharableAmountBodyTemplate = (rowData: MoneyTransaction) => {
+        const isStatusValid = rowData.order?.status === 1 || rowData.order?.status === "1";
+
+        return (
+            <>
+                <span className="p-column-title">Rechargeable Amount</span>
+                <span style={{ fontSize: '0.9rem' }}>
+                    {isStatusValid ? rowData.order?.rechargeble_account : "X"}
+                </span>
+            </>
+        );
+    };
 
     const transactionDateBodyTemplate = (rowData: MoneyTransaction) => {
         const formatDate = (dateString: string) => {
@@ -511,7 +556,7 @@ const recharableAmountBodyTemplate = (rowData: MoneyTransaction) => {
 
     const onPageChange = (event: any) => {
         const page = event.page + 1;
-        dispatch(_fetchMoneyTransactionsList(page, searchTag,activeFilters));
+        dispatch(_fetchMoneyTransactionsList(page, searchTag, activeFilters));
     };
 
     const handleSubmitFilter = (filters: any) => {
@@ -574,7 +619,7 @@ const recharableAmountBodyTemplate = (rowData: MoneyTransaction) => {
                             field="Remaining Balance"
                             header={t('TRANSACTION.TABLE.COLUMN.REMAININGBALANCE')}
                             body={remainingBalanceBodyTemplate}
-                            
+
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}

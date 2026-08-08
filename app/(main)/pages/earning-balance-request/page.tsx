@@ -1,30 +1,28 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _addEarningBalanceRequest, _changeEarningBalanceStatus, _fetchEarningBalanceRequestList } from '@/app/redux/actions/earningBalanceActions';
+import { _fetchResellers } from '@/app/redux/actions/resellerActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { EarningBalance, Reseller } from '@/types/interface';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
+import { InputNumber } from 'primereact/inputnumber';
 import { InputText } from 'primereact/inputtext';
+import { ProgressBar } from 'primereact/progressbar';
+import { SplitButton } from 'primereact/splitbutton';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { Paginator } from 'primereact/paginator';
-import { AppDispatch } from '@/app/redux/store';
-import { EarningBalance, Reseller } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
-import { SplitButton } from 'primereact/splitbutton';
+import { useDispatch, useSelector } from 'react-redux';
+import withAuth from '../../authGuard';
 import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
-import { _changeEarningBalanceStatus, _fetchEarningBalanceRequestList, _addEarningBalanceRequest } from '@/app/redux/actions/earningBalanceActions';
 import { isRTL } from '../../utilities/rtlUtil';
-import { _fetchResellers } from '@/app/redux/actions/resellerActions';
-import { InputNumber } from 'primereact/inputnumber';
 
 const EarningBalanceRequest = () => {
     // State management
@@ -118,13 +116,61 @@ const EarningBalanceRequest = () => {
     };
 
     // Templates for DataTable
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <React.Fragment>
+    //             <span className="block mt-2 md:mt-0 p-input-icon-left">
+    //                 <i className="pi pi-search" />
+    //                 <InputText type="search" onInput={(e) => setSearchTerm(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
+    //             </span>
+    //         </React.Fragment>
+    //     );
+    // };
+
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setSearchTerm(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
             <React.Fragment>
-                <span className="block mt-2 md:mt-0 p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText type="search" onInput={(e) => setSearchTerm(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
-                </span>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
+                    />
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setSearchTerm('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
             </React.Fragment>
         );
     };
@@ -290,15 +336,15 @@ const EarningBalanceRequest = () => {
                         /> */}
                         <Column body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
 
-                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.RESELLER')} body={resellerBodyTemplate}  style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
-                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.AMOUNT')} body={amountBodyTemplate}  style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
+                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.RESELLER')} body={resellerBodyTemplate} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
+                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.AMOUNT')} body={amountBodyTemplate} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
 
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="hawala_number"
                             header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.REVIEWED_BY')}
                             body={reviewedByBodyTemplate}
-                            
+
                         ></Column>
 
                         <Column
@@ -306,7 +352,7 @@ const EarningBalanceRequest = () => {
                             field="hawala_number"
                             header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.REVIEWED_AT')}
                             body={reviewedAtBodyTemplate}
-                            
+
                         ></Column>
 
                         <Column
@@ -314,9 +360,9 @@ const EarningBalanceRequest = () => {
                             field="hawala_number"
                             header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.NOTES')}
                             body={adminNotesBodyTemplate}
-                            
+
                         ></Column>
-                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.STATUS')} body={statusBodyTemplate}  style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
+                        <Column header={t('EARNING_BALANCE_REQUEST.TABLE.COLUMN.STATUS')} body={statusBodyTemplate} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} />
                     </DataTable>
 
                     {/* Add Earning Balance Dialog */}
@@ -393,7 +439,7 @@ const EarningBalanceRequest = () => {
                     {/* Status Change Dialog */}
                     <Dialog visible={statusChangeDialog} style={{ width: '450px' }} header={t('EARNING_BALANCE_REQUEST.STATUS_DIALOG.TITLE')} modal footer={statusChangeDialogFooter} onHide={() => setStatusChangeDialog(false)}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {selectedRequest && (
                                 <span>
                                     {t('EARNING_BALANCE_REQUEST.STATUS_DIALOG.CONFIRMATION')}
@@ -419,7 +465,7 @@ const EarningBalanceRequest = () => {
                                     label={t('FORM.GENERAL.SUBMIT')}
                                     icon="pi pi-check"
                                     severity="success"
-                                    onClick={() => {}} // Implement delete functionality
+                                    onClick={() => { }} // Implement delete functionality
                                     loading={loading}
                                 />
                             </>
@@ -427,7 +473,7 @@ const EarningBalanceRequest = () => {
                         onHide={hideDeleteDialog}
                     >
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {selectedRequest && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the request for <b>{selectedRequest.amount}</b> {t('FOR')} {selectedRequest.reseller?.reseller_name}?

@@ -1,37 +1,35 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
+import { _addHawala, _changeHawalaStatus, _deleteHawala, _fetchHawalaList } from '@/app/redux/actions/hawalaActions';
+import { _fetchHawalaBranchList } from '@/app/redux/actions/hawalaBranchActions';
+import { _fetchHawalaCurrencies } from '@/app/redux/actions/hawalaCurrenciesActions';
+import { _fetchHawalaNextNumber } from '@/app/redux/actions/hawalaSeriesActions';
+import { _fetchResellers } from '@/app/redux/actions/resellerActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { Currency, Hawala, Order } from '@/types/interface';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
+import { InputTextarea } from 'primereact/inputtextarea';
+import { Paginator } from 'primereact/paginator';
+import { ProgressBar } from 'primereact/progressbar';
+import { SplitButton } from 'primereact/splitbutton';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { Paginator } from 'primereact/paginator';
-import { AppDispatch } from '@/app/redux/store';
-import { Currency, Hawala, HawalaBranch, Order } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
-import { SplitButton } from 'primereact/splitbutton';
+import { useDispatch, useSelector } from 'react-redux';
+import withAuth from '../../authGuard';
 import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
-import { _addHawala, _changeHawalaStatus, _deleteHawala, _fetchHawalaList } from '@/app/redux/actions/hawalaActions';
 import { isRTL } from '../../utilities/rtlUtil';
-import { _fetchHawalaNextNumber } from '@/app/redux/actions/hawalaSeriesActions';
-import { _fetchHawalaCurrencies } from '@/app/redux/actions/hawalaCurrenciesActions';
-import { _fetchHawalaBranchList } from '@/app/redux/actions/hawalaBranchActions';
-import { Card } from 'primereact/card';
-import { _fetchResellers } from '@/app/redux/actions/resellerActions';
-import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
-import { Checkbox } from 'primereact/checkbox';
-import { InputTextarea } from 'primereact/inputtextarea';
-import { useRouter, useSearchParams } from 'next/navigation';
 
 // Form Data Interface
 interface HawalaFormData {
@@ -474,13 +472,61 @@ const HawalaPage = () => {
         );
     };
 
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <React.Fragment>
+    //             <span className="block mt-2 md:mt-0 p-input-icon-left">
+    //                 <i className="pi pi-search" />
+    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
+    //             </span>
+    //         </React.Fragment>
+    //     );
+    // };
+
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setSearchTag(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
             <React.Fragment>
-                <span className="block mt-2 md:mt-0 p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
-                </span>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
+                    />
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setSearchTag('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
             </React.Fragment>
         );
     };

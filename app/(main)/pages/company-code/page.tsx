@@ -1,28 +1,25 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _fetchCompanies } from '@/app/redux/actions/companyActions';
+import { _addCompanyCode, _deleteCompanyCode, _deleteSelectedCompanyCodes, _editCompanyCode, _fetchCompanyCodes } from '@/app/redux/actions/companyCodeActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { Company, CompanyCode } from '@/types/interface';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
+import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { _fetchCompanies, _deleteCompany, _addCompany, _editCompany } from '@/app/redux/actions/companyActions';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { _fetchCountries } from '@/app/redux/actions/countriesActions';
-import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
-import { _addCompanyCode, _deleteCompanyCode, _deleteSelectedCompanyCodes, _editCompanyCode, _fetchCompanyCodes } from '@/app/redux/actions/companyCodeActions';
-import { AppDispatch } from '@/app/redux/store';
-import { Company, CompanyCode } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+import withAuth from '../../authGuard';
 import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
 
 const CompanyCodePage = () => {
@@ -102,9 +99,9 @@ const CompanyCodePage = () => {
 
     const editCompanyCode = (companyCode: CompanyCode) => {
         //console.log(companyCode.company)
-                const matchingCompany = companies.find((r: any) => r.id === companyCode.company?.id);
+        const matchingCompany = companies.find((r: any) => r.id === companyCode.company?.id);
 
-        setCompanyCode({ ...companyCode,company:matchingCompany });
+        setCompanyCode({ ...companyCode, company: matchingCompany });
 
         setCompanyCodeDialog(true);
     };
@@ -125,7 +122,7 @@ const CompanyCodePage = () => {
 
 
 
-        const confirmDeleteSelected = () => {
+    const confirmDeleteSelected = () => {
         if (!selectedCompanyCodes || (selectedCompanyCodes as any).length === 0) {
             toast.current?.show({
                 severity: 'warn',
@@ -138,28 +135,28 @@ const CompanyCodePage = () => {
         setDeleteCompanyCodesDialog(true);
     };
 
-        const deleteSelectedCompanyCodes = async() => {
-            if (!selectedCompanyCodes || (selectedCompanyCodes as any).length === 0) {
-                toast.current?.show({
-                    severity: 'error',
-                    summary: t('VALIDATION_ERROR'),
-                    detail: t('NO_SELECTED_ITEMS_FOUND'),
-                    life: 3000
-                });
-                return;
-            }
+    const deleteSelectedCompanyCodes = async () => {
+        if (!selectedCompanyCodes || (selectedCompanyCodes as any).length === 0) {
+            toast.current?.show({
+                severity: 'error',
+                summary: t('VALIDATION_ERROR'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
 
-            const selectedIds = (selectedCompanyCodes as CompanyCode[]).map((companyCode) => companyCode.id);
-
-
-            await _deleteSelectedCompanyCodes(selectedIds,toast,t)
-            dispatch(_fetchCompanyCodes())
+        const selectedIds = (selectedCompanyCodes as CompanyCode[]).map((companyCode) => companyCode.id);
 
 
+        await _deleteSelectedCompanyCodes(selectedIds, toast, t)
+        dispatch(_fetchCompanyCodes())
 
-            setSelectedCompanyCodes(null)
-            setDeleteCompanyCodesDialog(false)
-        };
+
+
+        setSelectedCompanyCodes(null)
+        setDeleteCompanyCodesDialog(false)
+    };
 
 
     const rightToolbarTemplate = () => {
@@ -190,14 +187,61 @@ const CompanyCodePage = () => {
         );
     };
 
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <div className="flex items-center">
+    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
+    //                 <i className="pi pi-search" />
+    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
+    //             </span>
+    //         </div>
+    //     );
+    // };
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setSearchTag(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
-            <div className="flex items-center">
-                <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-                    <i className="pi pi-search" />
-                    <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
-                </span>
-            </div>
+            <React.Fragment>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
+                    />
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setSearchTag('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
+            </React.Fragment>
         );
     };
 
@@ -271,7 +315,7 @@ const CompanyCodePage = () => {
     const deleteCompaniesDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCompanyCodesDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedCompanyCodes}/>
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedCompanyCodes} />
         </>
     );
 
@@ -316,7 +360,7 @@ const CompanyCodePage = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         // header={header}
                         responsiveLayout="scroll"
@@ -326,29 +370,29 @@ const CompanyCodePage = () => {
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="reserved_digit"
                             header={t('COMPANYCODE.TABLE.COLUMN.RESERVEDDIGIT')}
-                            
+
                             body={reservedDigitBodyTemplate}
-                            
+
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="company.country.country_name"
                             header={t('COMPANYCODE.TABLE.COLUMN.COUNTRYNAME')}
                             body={countryNameBodyTemplate}
-                            
+
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="company.company_name"
                             header={t('COMPANYCODE.TABLE.COLUMN.COMPANYNAME')}
-                            
+
                             body={companyNameBodyTemplate}
                         ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="company.country.country_telecom_code"
                             header={t('COMPANYCODE.TABLE.COLUMN.COUNTRYCODE')}
-                            
+
                             body={countryCodeBodyTemplate}
                         ></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
@@ -414,7 +458,7 @@ const CompanyCodePage = () => {
 
                     <Dialog visible={deleteCompanyCodeDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteCompanyCodeDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {companyCode && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{companyCode.reserved_digit}</b>
@@ -425,7 +469,7 @@ const CompanyCodePage = () => {
 
                     <Dialog visible={deleteCompanyCodesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteCompanyCodesDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {companyCodes && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>

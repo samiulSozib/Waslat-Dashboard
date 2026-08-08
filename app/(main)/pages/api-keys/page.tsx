@@ -1,37 +1,36 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import {
+    _createApiKey,
+    _deleteApiKey,
+    _fetchApiKeys,
+    _regenerateApiKey,
+    _updateApiKey
+} from '@/app/redux/actions/apiKeyActions';
+import { _fetchResellers } from '@/app/redux/actions/resellerActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { ApiKey } from '@/types/interface';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from 'primereact/button';
+import { Calendar } from 'primereact/calendar';
+import { Chip } from 'primereact/chip';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
+import { ProgressBar } from 'primereact/progressbar';
+import { Tag } from 'primereact/tag';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { AppDispatch } from '@/app/redux/store';
-import { ApiKey } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import {
-    _fetchApiKeys,
-    _createApiKey,
-    _updateApiKey,
-    _deleteApiKey,
-    _regenerateApiKey
-} from '@/app/redux/actions/apiKeyActions';
-import { _fetchResellers } from '@/app/redux/actions/resellerActions';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+import withAuth from '../../authGuard';
 import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
-import { Tag } from 'primereact/tag';
-import { Chip } from 'primereact/chip';
-import { Calendar } from 'primereact/calendar';
-import { useRouter, useSearchParams } from 'next/navigation';
 
 const ApiKeysPage = () => {
     let emptyApiKey: Partial<ApiKey> = {
@@ -350,17 +349,64 @@ const ApiKeysPage = () => {
         );
     };
 
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <div className="p-input-icon-left w-full sm:w-auto">
+    //             <i className="pi pi-search" />
+    //             <InputText
+    //                 type="search"
+    //                 onInput={(e) => setSearchTag(e.currentTarget.value)}
+    //                 placeholder={t('SEARCH_API_KEYS')}
+    //                 className="w-full"
+    //             />
+    //         </div>
+    //     );
+    // };
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setSearchTag(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
-            <div className="p-input-icon-left w-full sm:w-auto">
-                <i className="pi pi-search" />
-                <InputText
-                    type="search"
-                    onInput={(e) => setSearchTag(e.currentTarget.value)}
-                    placeholder={t('SEARCH_API_KEYS')}
-                    className="w-full"
-                />
-            </div>
+            <React.Fragment>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
+                    />
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setSearchTag('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
+            </React.Fragment>
         );
     };
 
@@ -436,10 +482,10 @@ const ApiKeysPage = () => {
         const isExpired = rowData.expires_at && new Date(rowData.expires_at) < new Date();
         const status = rowData.is_active ? (isExpired ? 'expired' : 'active') : 'inactive';
 
-        const statusConfig: Record<string, { severity: string,  label: string }> = {
+        const statusConfig: Record<string, { severity: string, label: string }> = {
             'active': { severity: 'success', label: t('ACTIVE') },
-            'inactive': { severity: 'danger',  label: t('INACTIVE') },
-            'expired': { severity: 'warning',  label: t('EXPIRED') }
+            'inactive': { severity: 'danger', label: t('INACTIVE') },
+            'expired': { severity: 'warning', label: t('EXPIRED') }
         };
 
         const config = statusConfig[status] || statusConfig['inactive'];

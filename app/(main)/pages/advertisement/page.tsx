@@ -1,41 +1,37 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _addAdvertisement, _deleteAdvertisement, _editAdvertisement, _fetchAdvertisements } from '@/app/redux/actions/advertisementActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { Advertisement } from '@/types/interface';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
+import { FileUpload } from 'primereact/fileupload';
 import { InputText } from 'primereact/inputtext';
+import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
-import { AppDispatch } from '@/app/redux/store';
-import { Advertisement } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
-import { _fetchLanguages } from '@/app/redux/actions/languageActions';
-import { FileUpload } from 'primereact/fileupload';
-import { _addAdvertisement, _deleteAdvertisement, _editAdvertisement, _fetchAdvertisements } from '@/app/redux/actions/advertisementActions';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+import withAuth from '../../authGuard';
 import { customCellStyleImage } from '../../utilities/customRow';
-import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
 
 const AdvertisementPage = () => {
 
-    let emptyAdvertisement:Advertisement={
-        id:0,
-        advertisement_title:'',
-        ad_slider_image_url:'',
-        status:0,
-        deleted_at:'',
-        created_at:'',
-        updated_at:''
+    let emptyAdvertisement: Advertisement = {
+        id: 0,
+        advertisement_title: '',
+        ad_slider_image_url: '',
+        status: 0,
+        deleted_at: '',
+        created_at: '',
+        updated_at: ''
     }
 
 
@@ -43,22 +39,22 @@ const AdvertisementPage = () => {
     const [advertisementDialog, setAdvertisementDialog] = useState(false);
     const [deleteAdvertisementDialog, setDeleteAdvertisementDialog] = useState(false);
     const [deleteAdvertisementsDialog, setDeleteAdvertisementsDialog] = useState(false);
-    const [advertisement,setAdvertisement]=useState<Advertisement>(emptyAdvertisement)
+    const [advertisement, setAdvertisement] = useState<Advertisement>(emptyAdvertisement)
     const [selectedCompanies, setSelectedAdvertisement] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
     const dt = useRef<DataTable<any>>(null);
-    const dispatch=useDispatch<AppDispatch>()
-    const {advertisements,loading}=useSelector((state:any)=>state.advertisementsReducer)
-    const {t}=useTranslation()
-    const [searchTag,setSearchTag]=useState("")
+    const dispatch = useDispatch<AppDispatch>()
+    const { advertisements, loading } = useSelector((state: any) => state.advertisementsReducer)
+    const { t } = useTranslation()
+    const [searchTag, setSearchTag] = useState("")
 
 
 
-    useEffect(()=>{
+    useEffect(() => {
         dispatch(_fetchAdvertisements(searchTag))
-    },[dispatch,searchTag])
+    }, [dispatch, searchTag])
 
     const openNew = () => {
         setAdvertisement(emptyAdvertisement)
@@ -83,7 +79,7 @@ const AdvertisementPage = () => {
 
     const saveAdvertisement = () => {
         setSubmitted(true);
-        if (!advertisement.advertisement_title  ) {
+        if (!advertisement.advertisement_title) {
 
             toast.current?.show({
                 severity: 'error',
@@ -91,13 +87,13 @@ const AdvertisementPage = () => {
                 detail: t('PLEASE_FILLED_ALL_REQUIRED_FIELDS'),
                 life: 3000,
             });
-        return;
-    }
+            return;
+        }
         if (advertisement.id && advertisement.id !== 0) {
-            dispatch(_editAdvertisement(advertisement.id,advertisement,toast,t));
+            dispatch(_editAdvertisement(advertisement.id, advertisement, toast, t));
 
         } else {
-            dispatch(_addAdvertisement(advertisement,toast,t));
+            dispatch(_addAdvertisement(advertisement, toast, t));
         }
 
         setAdvertisementDialog(false);
@@ -106,7 +102,7 @@ const AdvertisementPage = () => {
     };
 
     const editAdvertisement = (advertisement: Advertisement) => {
-        setAdvertisement({ ...advertisement});
+        setAdvertisement({ ...advertisement });
 
         setAdvertisementDialog(true);
     };
@@ -121,7 +117,7 @@ const AdvertisementPage = () => {
             console.error("Advertisement  ID is undefined.");
             return;
         }
-        dispatch(_deleteAdvertisement(advertisement?.id,toast,t))
+        dispatch(_deleteAdvertisement(advertisement?.id, toast, t))
         setDeleteAdvertisementDialog(false);
 
     };
@@ -144,30 +140,77 @@ const AdvertisementPage = () => {
         );
     };
 
+    // const leftToolbarTemplate = () => {
+    //     return (
+    //         <div className="flex items-center">
+    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
+    //                 <i className="pi pi-search" />
+    //                 <InputText
+    //                     type="search"
+    //                     onInput={(e) => setSearchTag(e.currentTarget.value)}
+    //                     placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+    //                     className="w-full md:w-auto"
+    //                 />
+    //             </span>
+    //         </div>
+    //     );
+    // };
+    const [localSearchTerm, setLocalSearchTerm] = useState('');
+
     const leftToolbarTemplate = () => {
+
+        const handleSearch = () => {
+            setSearchTag(localSearchTerm);
+        };
+
+        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
+
         return (
-            <div className="flex items-center">
-                <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-                    <i className="pi pi-search" />
-                    <InputText
-                        type="search"
-                        onInput={(e) => setSearchTag(e.currentTarget.value)}
-                        placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        className="w-full md:w-auto"
+            <React.Fragment>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={localSearchTerm}
+                            onChange={(e) => setLocalSearchTerm(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
+                    <Button
+                        label={t('SEARCH')}
+                        onClick={handleSearch}
+                        className="p-button-sm"
                     />
-                </span>
-            </div>
+                    {localSearchTerm && (
+                        <Button
+                            icon="pi pi-times"
+                            onClick={() => {
+                                setLocalSearchTerm('');
+                                setSearchTag('');
+                            }}
+                            className="p-button-sm p-button-secondary p-button-text"
+
+                        />
+                    )}
+                </div>
+            </React.Fragment>
         );
     };
 
     const imageBodyTemplate = (rowData: Advertisement) => {
-            return (
-                <>
-                    <span className="p-column-title">Image</span>
-                    <img src={`${rowData.ad_slider_image_url}`} alt={rowData.ad_slider_image_url?.toString()} className="shadow-2" width="60" />
-                </>
-            );
-        };
+        return (
+            <>
+                <span className="p-column-title">Image</span>
+                <img src={`${rowData.ad_slider_image_url}`} alt={rowData.ad_slider_image_url?.toString()} className="shadow-2" width="60" />
+            </>
+        );
+    };
 
 
     const advertisementTitleBodyTemplate = (rowData: Advertisement) => {
@@ -180,30 +223,30 @@ const AdvertisementPage = () => {
     };
 
     const statusBodyTemplate = (rowData: Advertisement) => {
-            // Define the text and background color based on the status value
-            const getStatusText = (status: string) => {
-                return status == '1' ? 'Active' : 'Deactivated';
-            };
-
-            const getStatusClasses = (status: number) => {
-                return status == 1
-                    ? 'bg-green-500 text-white'
-                    : 'bg-red-500 text-white';
-            };
-
-            return (
-                <>
-                    <span className="p-column-title">Status</span>
-                    <span style={{borderRadius:"5px"}}
-                        className={`inline-block px-2 py-1 rounded text-sm font-semibold ${getStatusClasses(
-                            rowData.status
-                        )}`}
-                    >
-                        {getStatusText(rowData?.status?.toString())}
-                    </span>
-                </>
-            );
+        // Define the text and background color based on the status value
+        const getStatusText = (status: string) => {
+            return status == '1' ? 'Active' : 'Deactivated';
         };
+
+        const getStatusClasses = (status: number) => {
+            return status == 1
+                ? 'bg-green-500 text-white'
+                : 'bg-red-500 text-white';
+        };
+
+        return (
+            <>
+                <span className="p-column-title">Status</span>
+                <span style={{ borderRadius: "5px" }}
+                    className={`inline-block px-2 py-1 rounded text-sm font-semibold ${getStatusClasses(
+                        rowData.status
+                    )}`}
+                >
+                    {getStatusText(rowData?.status?.toString())}
+                </span>
+            </>
+        );
+    };
 
 
 
@@ -214,7 +257,7 @@ const AdvertisementPage = () => {
     const actionBodyTemplate = (rowData: Advertisement) => {
         return (
             <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"}  onClick={()=>editAdvertisement(rowData)}/>
+                <Button icon="pi pi-pencil" rounded severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"} onClick={() => editAdvertisement(rowData)} />
                 <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteAdvertisement(rowData)} />
             </>
         );
@@ -233,19 +276,19 @@ const AdvertisementPage = () => {
     const advertisementDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''} onClick={saveAdvertisement} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveAdvertisement} />
         </>
     );
     const deleteAdvertisementDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteAdvertisementDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''} onClick={deleteAdvertisement} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteAdvertisement} />
         </>
     );
     const deleteCompaniesDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteAdvertisementsDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''}  />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
         </>
     );
 
@@ -272,30 +315,30 @@ const AdvertisementPage = () => {
                         className={`datatable-responsive`}
                         paginatorTemplate={
                             isRTL()
-                            ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink'
-                            : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                                ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink'
+                                : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
                         }
                         currentPageReportTemplate={
                             isRTL()
-                            ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`  // localized RTL string
-                            : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
+                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`  // localized RTL string
+                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
                         }
                         globalFilter={globalFilter}
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         // header={header}
                         responsiveLayout="scroll"
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                     >
                         {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTIMAGE')} sortable body={imageBodyTemplate}></Column>
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="name" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTTITLE')}  sortable body={advertisementTitleBodyTemplate}></Column>
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="status" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTSTATUS')}  body={statusBodyTemplate} sortable></Column>
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTIMAGE')} sortable body={imageBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="name" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTTITLE')} sortable body={advertisementTitleBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="status" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTSTATUS')} body={statusBodyTemplate} sortable></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
 
-                    <Dialog visible={advertisementDialog}  style={{ width: '700px',padding:'5px' }} header={t('ADVERTISEMENT.DETAILS')} modal className="p-fluid" footer={advertisementDialogFooter} onHide={hideDialog}>
-                        <div className='card' style={{padding:'40px'}}></div>
+                    <Dialog visible={advertisementDialog} style={{ width: '700px', padding: '5px' }} header={t('ADVERTISEMENT.DETAILS')} modal className="p-fluid" footer={advertisementDialogFooter} onHide={hideDialog}>
+                        <div className='card' style={{ padding: '40px' }}></div>
                         {advertisement.ad_slider_image_url && (
                             <img
                                 src={
@@ -309,7 +352,7 @@ const AdvertisementPage = () => {
                             />
                         )}
                         <FileUpload
-                        mode='basic'
+                            mode='basic'
                             name="company_logo"
                             accept="image/*"
                             customUpload
@@ -317,10 +360,10 @@ const AdvertisementPage = () => {
                                 ...prev,
                                 ad_slider_image_url: e.files[0],
                             }))}
-                            style={{textAlign:'center',marginBottom:'10px'}}
+                            style={{ textAlign: 'center', marginBottom: '10px' }}
                         />
                         <div className="field">
-                            <label htmlFor="advertisement_title" style={{fontWeight:'bold'}}>{t('ADVERTISEMENT.FORM.INPUT.ADVERTISEMENTTITLE')}</label>
+                            <label htmlFor="advertisement_title" style={{ fontWeight: 'bold' }}>{t('ADVERTISEMENT.FORM.INPUT.ADVERTISEMENTTITLE')}</label>
                             <InputText
                                 id="advertisement_title"
                                 value={advertisement.advertisement_title}
@@ -341,7 +384,7 @@ const AdvertisementPage = () => {
                         </div>
 
                         <div className="field">
-                            <label htmlFor="status" style={{fontWeight:'bold'}}>{t('ADVERTISEMENT.FORM.INPUT.ADVERTISEMENTSTATUS')}</label>
+                            <label htmlFor="status" style={{ fontWeight: 'bold' }}>{t('ADVERTISEMENT.FORM.INPUT.ADVERTISEMENTSTATUS')}</label>
                             <Dropdown
                                 id="status"
                                 value={advertisement.status}
@@ -367,7 +410,7 @@ const AdvertisementPage = () => {
 
                     <Dialog visible={deleteAdvertisementDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteAdvertisementDialogFooter} onHide={hideDeleteAdvertisementDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {advertisement && (
                                 <span>
                                     {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{advertisement.advertisement_title}</b>
@@ -378,7 +421,7 @@ const AdvertisementPage = () => {
 
                     <Dialog visible={deleteAdvertisementsDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteAdvertisementsDialog}>
                         <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color:'red' }} />
+                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {advertisement && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>
