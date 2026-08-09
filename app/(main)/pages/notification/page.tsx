@@ -56,7 +56,7 @@ const NotificationPage = () => {
 
     useEffect(() => {
         dispatch(_fetchNotifications());
-        dispatch(_fetchResellers(1, '', '', 10000));
+        dispatch(_fetchResellers(1, '', '', 15));
     }, [dispatch]);
 
     // Debounced reseller search

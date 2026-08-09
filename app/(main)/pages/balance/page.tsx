@@ -121,7 +121,7 @@ const BalancePage = () => {
                 dispatch(_fetchCurrencies());
             }
             if (resellers.length === 0) {
-                dispatch(_fetchResellers(1, '', '', 10000));
+                dispatch(_fetchResellers(1, '', '', 15));
             }
             if (paymentMethods.length === 0) {
                 dispatch(_fetchPaymentMethods());

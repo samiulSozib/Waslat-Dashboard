@@ -114,7 +114,7 @@ const HawalaPage = () => {
         dispatch(_fetchHawalaList(1, searchTag));
         dispatch(_fetchHawalaCurrencies());
         dispatch(_fetchHawalaBranchList());
-        dispatch(_fetchResellers(1, '', '', 10000));
+        dispatch(_fetchResellers(1, '', '', 15));
         dispatch(_fetchCurrencies());
     }, [dispatch, searchTag]);
 

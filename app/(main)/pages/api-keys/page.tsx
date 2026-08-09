@@ -78,16 +78,16 @@ const ApiKeysPage = () => {
     // Fetch API keys and resellers
     useEffect(() => {
         dispatch(_fetchApiKeys(currentPage, searchTag, activeFilters));
-        dispatch(_fetchResellers(1, '', '', 10000));
+        dispatch(_fetchResellers(1, '', '', 15));
     }, [dispatch, searchTag, activeFilters, currentPage]);
 
     // Debounced search for resellers
     useEffect(() => {
         const timer = setTimeout(() => {
             if (resellerSearchTerm) {
-                dispatch(_fetchResellers(1, resellerSearchTerm, '', 10000));
+                dispatch(_fetchResellers(1, resellerSearchTerm, '', 15));
             } else {
-                dispatch(_fetchResellers(1, '', '', 10000));
+                dispatch(_fetchResellers(1, '', '', 15));
             }
         }, 300);
         return () => clearTimeout(timer);
