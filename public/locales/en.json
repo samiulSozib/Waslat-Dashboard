@@ -2285,6 +2285,8 @@
     }
   },
 
-  "HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER":"Amount In Letter"
+  "HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER":"Amount In Letter",
+  "NO_RESULTS_FOUND": "No results found",
+  "TRY_DIFFERENT_SEARCH_TERM": "Try a different search term"
 
 }

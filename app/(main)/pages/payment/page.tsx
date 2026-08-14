@@ -38,6 +38,8 @@ import { generatePaymentExcelFile } from '../../utilities/generateExcel';
 import { SplitButton } from 'primereact/splitbutton';
 import { Checkbox } from 'primereact/checkbox';
 import { useRouter, useSearchParams } from 'next/navigation';
+import CustomDropdown from '@/app/(main)/components/customDropDownWithSearch';
+import CustomDropdownWithSearch from '@/app/(main)/components/customDropDownWithSearch';
 
 const PaymentPage = () => {
     let emptyPayment: Payment = {
@@ -510,54 +512,54 @@ const PaymentPage = () => {
         );
     };
 
-        const [searchValue, setSearchValue] = useState('');
+    const [searchValue, setSearchValue] = useState('');
 
-const leftToolbarTemplate = () => {
+    const leftToolbarTemplate = () => {
 
-    const handleSearch = () => {
-        setSearchTag(searchValue);
-    };
+        const handleSearch = () => {
+            setSearchTag(searchValue);
+        };
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            handleSearch();
-        }
-    };
+        const handleKeyPress = (e: React.KeyboardEvent) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        };
 
-    return (
-        <React.Fragment>
-            <div className="flex align-items-center gap-2">
-                <span className="p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText
-                        type="search"
-                        value={searchValue}
-                        onChange={(e) => setSearchValue(e.currentTarget.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                    />
-                </span>
-                <Button
-                    severity="info"
-                    onClick={handleSearch}
-                    label={t('ECOMMERCE.COMMON.SEARCH')}
-                    className="p-button-sm"
-                />
-                {searchTag && (
+        return (
+            <React.Fragment>
+                <div className="flex align-items-center gap-2">
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText
+                            type="search"
+                            value={searchValue}
+                            onChange={(e) => setSearchValue(e.currentTarget.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
+                        />
+                    </span>
                     <Button
-                        severity="secondary"
-                        onClick={() => {
-                            setSearchTag('');
-                            setSearchValue('');
-                        }}
-                        className="p-button-sm p-button-outlined"
-                        label={t('CLEAR_FILTERS')}
+                        severity="info"
+                        onClick={handleSearch}
+                        label={t('ECOMMERCE.COMMON.SEARCH')}
+                        className="p-button-sm"
                     />
-                )}
-            </div>
-        </React.Fragment>
-    );
-};
+                    {searchTag && (
+                        <Button
+                            severity="secondary"
+                            onClick={() => {
+                                setSearchTag('');
+                                setSearchValue('');
+                            }}
+                            className="p-button-sm p-button-outlined"
+                            label={t('CLEAR_FILTERS')}
+                        />
+                    )}
+                </div>
+            </React.Fragment>
+        );
+    };
 
     const resellerNameBodyTemplate = (rowData: Payment) => {
         return (
@@ -994,7 +996,7 @@ const leftToolbarTemplate = () => {
 
                         <div className="card flex  flex-wrap p-fluid mt-3 gap-4">
                             <div className=" flex-1 col-12 lg:col-6">
-                                <div className="field">
+                                {/* <div className="field">
                                     <label htmlFor="reseller" style={{ fontWeight: 'bold' }}>
                                         {t('PAYMENT.FORM.INPUT.RESELLER')}
                                     </label>
@@ -1052,6 +1054,67 @@ const leftToolbarTemplate = () => {
                                             {t('THIS_FIELD_IS_REQUIRED')}
                                         </small>
                                     )}
+                                </div> */}
+
+
+                                <div className="field">
+                                    <label htmlFor="reseller" style={{ fontWeight: 'bold' }}>
+                                        {t('PAYMENT.FORM.INPUT.RESELLER')}
+                                    </label>
+                                    <CustomDropdownWithSearch
+                                        id="reseller"
+                                        value={payment.reseller}
+                                        options={resellers}
+                                        onChange={(selectedOption) => {
+                                            setPayment((prev) => ({
+                                                ...prev,
+                                                reseller: selectedOption // This will be the full object
+                                            }));
+                                        }}
+                                        optionLabel="reseller_name"
+                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                                        placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
+                                        className="w-full"
+                                        panelClassName="min-w-[20rem]"
+                                        searchButtonText={t('ECOMMERCE.COMMON.SEARCH')}
+                                        error={submitted && !payment.reseller}
+                                        errorMessage={t('THIS_FIELD_IS_REQUIRED')}
+                                        showClear={true}
+                                        emptyMessage={t('NO_RESULTS_FOUND')}
+                                        noResultsMessage={t('TRY_DIFFERENT_SEARCH_TERM')}
+                                        returnFullObject={true} // This ensures we get the full object
+                                        itemTemplate={(option) => {
+                                            if (!option) return null;
+                                            return (
+                                                <div className="flex flex-column p-2 gap-1">
+                                                    <div className="font-semibold">
+                                                        {option.contact_name} || {option.reseller_name}
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">
+                                                        {option.phone && (
+                                                            <span className="ml-2 text-gray-500">{option.phone}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }}
+                                        valueTemplate={(option) => {
+                                            if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
+                                            return (
+                                                <div className="flex flex-column">
+                                                    <span style={{ fontWeight: 'bold' }}>
+                                                        {option.reseller_name}
+                                                    </span>
+                                                    <small className="text-gray-500 text-xs">
+                                                        {option.contact_name} {option.phone && `${option.phone}`}
+                                                    </small>
+                                                </div>
+                                            );
+                                        }}
+                                        onSearch={(searchTerm) => {
+                                            setResellerSearchTerm(searchTerm);
+                                        }}
+                                    />
                                 </div>
 
                                 <div className="field">

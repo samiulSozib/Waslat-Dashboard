@@ -2264,7 +2264,9 @@
   },
 
 
-    "HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER": "مبلغ به حروف"
+    "HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER": "مبلغ به حروف",
+    "NO_RESULTS_FOUND": "نتیجه‌ای یافت نشد",
+    "TRY_DIFFERENT_SEARCH_TERM": "عبارت دیگری را جستجو کنید"
 
 
 

@@ -2265,7 +2265,9 @@
     }
   },
 
-    "HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER": "مبلغ په تورو"
+    "HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER": "مبلغ په تورو",
+    "NO_RESULTS_FOUND": "هیچ پایلې ونه موندل شوې",
+    "TRY_DIFFERENT_SEARCH_TERM": "بله کلمه وپلټئ"
 
 
 
