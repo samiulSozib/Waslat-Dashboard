@@ -1,26 +1,30 @@
-import { Dispatch } from "redux";
 import axios from "axios";
 
 import {
+    FETCH_DASHBOARD_DATA_FAIL,
     FETCH_DASHBOARD_DATA_REQUEST,
-    FETCH_DASHBOARD_DATA_SUCCESS,
-    FETCH_DASHBOARD_DATA_FAIL
-} from '../constants/dashboardConstants'
+    FETCH_DASHBOARD_DATA_SUCCESS
+} from '../constants/dashboardConstants';
 import { AppDispatch } from "../store";
 
 const getAuthToken = () => {
     return localStorage.getItem("api_token") || ""; // Get the token or return an empty string if not found
 };
 
+let lastDashboardController: AbortController | null = null;
+
 export const fetchDashboardData = (filters?: any) => async (dispatch: AppDispatch) => {
     dispatch({ type: FETCH_DASHBOARD_DATA_REQUEST });
 
     try {
+        try { if (lastDashboardController) lastDashboardController.abort(); } catch (err) { }
+        lastDashboardController = new AbortController();
+
         const token = getAuthToken();
-        
+
         // Build query parameters from filters
         const params = new URLSearchParams();
-        
+
         if (filters) {
             if (filters.filter_service_id) {
                 params.append('service_id', filters.filter_service_id.toString());
@@ -34,15 +38,17 @@ export const fetchDashboardData = (filters?: any) => async (dispatch: AppDispatc
         }
 
         const url = `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard${params.toString() ? `?${params.toString()}` : ''}`;
-        
+
         const response = await axios.get(url, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
+            signal: lastDashboardController.signal
         });
-        
+
         dispatch({ type: FETCH_DASHBOARD_DATA_SUCCESS, payload: response.data.data });
     } catch (error: any) {
-        dispatch({ type: FETCH_DASHBOARD_DATA_FAIL, payload: error.message });
+        const isCanceled = error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError';
+        if (!isCanceled) dispatch({ type: FETCH_DASHBOARD_DATA_FAIL, payload: error.message });
     }
 }

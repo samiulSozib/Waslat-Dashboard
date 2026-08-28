@@ -1,35 +1,43 @@
 // store/actions/orderActions.ts
-import { Dispatch } from 'redux';
 import axios from 'axios';
+import { Dispatch } from 'redux';
 
+import { Toast } from 'primereact/toast';
 import {
-    FETCH_ORDERS_REQUEST,
-    FETCH_ORDERS_SUCCESS,
-    FETCH_ORDERS_FAIL,
+    ADD_ORDER_FAIL,
     ADD_ORDER_REQUEST,
     ADD_ORDER_SUCCESS,
-    ADD_ORDER_FAIL,
-    EDIT_ORDER_REQUEST,
-    EDIT_ORDER_SUCCESS,
-    EDIT_ORDER_FAIL,
+    CHANGE_ORDER_STATUS_FAIL,
+    CHANGE_ORDER_STATUS_REQUEST,
+    CHANGE_ORDER_STATUS_SUCCESS,
+    DELETE_ORDER_FAIL,
     DELETE_ORDER_REQUEST,
     DELETE_ORDER_SUCCESS,
-    DELETE_ORDER_FAIL,
-    CHANGE_ORDER_STATUS_REQUEST,
-  CHANGE_ORDER_STATUS_SUCCESS,
-  CHANGE_ORDER_STATUS_FAIL,
+    EDIT_ORDER_FAIL,
+    EDIT_ORDER_REQUEST,
+    EDIT_ORDER_SUCCESS,
+    FETCH_ORDERS_FAIL,
+    FETCH_ORDERS_REQUEST,
+    FETCH_ORDERS_SUCCESS,
 } from '../constants/orderConstants';
-import { Toast } from 'primereact/toast';
 
 const getAuthToken = () => {
     return localStorage.getItem('api_token') || ''; // Retrieve the token from localStorage
 };
+
+// Keep a reference to the last controller to cancel overlapping requests
+let lastOrdersController: AbortController | null = null;
 
 // Fetch orders
 export const _fetchOrders = (page: number = 1, search: string = '', filters: any = {}) => async (dispatch: Dispatch) => {
     dispatch({ type: FETCH_ORDERS_REQUEST });
 
     try {
+    // Cancel previous request if still running
+    try {
+      if (lastOrdersController) lastOrdersController.abort();
+    } catch (err) {}
+    lastOrdersController = new AbortController();
         const token = getAuthToken();
         //console.log(filters)
         const queryParams = new URLSearchParams();
@@ -48,9 +56,10 @@ export const _fetchOrders = (page: number = 1, search: string = '', filters: any
         const queryString = queryParams.toString();
 
         const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/orders?${queryString}`, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: lastOrdersController.signal
         });
 
         dispatch({
@@ -60,7 +69,11 @@ export const _fetchOrders = (page: number = 1, search: string = '', filters: any
             }
         });
     } catch (error: any) {
-        dispatch({ type: FETCH_ORDERS_FAIL, payload: error.message });
+        // if request was aborted, don't dispatch a failure
+        const isCanceled = error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError';
+        if (!isCanceled) {
+          dispatch({ type: FETCH_ORDERS_FAIL, payload: error.message });
+        }
     }
 };
 

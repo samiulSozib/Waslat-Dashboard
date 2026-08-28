@@ -6,10 +6,11 @@ import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import { _fetchProviders, fetchCategoryProducts, fetchProviderCategories } from '@/app/redux/actions/providerActions';
 import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
-import { _fetchSingleProvider } from '@/app/redux/actions/singleProviderAction';
+import { _fetchSingleProvider, _fetchPaystoreOperators, _fetchPaystoreProductsByFirm } from '@/app/redux/actions/singleProviderAction';
 import { AppDispatch } from '@/app/redux/store';
 import i18n from '@/i18n';
 import { ApiBinding, Bundle, Category, Product, Provider, RawInternet, Service } from '@/types/interface';
+import { PaystoreGroup, PaystoreOperator } from '@/types/interface';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
@@ -54,8 +55,6 @@ const BundlePage = () => {
         api_binding: null
     };
 
-
-
     const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
     const [selectedCapability, setSelectedCapability] = useState('');
     const [selectedProviderBundle, setSelectedProviderBundle] = useState<RawInternet | null>(null);
@@ -87,7 +86,15 @@ const BundlePage = () => {
 
     const [activeFilters, setActiveFilters] = useState({});
     const { providers } = useSelector((state: any) => state.providerReducer);
-    const { rawInternets, rawBundles } = useSelector((state: any) => state.singleProviderReducer);
+    const {
+        rawInternets,
+        rawBundles,
+        products,
+        operatorGroups,
+        totalGroups,
+        selectedOpFirm: selectedOpFirmFromRedux,
+        loading: singleProviderLoading
+    } = useSelector((state: any) => state.singleProviderReducer);
 
     const [providerSearchTag, setProviderSearchTag] = useState('');
 
@@ -102,6 +109,10 @@ const BundlePage = () => {
     const [loadingCategories, setLoadingCategories] = useState(false);
     const [loadingProducts, setLoadingProducts] = useState(false);
 
+    // Paystore operator states
+    const [selectedPaystoreGroup, setSelectedPaystoreGroup] = useState<PaystoreGroup | null>(null);
+    const [selectedPaystoreOperator, setSelectedPaystoreOperator] = useState<PaystoreOperator | null>(null);
+
     useEffect(() => {
         dispatch(_fetchBundleList(1, searchTag));
         dispatch(_fetchCurrencies());
@@ -109,24 +120,6 @@ const BundlePage = () => {
         dispatch(_fetchCompanies());
         dispatch(_fetchServiceCategories());
     }, [dispatch, searchTag]);
-
-    // useEffect(() => {
-    //     if (serviceDialog) {
-    //         // Fetch all required dropdown data
-    //         if (currencies.length === 0) {
-    //             dispatch(_fetchCurrencies());
-    //         }
-    //         if (services.length === 0) {
-    //             dispatch(_fetchServiceList());
-    //         }
-    //         if (companies.length === 0) {
-    //             dispatch(_fetchCompanies());
-    //         }
-    //         if (serviceCategories.length === 0) {
-    //             dispatch(_fetchServiceCategories());
-    //         }
-    //     }
-    // }, [serviceDialog, dispatch]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -199,12 +192,49 @@ const BundlePage = () => {
         }
     }, [selectedCategory, selectedProvider, dispatch, t]);
 
-    // Fetch rawInternets for non-mzr providers
+    // 🔥 FIXED: WHEN PROVIDER IS PAYSTORE - FETCH OPERATORS using the correct action
     useEffect(() => {
-        if (selectedProvider && selectedCapability && selectedProvider.code !== 'mzr') {
-            dispatch(_fetchSingleProvider(selectedProvider?.id, selectedProvider?.code, selectedCapability, bundle.service?.company?.company_name ?? ""));
+        if (selectedProvider && selectedProvider.code === 'paystore') {
+            console.log('📦 Fetching operators for paystore provider:', selectedProvider.id);
+            dispatch(_fetchPaystoreOperators(selectedProvider.id));
+        }
+    }, [dispatch, selectedProvider]);
+
+    // WHEN PAYSTORE GROUP IS SELECTED - FETCH PRODUCTS BY OP_FIRM
+    useEffect(() => {
+        if (selectedProvider && selectedProvider.code === 'paystore' && selectedPaystoreGroup) {
+            console.log('📦 Fetching paystore products for firm:', selectedPaystoreGroup.op_firm);
+            dispatch(_fetchPaystoreProductsByFirm(
+                selectedProvider.id,
+                selectedPaystoreGroup.op_firm
+            ));
+        }
+    }, [dispatch, selectedProvider, selectedPaystoreGroup]);
+
+    // For other providers (non-paystore, non-mzr)
+    useEffect(() => {
+        if (selectedProvider && selectedCapability && selectedProvider.code !== 'mzr' && selectedProvider.code !== 'paystore') {
+            console.log('📦 Fetching bundles for provider:', selectedProvider.code);
+            dispatch(_fetchSingleProvider(
+                selectedProvider?.id,
+                selectedProvider?.code,
+                selectedCapability,
+                bundle.service?.company?.company_name ?? ""
+            ));
         }
     }, [dispatch, selectedProvider, selectedCapability, bundle.service?.company?.company_name]);
+
+    // Debug effect
+    useEffect(() => {
+        console.log('📊 Products in Redux:', products);
+        console.log('📊 Products length:', products?.length);
+        console.log('📊 Raw Internets in Redux:', rawInternets);
+        console.log('📊 Operator Groups:', operatorGroups);
+        console.log('📊 Total Groups:', totalGroups);
+        console.log('🔍 Selected Provider:', selectedProvider?.code);
+        console.log('🔍 Selected Capability:', selectedCapability);
+        console.log('🔍 Selected Paystore Group:', selectedPaystoreGroup?.op_firm);
+    }, [products, rawInternets, selectedProvider, selectedCapability, operatorGroups, selectedPaystoreGroup, totalGroups]);
 
     useEffect(() => {
         if (Object.keys(activeFilters).length > 0) {
@@ -222,6 +252,8 @@ const BundlePage = () => {
         setSelectedCategory(null);
         setCategories([]);
         setCategoryProducts([]);
+        setSelectedPaystoreGroup(null);
+        setSelectedPaystoreOperator(null);
     };
 
     const hideDialog = () => {
@@ -234,6 +266,8 @@ const BundlePage = () => {
         setSelectedCategory(null);
         setCategories([]);
         setCategoryProducts([]);
+        setSelectedPaystoreGroup(null);
+        setSelectedPaystoreOperator(null);
     };
 
     const hideDeleteServiceDialog = () => {
@@ -271,150 +305,227 @@ const BundlePage = () => {
     };
 
     const saveService = () => {
-        setSubmitted(true);
-        if (!bundle.bundle_title || !bundle.bundle_description || !bundle.admin_buying_price || !bundle.buying_price || !bundle.selling_price || !bundle.validity_type || !bundle.service || !bundle.currency) {
-            toast.current?.show({
-                severity: 'error',
-                summary: t('VALIDATION_ERROR'),
-                detail: t('PLEASE_FILLED_ALL_REQUIRED_FIELDS'),
-                life: 3000
-            });
-            return;
-        }
+    setSubmitted(true);
+    if (!bundle.bundle_title || !bundle.bundle_description || !bundle.admin_buying_price || !bundle.buying_price || !bundle.selling_price || !bundle.validity_type || !bundle.service || !bundle.currency) {
+        toast.current?.show({
+            severity: 'error',
+            summary: t('VALIDATION_ERROR'),
+            detail: t('PLEASE_FILLED_ALL_REQUIRED_FIELDS'),
+            life: 3000
+        });
+        return;
+    }
 
-        // For mzr provider, use selectedCategory and categoryProducts
-        if (selectedProvider && selectedProvider.code === 'mzr' && selectedCategory && selectedProviderBundle) {
-            const providerData = {
-                api_provider_id: selectedProvider.id,
-                api_provider_bundle_id: selectedProviderBundle.id,
-                api_binding: {
-                    product_type: selectedCategory.purchase_type,
-                    category_id: selectedCategory.id,
-                    category_name: selectedCategory.name,
-                    product_id: selectedProviderBundle.id,
-                    product_name: selectedProviderBundle.name,
-                    price: selectedProviderBundle.price,
-                    stock: selectedProviderBundle.stock,
-                    description: selectedProviderBundle.description,
-
-                    // product_type: selectedCategory.purchase_type,
-                    operator: selectedProviderBundle.operator,
-                    internet_type: selectedProviderBundle.internet_type,
-                    sim_type: selectedProviderBundle.sim_type,
-                    // product_id: selectedProviderBundle.id,
-                    table_id: selectedProviderBundle.table_id,
-                    name: selectedProviderBundle.name,
-                    days: selectedProviderBundle.days,
-                    volume: selectedProviderBundle.volume,
-                    unit: selectedProviderBundle.unit,
-                    periodicity: selectedProviderBundle.periodicity
-                }
-            };
-
-            console.log(providerData)
-
-            if (bundle.id && bundle.id !== 0) {
-                if (selectedProvider) {
-                    bundle.api_provider_id = selectedProvider.id
-                }
-                dispatch(_editBundle(bundle.id, bundle, toast, t))
-                    .then((newBundle) => {
-                        if (newBundle) {
-                            console.log(providerData)
-                            dispatch(_setProvider(newBundle.id, providerData, toast, t));
-                        }
-                    })
-                    .catch((err) => {
-                        console.error('Edit bundle failed:', err);
-                    });
-            } else {
-                if (selectedProvider) {
-                    bundle.api_provider_id = selectedProvider.id
-                }
-                dispatch(_addBundle(bundle, toast, t))
-                    .then((newBundle) => {
-                        if (newBundle) {
-                            console.log(providerData)
-                            dispatch(_setProvider(newBundle.id, providerData, toast, t));
-                        }
-                    })
-                    .catch((err) => {
-                        console.error('Add bundle failed:', err);
-                    });
+    // For mzr provider
+    if (selectedProvider && selectedProvider.code === 'mzr' && selectedCategory && selectedProviderBundle) {
+        const providerData = {
+            api_provider_id: selectedProvider.id,
+            api_provider_bundle_id: selectedProviderBundle.id,
+            api_binding: {
+                product_type: selectedCategory.purchase_type,
+                category_id: selectedCategory.id,
+                category_name: selectedCategory.name,
+                product_id: selectedProviderBundle.id,
+                product_name: selectedProviderBundle.name,
+                price: selectedProviderBundle.price,
+                stock: selectedProviderBundle.stock,
+                description: selectedProviderBundle.description,
+                operator: selectedProviderBundle.operator,
+                internet_type: selectedProviderBundle.internet_type,
+                sim_type: selectedProviderBundle.sim_type,
+                table_id: selectedProviderBundle.table_id,
+                name: selectedProviderBundle.name,
+                days: selectedProviderBundle.days,
+                volume: selectedProviderBundle.volume,
+                unit: selectedProviderBundle.unit,
+                periodicity: selectedProviderBundle.periodicity
             }
-        }
-        // For non-mzr providers
-        else if (selectedProvider && selectedProviderBundle && selectedProvider.code !== 'mzr') {
-            const providerData = {
-                api_provider_id: selectedProvider.id,
-                api_provider_bundle_id: selectedProviderBundle.id,
+        };
 
-                api_binding: {
-                    product_type: selectedProviderBundle.product_type,
-                    operator: selectedProviderBundle.operator,
-                    internet_type: selectedProviderBundle.internet_type,
-                    sim_type: selectedProviderBundle.sim_type,
-                    product_id: selectedProviderBundle.id,
-                    table_id: selectedProviderBundle.table_id,
-                    name: selectedProviderBundle.name,
-                    days: selectedProviderBundle.days,
-                    volume: selectedProviderBundle.volume,
-                    unit: selectedProviderBundle.unit,
-                    periodicity: selectedProviderBundle.periodicity
-                }
-            };
+        console.log('Provider Data (MZR):', providerData);
 
-            console.log(providerData)
-
-            if (bundle.id && bundle.id !== 0) {
-                if (selectedProvider) {
-                    bundle.api_provider_id = selectedProvider.id
-                }
-                dispatch(_editBundle(bundle.id, bundle, toast, t))
-                    .then((newBundle) => {
-                        if (newBundle) {
-                            console.log(providerData)
-                            dispatch(_setProvider(newBundle.id, providerData, toast, t));
-                        }
-                    })
-                    .catch((err) => {
-                        console.error('Edit bundle failed:', err);
-                    });
-            } else {
-                if (selectedProvider) {
-                    bundle.api_provider_id = selectedProvider.id
-                }
-                dispatch(_addBundle(bundle, toast, t))
-                    .then((newBundle) => {
-                        if (newBundle) {
-                            console.log(providerData)
-                            dispatch(_setProvider(newBundle.id, providerData, toast, t));
-                        }
-                    })
-                    .catch((err) => {
-                        console.error('Add bundle failed:', err);
-                    });
+        if (bundle.id && bundle.id !== 0) {
+            if (selectedProvider) {
+                bundle.api_provider_id = selectedProvider.id;
             }
+            dispatch(_editBundle(bundle.id, bundle, toast, t))
+                .then((newBundle) => {
+                    if (newBundle) {
+                        dispatch(_setProvider(newBundle.id, providerData, toast, t));
+                    }
+                })
+                .catch((err) => {
+                    console.error('Edit bundle failed:', err);
+                });
         } else {
             if (selectedProvider) {
-                bundle.api_provider_id = selectedProvider.id
+                bundle.api_provider_id = selectedProvider.id;
             }
-            // Save without provider binding
-            if (bundle.id && bundle.id !== 0) {
-                dispatch(_editBundle(bundle.id, bundle, toast, t));
-            } else {
-                dispatch(_addBundle(bundle, toast, t));
-            }
+            dispatch(_addBundle(bundle, toast, t))
+                .then((newBundle) => {
+                    if (newBundle) {
+                        dispatch(_setProvider(newBundle.id, providerData, toast, t));
+                    }
+                })
+                .catch((err) => {
+                    console.error('Add bundle failed:', err);
+                });
         }
+    }
+    // For paystore with products
+    else if (selectedProvider && selectedProvider.code === 'paystore' && selectedProviderBundle) {
+        // Get the product data from the selected bundle
+        const product = selectedProviderBundle as any;
 
-        setServiceDialog(false);
-        setBundle(emptyBundle);
-        setSubmitted(false);
-        hideDialog();
-    };
+        // Extract data from product
+        const productId = product.id || product.product_id || product.ProductId;
+        const operator = product.operator || product.Operator || '';
+        const operatorRaw = product.operator_raw || product.Operator || '';
+        const opFirm = selectedPaystoreGroup?.op_firm || product.op_firm || product.OpFirm || selectedOpFirmFromRedux || '';
+        const opFirmRaw = opFirm;
+        const type = product.type || product.Type || '';
+        const amount = product.amount || product.Amount || '';
+        const packageName = product.title || product.name || product.package_name || product.PackageName || '';
+        const price = product.price || product.Price || '';
+        const recomPrice = product.recommended_price || product.RecomPrice || '';
+
+        // Extract packet privacy data
+        const packetPrivacy = product.packet_privacy || product.PacketPrivacy || product.raw?.PacketPrivacy || {};
+        const usableDays = packetPrivacy.UsableDays || product.validity_days || 0;
+        const minAbroad = packetPrivacy.MinAbroad || '0.00';
+        const minAllDirection = packetPrivacy.MinAllDirection || '0.00';
+        const minInNetwork = packetPrivacy.MinInNetwork || '0.00';
+        const sms = packetPrivacy.Sms || '0.00';
+        const internetMb = packetPrivacy.InternetMb || '0';
+        const isSocial = packetPrivacy.isSocial || 0;
+        const officialSalePrice = packetPrivacy.officialSalePrice || '0.00';
+
+        const providerData = {
+            api_provider_id: selectedProvider.id,
+            api_provider_bundle_id: String(productId),
+            api_binding: {
+                product_id: productId,
+                operator: operator,
+                operator_raw: operatorRaw,
+                op_firm: opFirm,
+                op_firm_raw: opFirmRaw,
+                type: type,
+                amount: amount,
+                package_name: packageName,
+                price: String(price),
+                recom_price: String(recomPrice),
+                packet_privacy: {
+                    UsableDays: usableDays,
+                    MinAbroad: minAbroad,
+                    MinAllDirection: minAllDirection,
+                    MinInNetwork: minInNetwork,
+                    Sms: sms,
+                    InternetMb: String(internetMb),
+                    isSocial: isSocial,
+                    officialSalePrice: officialSalePrice
+                }
+            }
+        };
+
+        console.log('Provider Data (Paystore Product):', providerData);
+
+        if (bundle.id && bundle.id !== 0) {
+            if (selectedProvider) {
+                bundle.api_provider_id = selectedProvider.id;
+            }
+            dispatch(_editBundle(bundle.id, bundle, toast, t))
+                .then((newBundle) => {
+                    if (newBundle) {
+                        dispatch(_setProvider(newBundle.id, providerData, toast, t));
+                    }
+                })
+                .catch((err) => {
+                    console.error('Edit bundle failed:', err);
+                });
+        } else {
+            if (selectedProvider) {
+                bundle.api_provider_id = selectedProvider.id;
+            }
+            dispatch(_addBundle(bundle, toast, t))
+                .then((newBundle) => {
+                    if (newBundle) {
+                        dispatch(_setProvider(newBundle.id, providerData, toast, t));
+                    }
+                })
+                .catch((err) => {
+                    console.error('Add bundle failed:', err);
+                });
+        }
+    }
+    // For non-mzr, non-paystore providers (regular bundles)
+    else if (selectedProvider && selectedProviderBundle && selectedProvider.code !== 'mzr' && selectedProvider.code !== 'paystore') {
+        const providerData = {
+            api_provider_id: selectedProvider.id,
+            api_provider_bundle_id: selectedProviderBundle.id,
+            api_binding: {
+                product_type: selectedProviderBundle.product_type,
+                operator: selectedProviderBundle.operator,
+                internet_type: selectedProviderBundle.internet_type,
+                sim_type: selectedProviderBundle.sim_type,
+                product_id: selectedProviderBundle.id,
+                table_id: selectedProviderBundle.table_id,
+                name: selectedProviderBundle.name,
+                days: selectedProviderBundle.days,
+                volume: selectedProviderBundle.volume,
+                unit: selectedProviderBundle.unit,
+                periodicity: selectedProviderBundle.periodicity
+            }
+        };
+
+        console.log('Provider Data (Regular):', providerData);
+
+        if (bundle.id && bundle.id !== 0) {
+            if (selectedProvider) {
+                bundle.api_provider_id = selectedProvider.id;
+            }
+            dispatch(_editBundle(bundle.id, bundle, toast, t))
+                .then((newBundle) => {
+                    if (newBundle) {
+                        dispatch(_setProvider(newBundle.id, providerData, toast, t));
+                    }
+                })
+                .catch((err) => {
+                    console.error('Edit bundle failed:', err);
+                });
+        } else {
+            if (selectedProvider) {
+                bundle.api_provider_id = selectedProvider.id;
+            }
+            dispatch(_addBundle(bundle, toast, t))
+                .then((newBundle) => {
+                    if (newBundle) {
+                        dispatch(_setProvider(newBundle.id, providerData, toast, t));
+                    }
+                })
+                .catch((err) => {
+                    console.error('Add bundle failed:', err);
+                });
+        }
+    } else {
+        if (selectedProvider) {
+            bundle.api_provider_id = selectedProvider.id;
+        }
+        // Save without provider binding
+        if (bundle.id && bundle.id !== 0) {
+            dispatch(_editBundle(bundle.id, bundle, toast, t));
+        } else {
+            dispatch(_addBundle(bundle, toast, t));
+        }
+    }
+
+    setServiceDialog(false);
+    setBundle(emptyBundle);
+    setSubmitted(false);
+    hideDialog();
+};
 
     const editService = (bundle: Bundle) => {
-        console.log(bundle);
+        console.log('Editing bundle:', bundle);
 
         let parsedApiBinding: any = null;
         if (bundle.api_binding) {
@@ -437,15 +548,35 @@ const BundlePage = () => {
 
                 // Check if provider is mzr
                 if (provider.code === 'mzr' && parsedApiBinding.category_id) {
-                    // For mzr provider, set category and product
                     setSelectedCategory({ id: parsedApiBinding.category_id, name: parsedApiBinding.category_name } as Category);
                     setSelectedProviderBundle({ id: parsedApiBinding.product_id, name: parsedApiBinding.product_name, price: parsedApiBinding.price } as RawInternet);
-                } else {
-                    // For non-mzr providers
-                    const capability = provider.capabilities.find((cap: any) =>
+                }
+                // Check if provider is paystore with products
+                else if (provider.code === 'paystore' && (parsedApiBinding.product_type === 'product' || parsedApiBinding.type)) {
+                    // Find the product in the products list
+                    const product = products.find((p: any) =>
+                        String(p.id) === String(parsedApiBinding.product_id) ||
+                        String(p.product_id) === String(parsedApiBinding.product_id)
+                    );
+                    if (product) {
+                        setSelectedProviderBundle(product);
+                    } else {
+                        setSelectedProviderBundle(parsedApiBinding);
+                    }
+                    // Set the op_firm if available
+                    if (parsedApiBinding.op_firm) {
+                        const group = operatorGroups.find((g: PaystoreGroup) => g.op_firm === parsedApiBinding.op_firm);
+                        if (group) {
+                            setSelectedPaystoreGroup(group);
+                        }
+                    }
+                }
+                else if (provider.code !== 'mzr' && provider.code !== 'paystore') {
+                    // For non-mzr, non-paystore providers
+                    const capability = provider.capabilities?.find((cap: any) =>
                         cap.toLowerCase().includes(parsedApiBinding.internet_type) ||
                         cap.toLowerCase().includes(parsedApiBinding.sim_type)
-                    ) || provider.capabilities[0];
+                    ) || provider.capabilities?.[0];
 
                     setSelectedCapability(capability);
 
@@ -552,6 +683,8 @@ const BundlePage = () => {
             setSelectedCategory(null);
             setCategories([]);
             setCategoryProducts([]);
+            setSelectedPaystoreGroup(null);
+            setSelectedPaystoreOperator(null);
         }
     };
 
@@ -685,17 +818,6 @@ const BundlePage = () => {
         );
     };
 
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <div className="flex items-center">
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-    //                 <i className="pi pi-search" />
-    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
-    //             </span>
-    //         </div>
-    //     );
-    // };
-
     const [localSearchTerm, setLocalSearchTerm] = useState('');
 
     const leftToolbarTemplate = () => {
@@ -743,6 +865,7 @@ const BundlePage = () => {
             </React.Fragment>
         );
     };
+
     const bundleTitleBodyTemplate = (rowData: Bundle) => {
         return (
             <>
@@ -940,6 +1063,9 @@ const BundlePage = () => {
         }
     }, [bundle.service_id, services]);
 
+    // Check if provider is paystore
+    const isPaystore = selectedProvider?.code === 'paystore';
+
     return (
         <div className="grid crud-demo -m-5">
             <div className="col-12">
@@ -1000,7 +1126,6 @@ const BundlePage = () => {
                         className="p-fluid"
                         footer={companyDialogFooter}
                         onHide={hideDialog}
-
                         breakpoints={{ '960px': '95vw', '640px': '95vw' }}
                     >
                         <div className="card" style={{ padding: '20px' }}>
@@ -1296,6 +1421,10 @@ const BundlePage = () => {
                                         options={providers}
                                         onChange={(e) => {
                                             setSelectedProvider(e.value);
+                                            setSelectedCapability('');
+                                            setSelectedProviderBundle(null);
+                                            setSelectedPaystoreGroup(null);
+                                            setSelectedPaystoreOperator(null);
                                         }}
                                         optionLabel="name"
                                         filter
@@ -1312,8 +1441,8 @@ const BundlePage = () => {
                                 </div>
                             </div>
 
-                            {/* Dynamic Provider Fields - Capabilities or Categories */}
-                            {selectedProvider && selectedProvider.code !== 'mzr' && (
+                            {/* Capabilities - Only show for non-paystore providers */}
+                            {selectedProvider && selectedProvider.code !== 'mzr' && selectedProvider.code !== 'paystore' && (
                                 <div className="grid formgrid p-fluid">
                                     <div className="field col-12">
                                         <label htmlFor="capabilities" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
@@ -1322,9 +1451,10 @@ const BundlePage = () => {
                                         <Dropdown
                                             id="capabilities"
                                             value={selectedCapability}
-                                            options={selectedProvider?.capabilities}
+                                            options={selectedProvider?.capabilities || []}
                                             onChange={(e) => {
                                                 setSelectedCapability(e.value);
+                                                setSelectedProviderBundle(null);
                                             }}
                                             placeholder={t('SEARCH_CAPABILITIES')}
                                             className=""
@@ -1334,6 +1464,7 @@ const BundlePage = () => {
                                 </div>
                             )}
 
+                            {/* MZR Provider Section */}
                             {selectedProvider && selectedProvider.code === 'mzr' && (
                                 <>
                                     <div className="grid formgrid p-fluid">
@@ -1357,7 +1488,6 @@ const BundlePage = () => {
                                                 placeholder={t('SELECT_CATEGORY')}
                                                 className=""
                                                 panelClassName=""
-                                                // loading={loadingCategories}
                                                 itemTemplate={(option) => (
                                                     <div className="flex flex-col p-2 gap-1">
                                                         <div className="font-semibold">{option.name}</div>
@@ -1391,7 +1521,6 @@ const BundlePage = () => {
                                                     placeholder={t('SELECT_PRODUCT')}
                                                     className=""
                                                     panelClassName=""
-                                                    // loading={loadingProducts}
                                                     itemTemplate={(option) => (
                                                         <div className="flex flex-col p-2 gap-2">
                                                             <div className="font-semibold text-sm">{option.name}</div>
@@ -1409,7 +1538,6 @@ const BundlePage = () => {
                                                             <div className="flex flex-col">
                                                                 <span className="font-semibold text-sm">{option.name}</span>
                                                                 <span className="text-xs text-gray-600">Price: {option.price}</span>
-
                                                             </div>
                                                         );
                                                     }}
@@ -1420,7 +1548,155 @@ const BundlePage = () => {
                                 </>
                             )}
 
-                            {selectedProvider && selectedProvider.code !== 'mzr' && selectedCapability && (
+                            {/* PAYSTORE SECTION - Show operator list and products based on op_firm */}
+                            {isPaystore && (
+                                <div className="grid formgrid p-fluid">
+                                    {/* Operator Group Dropdown */}
+                                    <div className="field col-12 md:col-6">
+                                        <label htmlFor="operator_group" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+                                            {t('OPERATOR_GROUP')}
+                                        </label>
+                                        <Dropdown
+                                            id="operator_group"
+                                            value={selectedPaystoreGroup}
+                                            options={operatorGroups}
+                                            onChange={(e) => {
+                                                setSelectedPaystoreGroup(e.value);
+                                                setSelectedPaystoreOperator(null);
+                                                setSelectedProviderBundle(null);
+                                            }}
+                                            optionLabel="op_firm"
+                                            placeholder={t('SELECT_OPERATOR_GROUP')}
+                                            className="w-full"
+                                            itemTemplate={(option: PaystoreGroup) => (
+                                                <div className="flex justify-content-between align-items-center p-2">
+                                                    <span className="font-semibold">{option.op_firm}</span>
+                                                    <span className="text-xs text-gray-500">Products: {option.product_count}</span>
+                                                </div>
+                                            )}
+                                            valueTemplate={(option: PaystoreGroup) => {
+                                                if (!option) return t('SELECT_OPERATOR_GROUP');
+                                                return (
+                                                    <div className="flex justify-content-between align-items-center">
+                                                        <span>{option.op_firm}</span>
+                                                        <span className="text-xs text-gray-500">({option.product_count} products)</span>
+                                                    </div>
+                                                );
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Operator Dropdown */}
+                                    {selectedPaystoreGroup && (
+                                        <div className="field col-12 md:col-6">
+                                            <label htmlFor="operator" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+                                                {t('OPERATOR')}
+                                            </label>
+                                            <Dropdown
+                                                id="operator"
+                                                value={selectedPaystoreOperator}
+                                                options={selectedPaystoreGroup.operators}
+                                                onChange={(e) => {
+                                                    setSelectedPaystoreOperator(e.value);
+                                                }}
+                                                optionLabel="code"
+                                                placeholder={t('SELECT_OPERATOR')}
+                                                className="w-full"
+                                                itemTemplate={(option: PaystoreOperator) => (
+                                                    <div className="flex justify-content-between align-items-center p-2">
+                                                        <span>{option.code}</span>
+                                                        <span className="text-xs text-gray-500">Products: {option.product_count}</span>
+                                                    </div>
+                                                )}
+                                                valueTemplate={(option: PaystoreOperator) => {
+                                                    if (!option) return t('SELECT_OPERATOR');
+                                                    return (
+                                                        <div className="flex justify-content-between align-items-center">
+                                                            <span>{option.code}</span>
+                                                            <span className="text-xs text-gray-500">({option.product_count} products)</span>
+                                                        </div>
+                                                    );
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Info Display */}
+                                    {selectedPaystoreGroup && (
+                                        <div className="field col-12">
+                                            <div className="text-sm text-gray-600 p-2 bg-blue-50 rounded">
+                                                <strong>{selectedPaystoreGroup.op_firm}</strong> - Total Products: {selectedPaystoreGroup.product_count}
+                                                {selectedPaystoreOperator && (
+                                                    <span className="ml-3">
+                                                        | Selected Operator: <strong>{selectedPaystoreOperator.code}</strong>
+                                                        ({selectedPaystoreOperator.product_count} products)
+                                                    </span>
+                                                )}
+                                                {selectedOpFirmFromRedux && (
+                                                    <span className="ml-3 text-green-600">
+                                                        | ✅ Products loaded for: <strong>{selectedOpFirmFromRedux}</strong> ({products?.length || 0} products)
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Products Dropdown - Shows products based on op_firm */}
+                                    {selectedPaystoreGroup && (
+                                        <div className="field col-12">
+                                            <label htmlFor="product_select" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+                                                {t('PRODUCTS')}
+                                            </label>
+                                            <Dropdown
+                                                id="product_select"
+                                                value={selectedProviderBundle}
+                                                options={products}
+                                                onChange={(e) => {
+                                                    console.log('Selected product:', e.value);
+                                                    setSelectedProviderBundle(e.value);
+                                                }}
+                                                optionLabel="title"
+                                                filter
+                                                filterBy="title,operator,type"
+                                                filterPlaceholder={t('SEARCH_PRODUCT')}
+                                                showFilterClear
+                                                placeholder={t('SELECT_PRODUCT')}
+                                                className="w-full"
+                                                panelClassName="w-full"
+                                                emptyMessage="No products found for this operator"
+                                                itemTemplate={(option: any) => (
+                                                    <div className="flex flex-col p-2 gap-2">
+                                                        <div className="font-semibold text-sm">{option.title || option.name || option.package_name || 'N/A'}</div>
+                                                        <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                                                            {option.operator && <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">{option.operator}</span>}
+                                                            {option.price && <span className="bg-red-100 text-red-800 px-2 py-1 rounded">Price: {option.price}</span>}
+                                                            {option.validity_days && <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">Validity: {option.validity_days} days</span>}
+                                                            {option.type && <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Type: {option.type}</span>}
+                                                            {option.amount && <span className="bg-green-100 text-green-800 px-2 py-1 rounded">Amount: {option.amount}</span>}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                valueTemplate={(option: any) => {
+                                                    if (!option) return t('SELECT_PRODUCT');
+                                                    return (
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="font-semibold text-sm">
+                                                                {option.title || option.name || option.package_name || 'N/A'}
+                                                            </span>
+                                                            <span className="text-xs text-gray-600">
+                                                                {option.operator} - {option.price}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* BUNDLE DROPDOWN - for regular providers (not paystore, not mzr) */}
+                            {selectedProvider && selectedProvider.code !== 'mzr' && selectedProvider.code !== 'paystore' && selectedCapability && (
                                 <div className="grid formgrid p-fluid">
                                     <div className="field col-12">
                                         <label htmlFor="bundle_select" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
@@ -1431,6 +1707,7 @@ const BundlePage = () => {
                                             value={selectedProviderBundle}
                                             options={rawInternets}
                                             onChange={(e) => {
+                                                console.log('Selected bundle:', e.value);
                                                 setSelectedProviderBundle(e.value);
                                             }}
                                             optionLabel="name"
@@ -1441,7 +1718,8 @@ const BundlePage = () => {
                                             placeholder={t('SEARCH_BUNDLE')}
                                             className="w-full"
                                             panelClassName="w-full"
-                                            itemTemplate={(option) => (
+                                            emptyMessage="No bundles found"
+                                            itemTemplate={(option: any) => (
                                                 <div className="flex flex-col p-2 gap-2">
                                                     <div className="font-semibold text-sm">{option.name || option.title}</div>
                                                     <div className="flex flex-wrap gap-2 text-xs text-gray-600">
@@ -1451,46 +1729,15 @@ const BundlePage = () => {
                                                     </div>
                                                 </div>
                                             )}
-                                            valueTemplate={(option) => {
+                                            valueTemplate={(option: any) => {
                                                 if (!option) return t('SEARCH_BUNDLE');
-
                                                 return (
-                                                    <div className="flex flex-col gap-1 justify-center items-center">
+                                                    <div className="flex flex-col gap-1">
                                                         <span className="font-semibold text-sm">
                                                             {option.name || option.title}
                                                         </span>
-
                                                         <span className="text-xs text-gray-600">
-                                                            {option.operator}
-                                                        </span>
-
-                                                        <span className="text-xs text-gray-600">
-                                                            {option.currency}
-                                                        </span>
-
-                                                        <span className="text-xs text-gray-600">
-                                                            {option.category}
-                                                        </span>
-
-                                                        <span className="text-xs text-gray-600">
-                                                            {option.validity}
-                                                        </span>
-
-                                                        <span className="text-xs text-gray-600">
-                                                            {option.price}
-                                                        </span>
-
-                                                        <span className="text-xs text-gray-600">
-                                                            {option.voulume}
-                                                        </span>
-                                                        <span className="text-xs text-gray-600">
-                                                            {option.unit}
-                                                        </span>
-                                                        <span className="text-xs text-gray-600">
-                                                            {option.sim_type}
-                                                        </span>
-                                                        <span className="text-xs text-gray-600">
-                                                            {option.internet_type}
+                                                            {option.operator} - {option.price}
                                                         </span>
                                                     </div>
                                                 );
@@ -1516,6 +1763,8 @@ const BundlePage = () => {
                             )}
                         </div>
                     </Dialog>
+
+
 
                     <Dialog visible={deleteServiceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteServiceDialog}>
                         <div className="flex align-items-center justify-content-center">

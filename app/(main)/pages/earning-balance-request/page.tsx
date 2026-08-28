@@ -23,6 +23,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
 import { customCellStyle } from '../../utilities/customRow';
 import { isRTL } from '../../utilities/rtlUtil';
+import CustomDropdownWithSearch from '@/app/(main)/components/customDropDownWithSearch';
 
 const EarningBalanceRequest = () => {
     // State management
@@ -387,7 +388,7 @@ const EarningBalanceRequest = () => {
                                 })}
                                 // loading={resellersLoading}
                             /> */}
-                            <Dropdown
+                            {/* <Dropdown
                                 id="reseller"
                                 value={formData.reseller_id}
                                 options={resellers.map((reseller: Reseller) => ({
@@ -410,7 +411,62 @@ const EarningBalanceRequest = () => {
                                     setResellerSearchTerm(e.filter);
                                 }}
                                 filterIcon
-                            />
+                            /> */}
+
+                             <CustomDropdownWithSearch
+                                        id="reseller"
+                                        value={formData.reseller_id}
+                                        options={resellers}
+                                        onChange={(selectedOption) => {
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                reseller_id: selectedOption?.id // This will be the full object
+                                            }));
+                                        }}
+                                        optionLabel="reseller_name"
+                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                                        placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
+                                        className="w-full"
+                                        panelClassName="min-w-[20rem]"
+                                        searchButtonText={t('ECOMMERCE.COMMON.SEARCH')}
+                                        error={submitted && !formData.reseller_id}
+                                        errorMessage={t('THIS_FIELD_IS_REQUIRED')}
+                                        showClear={true}
+                                        emptyMessage={t('NO_RESULTS_FOUND')}
+                                        noResultsMessage={t('TRY_DIFFERENT_SEARCH_TERM')}
+                                        returnFullObject={true} // This ensures we get the full object
+                                        itemTemplate={(option) => {
+                                            if (!option) return null;
+                                            return (
+                                                <div className="flex flex-column p-2 gap-1">
+                                                    <div className="font-semibold">
+                                                        {option.contact_name} || {option.reseller_name}
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">
+                                                        {option.phone && (
+                                                            <span className="ml-2 text-gray-500">{option.phone}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }}
+                                        valueTemplate={(option) => {
+                                            if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
+                                            return (
+                                                <div className="flex flex-column">
+                                                    <span style={{ fontWeight: 'bold' }}>
+                                                        {option.reseller_name}
+                                                    </span>
+                                                    <small className="text-gray-500 text-xs">
+                                                        {option.contact_name} {option.phone && `${option.phone}`}
+                                                    </small>
+                                                </div>
+                                            );
+                                        }}
+                                        onSearch={(searchTerm) => {
+                                            setResellerSearchTerm(searchTerm);
+                                        }}
+                                    />
 
                             {submitted && !formData.reseller_id && <small className="p-invalid">{t('FORM.VALIDATION.REQUIRED')}</small>}
                         </div>

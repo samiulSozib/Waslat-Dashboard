@@ -149,46 +149,50 @@
 //           });
 //     }
 // };
-import { Dispatch } from "redux";
+import { Payment } from "@/types/interface";
 import axios from "axios";
+import { Toast } from "primereact/toast";
+import { Dispatch } from "redux";
 import {
-    FETCH_PAYMENT_LIST_REQUEST,
-    FETCH_PAYMENT_LIST_SUCCESS,
-    FETCH_PAYMENT_LIST_FAIL,
+    ADD_PAYMENT_FAIL,
     ADD_PAYMENT_REQUEST,
     ADD_PAYMENT_SUCCESS,
-    ADD_PAYMENT_FAIL,
-    EDIT_PAYMENT_REQUEST,
-    EDIT_PAYMENT_SUCCESS,
-    EDIT_PAYMENT_FAIL,
+    DELETE_PAYMENT_FAIL,
     DELETE_PAYMENT_REQUEST,
     DELETE_PAYMENT_SUCCESS,
-    DELETE_PAYMENT_FAIL,
-    ROLLBACK_PAYMENT_REQUEST,
-    ROLLBACK_PAYMENT_SUCCESS,
-    ROLLBACK_PAYMENT_FAIL,
+    EDIT_PAYMENT_FAIL,
+    EDIT_PAYMENT_REQUEST,
+    EDIT_PAYMENT_SUCCESS,
+    FETCH_PAYMENT_LIST_FAIL,
+    FETCH_PAYMENT_LIST_REQUEST,
+    FETCH_PAYMENT_LIST_SUCCESS,
+    INVALIDATE_PAYMENT_FAIL,
     INVALIDATE_PAYMENT_REQUEST,
     INVALIDATE_PAYMENT_SUCCESS,
-    INVALIDATE_PAYMENT_FAIL,
-    VERIFY_PAYMENT_REQUEST,
-    VERIFY_PAYMENT_SUCCESS,
-    VERIFY_PAYMENT_FAIL,
+    ROLLBACK_PAYMENT_FAIL,
+    ROLLBACK_PAYMENT_REQUEST,
+    ROLLBACK_PAYMENT_SUCCESS,
+    VERIFY_PAYMENT_AND_SEND_TO_BALANCE_FAIL,
     VERIFY_PAYMENT_AND_SEND_TO_BALANCE_REQUEST,
     VERIFY_PAYMENT_AND_SEND_TO_BALANCE_SUCCESS,
-    VERIFY_PAYMENT_AND_SEND_TO_BALANCE_FAIL,
+    VERIFY_PAYMENT_FAIL,
+    VERIFY_PAYMENT_REQUEST,
+    VERIFY_PAYMENT_SUCCESS,
 } from "../constants/paymentConstants";
-import { Payment } from "@/types/interface";
-import { Toast } from "primereact/toast";
 
 const getAuthToken = () => {
     return localStorage.getItem("api_token") || "";
 };
+let lastPaymentsController: AbortController | null = null;
 
 // Fetch payment list
 export const _fetchPayments = (page: number = 1, search: string = '', filters: any = {}) => async (dispatch: Dispatch) => {
     dispatch({ type: FETCH_PAYMENT_LIST_REQUEST });
 
     try {
+        try { if (lastPaymentsController) lastPaymentsController.abort(); } catch (err) {}
+        lastPaymentsController = new AbortController();
+
         const token = getAuthToken();
         const queryParams = new URLSearchParams();
 
@@ -208,12 +212,14 @@ export const _fetchPayments = (page: number = 1, search: string = '', filters: a
             headers: {
                 Authorization: `Bearer ${token}`,
             },
+            signal: lastPaymentsController.signal
         });
 
         dispatch({ type: FETCH_PAYMENT_LIST_SUCCESS, payload: { data: response.data.data.payments, pagination: response.data.payload.pagination } });
 
     } catch (error: any) {
-        dispatch({ type: FETCH_PAYMENT_LIST_FAIL, payload: error.message });
+        const isCanceled = error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError';
+        if (!isCanceled) dispatch({ type: FETCH_PAYMENT_LIST_FAIL, payload: error.message });
 
     }
 };
@@ -235,7 +241,7 @@ export const _addPayment = (
         payment_date: paymentData.payment_date,
         operation_type:paymentData.operation_type
     };
-    
+
 
     try {
         const token = getAuthToken();
@@ -516,4 +522,3 @@ export const _verifyAndSendPayment = (paymentId: number,notes:string, toast: Rea
 
     }
 };
-

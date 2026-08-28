@@ -269,7 +269,7 @@ const AppMenu = () => {
 
     return (
         <MenuProvider>
-            <ul className="layout-menu" style={{
+            {/* <ul className="layout-menu" style={{
                 padding: '0.25rem 0',
                 margin: 0,
                 listStyle: 'none'
@@ -281,6 +281,31 @@ const AppMenu = () => {
                         </li>
                     ) : (
                         <li className="menu-separator" style={{ margin: '0.125rem 0' }}></li>
+                    );
+                })}
+            </ul> */}
+            <ul
+                className="layout-menu"
+                style={{
+                    padding: '0.25rem 0',
+                    margin: 0,
+                    listStyle: 'none'
+                }}
+            >
+                {model.map((item, i) => {
+                    return !item?.seperator ? (
+                        <AppMenuitem
+                            key={item.label}
+                            item={item}
+                            root={true}
+                            index={i}
+                        />
+                    ) : (
+                        <li
+                            key={`separator-${i}`}
+                            className="menu-separator"
+                            style={{ margin: '0.125rem 0' }}
+                        />
                     );
                 })}
             </ul>

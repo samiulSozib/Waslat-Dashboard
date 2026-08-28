@@ -1,40 +1,46 @@
-import { Dispatch } from "redux";
+import { Balance } from "@/types/interface";
 import axios from "axios";
+import { Toast } from "primereact/toast";
+import { Dispatch } from "redux";
 import {
-    FETCH_BALANCES_REQUEST,
-    FETCH_BALANCES_SUCCESS,
-    FETCH_BALANCES_FAIL,
+    ADD_BALANCE_FAIL,
     ADD_BALANCE_REQUEST,
     ADD_BALANCE_SUCCESS,
-    ADD_BALANCE_FAIL,
-    EDIT_BALANCE_REQUEST,
-    EDIT_BALANCE_SUCCESS,
-    EDIT_BALANCE_FAIL,
+    DELETE_BALANCE_FAIL,
     DELETE_BALANCE_REQUEST,
     DELETE_BALANCE_SUCCESS,
-    DELETE_BALANCE_FAIL,
-    ROLLBACK_BALANCE_REQUEST,
-    ROLLBACK_BALANCE_SUCCESS,
-    ROLLBACK_BALANCE_FAIL,
-    VERIFY_BALANCE_REQUEST,
-    VERIFY_BALANCE_SUCCESS,
-    VERIFY_BALANCE_FAIL,
+    EDIT_BALANCE_FAIL,
+    EDIT_BALANCE_REQUEST,
+    EDIT_BALANCE_SUCCESS,
+    FETCH_BALANCES_FAIL,
+    FETCH_BALANCES_REQUEST,
+    FETCH_BALANCES_SUCCESS,
+    REJECT_BALANCE_FAIL,
     REJECT_BALANCE_REQUEST,
     REJECT_BALANCE_SUCCESS,
-    REJECT_BALANCE_FAIL,
+    ROLLBACK_BALANCE_FAIL,
+    ROLLBACK_BALANCE_REQUEST,
+    ROLLBACK_BALANCE_SUCCESS,
+    VERIFY_BALANCE_FAIL,
+    VERIFY_BALANCE_REQUEST,
+    VERIFY_BALANCE_SUCCESS,
 } from '../constants/balanceConstants';
-import { Balance } from "@/types/interface";
-import { Toast } from "primereact/toast";
 
 const getAuthToken = () => {
     return localStorage.getItem("api_token") || ""; // Retrieve the token from localStorage
 };
+
+// keep last controller to cancel overlapping
+let lastBalancesController: AbortController | null = null;
 
 // Fetch balances
 export const _fetchBalances = (page: number = 1, search: string = '', filters: any = {}) => async (dispatch: Dispatch) => {
     dispatch({ type: FETCH_BALANCES_REQUEST });
 
     try {
+        try { if (lastBalancesController) lastBalancesController.abort(); } catch (err) {}
+        lastBalancesController = new AbortController();
+
         const token = getAuthToken();
         const queryParams = new URLSearchParams();
 
@@ -54,6 +60,7 @@ export const _fetchBalances = (page: number = 1, search: string = '', filters: a
             headers: {
                 Authorization: `Bearer ${token}`,
             },
+            signal: lastBalancesController.signal
         });
 
         dispatch({
@@ -63,7 +70,8 @@ export const _fetchBalances = (page: number = 1, search: string = '', filters: a
             }
         });
     } catch (error: any) {
-        dispatch({ type: FETCH_BALANCES_FAIL, payload: error.message });
+        const isCanceled = error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError';
+        if (!isCanceled) dispatch({ type: FETCH_BALANCES_FAIL, payload: error.message });
     }
 };
 
@@ -298,5 +306,3 @@ export const _rejectBalance = (balanceId: number, toast: React.RefObject<Toast>,
 
     }
 };
-
-

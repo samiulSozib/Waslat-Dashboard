@@ -1,31 +1,37 @@
-import { Dispatch } from "redux";
+import { MoneyTransaction } from "@/types/interface";
 import axios from "axios";
+import { Toast } from "primereact/toast";
+import { Dispatch } from "redux";
 import {
-    FETCH_MONEY_TRANSACTIONS_LIST_REQUEST,
-    FETCH_MONEY_TRANSACTIONS_LIST_SUCCESS,
-    FETCH_MONEY_TRANSACTIONS_LIST_FAIL,
+    ADD_MONEY_TRANSACTIONS_FAIL,
     ADD_MONEY_TRANSACTIONS_REQUEST,
     ADD_MONEY_TRANSACTIONS_SUCCESS,
-    ADD_MONEY_TRANSACTIONS_FAIL,
-    EDIT_MONEY_TRANSACTIONS_REQUEST,
-    EDIT_MONEY_TRANSACTIONS_SUCCESS,
-    EDIT_MONEY_TRANSACTIONS_FAIL,
+    DELETE_MONEY_TRANSACTIONS_FAIL,
     DELETE_MONEY_TRANSACTIONS_REQUEST,
     DELETE_MONEY_TRANSACTIONS_SUCCESS,
-    DELETE_MONEY_TRANSACTIONS_FAIL,
+    EDIT_MONEY_TRANSACTIONS_FAIL,
+    EDIT_MONEY_TRANSACTIONS_REQUEST,
+    EDIT_MONEY_TRANSACTIONS_SUCCESS,
+    FETCH_MONEY_TRANSACTIONS_LIST_FAIL,
+    FETCH_MONEY_TRANSACTIONS_LIST_REQUEST,
+    FETCH_MONEY_TRANSACTIONS_LIST_SUCCESS,
 } from "../constants/moneyTransactionConstants";
-import { Toast } from "primereact/toast";
-import { MoneyTransaction } from "@/types/interface";
 
 const getAuthToken = () => {
     return localStorage.getItem("api_token") || "";
 };
 
 // Fetch Reseller Balance Transaction List
+let lastMoneyTransactionsController: AbortController | null = null;
+
+// Fetch Reseller Balance Transaction List
 export const _fetchMoneyTransactionsList =
     (page: number = 1,search:string='',filters: any = {}) => async (dispatch: Dispatch) => {
         dispatch({ type: FETCH_MONEY_TRANSACTIONS_LIST_REQUEST });
         try {
+            try { if (lastMoneyTransactionsController) lastMoneyTransactionsController.abort(); } catch (err) {}
+            lastMoneyTransactionsController = new AbortController();
+
             const token = getAuthToken();
             const queryParams = new URLSearchParams();
 
@@ -47,6 +53,7 @@ export const _fetchMoneyTransactionsList =
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
+                    signal: lastMoneyTransactionsController.signal
                 }
             );
             dispatch({
@@ -58,7 +65,8 @@ export const _fetchMoneyTransactionsList =
             });
 
         } catch (error: any) {
-            dispatch({
+            const isCanceled = error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError';
+            if (!isCanceled) dispatch({
                 type: FETCH_MONEY_TRANSACTIONS_LIST_FAIL,
                 payload: error.message,
             });

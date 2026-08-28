@@ -23,6 +23,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
 import { customCellStyle } from '../../utilities/customRow';
 import { isRTL } from '../../utilities/rtlUtil';
+import CustomDropdownWithSearch from '@/app/(main)/components/customDropDownWithSearch';
 
 const NotificationPage = () => {
     let emptyNotification: Notification = {
@@ -50,7 +51,7 @@ const NotificationPage = () => {
     const { notifications, loading, unreadCount } = useSelector((state: any) => state.notificationReducer);
     const { resellers } = useSelector((state: any) => state.resellerReducer);
     const [resellerSearchTerm, setResellerSearchTerm] = useState('');
-
+    const [selectedReseller, setSelectedReseller] = useState<any>(null);
 
     const { t } = useTranslation();
 
@@ -67,13 +68,14 @@ const NotificationPage = () => {
             } else {
                 dispatch(_fetchResellers(1, ''));
             }
-        }, 300); // Debounce for 300ms
+        }, 300);
 
         return () => clearTimeout(timer);
     }, [resellerSearchTerm, dispatch]);
 
     const openNew = () => {
         setNotification(emptyNotification);
+        setSelectedReseller(null);
         setSubmitted(false);
         setNotificationDialog(true);
     };
@@ -81,6 +83,7 @@ const NotificationPage = () => {
     const hideDialog = () => {
         setSubmitted(false);
         setNotificationDialog(false);
+        setSelectedReseller(null);
     };
 
     const hideDeleteNotificationDialog = () => {
@@ -130,11 +133,19 @@ const NotificationPage = () => {
 
         setNotificationDialog(false);
         setNotification(emptyNotification);
+        setSelectedReseller(null);
         setSubmitted(false);
     };
 
     const editNotification = (notification: Notification) => {
         setNotification({ ...notification });
+        // Find the reseller object if reseller_id exists
+        if (notification.reseller_id) {
+            const foundReseller = resellers.find((r: any) => r.id === notification.reseller_id);
+            setSelectedReseller(foundReseller || null);
+        } else {
+            setSelectedReseller(null);
+        }
         setNotificationDialog(true);
     };
 
@@ -175,7 +186,6 @@ const NotificationPage = () => {
             return;
         }
 
-        // Delete selected notifications one by one
         const selectedNotificationArray = selectedNotifications as Notification[];
         for (const notif of selectedNotificationArray) {
             if (notif.id) {
@@ -213,23 +223,6 @@ const NotificationPage = () => {
             </React.Fragment>
         );
     };
-
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <div className="flex items-center">
-    //             <Badge value={unreadCount} severity="danger" className="mr-2"></Badge>
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-    //                 <i className="pi pi-search" />
-    //                 <InputText
-    //                     type="search"
-    //                     onInput={(e) => setGlobalFilter(e.currentTarget.value)}
-    //                     placeholder={t('SEARCH')}
-    //                     className="w-full md:w-auto"
-    //                 />
-    //             </span>
-    //         </div>
-    //     );
-    // };
 
     const [localSearchTerm, setLocalSearchTerm] = useState('');
 
@@ -322,17 +315,31 @@ const NotificationPage = () => {
         );
     };
 
-    // const readStatusBodyTemplate = (rowData: Notification) => {
-    //     return (
-    //         <>
-    //             <span className="p-column-title">Read Status</span>
-    //             <Badge
-    //                 value={rowData.is_read ? t('READ') : t('UNREAD')}
-    //                 severity={rowData.is_read ? 'success' : 'danger'}
-    //             />
-    //         </>
-    //     );
-    // };
+    // Add reseller display column
+    const resellerBodyTemplate = (rowData: Notification) => {
+        // Try to find the reseller from the resellers list
+        const reseller = resellers.find((r: any) => r.id === rowData.reseller_id);
+        return (
+            <>
+                <span className="p-column-title">Reseller</span>
+                {rowData.target_type === 'reseller' && rowData.reseller_id ? (
+                    <div className="flex flex-column">
+                        <span style={{ fontWeight: '500' }}>
+                            {reseller?.reseller_name || `ID: ${rowData.reseller_id}`}
+                        </span>
+                        {reseller && (
+                            <small className="text-gray-500 text-xs">
+                                {reseller.contact_name}
+                                {reseller.phone && ` | ${reseller.phone}`}
+                            </small>
+                        )}
+                    </div>
+                ) : (
+                    <span className="text-gray-400">—</span>
+                )}
+            </>
+        );
+    };
 
     const dateBodyTemplate = (rowData: Notification) => {
         const formatDate = (dateString: string) => {
@@ -454,6 +461,7 @@ const NotificationPage = () => {
         { label: t('TRUE'), value: 1 },
         { label: t('FALSE'), value: 0 }
     ];
+
     return (
         <div className="grid -m-5">
             <div className="col-12">
@@ -505,18 +513,18 @@ const NotificationPage = () => {
                             body={targetTypeBodyTemplate}
                             sortable
                         ></Column>
+                        {/* Add Reseller column */}
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            header={t('RESELLER')}
+                            body={resellerBodyTemplate}
+                        ></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             header={t('STATUS')}
                             body={statusBodyTemplate}
                             sortable
                         ></Column>
-                        {/* <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('READ_STATUS')}
-                            body={readStatusBodyTemplate}
-                            sortable
-                        ></Column> */}
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             header={t('NOTIFICATION.MEDIA')}
@@ -644,6 +652,7 @@ const NotificationPage = () => {
                                             // Clear reseller_id if not "reseller" target type
                                             if (e.value !== 'reseller') {
                                                 newNotification.reseller_id = undefined;
+                                                setSelectedReseller(null);
                                             }
                                             setNotification(newNotification);
                                         }}
@@ -704,42 +713,67 @@ const NotificationPage = () => {
                                 </small>
                             </div>
 
-                            {/* Reseller ID */}
+                            {/* Reseller Selection - Only show when target_type is 'reseller' */}
                             {notification.target_type === 'reseller' && (
                                 <div className="field mb-4">
                                     <label htmlFor="reseller" style={{ fontWeight: 'bold' }}>
-                                        {t('NOTIFICATION.RESELLER')} *
+                                        {t('RESELLER')} *
                                     </label>
-                                    <Dropdown
+                                    <CustomDropdownWithSearch
                                         id="reseller"
-                                        value={notification.reseller_id}
+                                        value={selectedReseller}
                                         options={resellers}
-                                        onChange={(e) =>
+                                        onChange={(selectedOption) => {
+                                            setSelectedReseller(selectedOption);
                                             setNotification((prev) => ({
                                                 ...prev,
-                                                reseller_id: e.value
-                                            }))
-                                        }
+                                                reseller_id: selectedOption?.id ?? undefined
+                                            }));
+                                        }}
                                         optionLabel="reseller_name"
-                                        optionValue="id"
-                                        filter
-                                        filterBy="reseller_name"
                                         filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        showFilterClear
-                                        placeholder={t('NOTIFICATION.SELECT_RESELLER')}
+                                        placeholder={t('SELECT_RESELLER')}
                                         className="w-full"
                                         panelClassName="min-w-[20rem]"
-                                        onFilter={(e) => {
-                                            setResellerSearchTerm(e.filter);
+                                        searchButtonText={t('ECOMMERCE.COMMON.SEARCH')}
+                                        error={submitted && !notification.reseller_id}
+                                        errorMessage={t('THIS_FIELD_IS_REQUIRED')}
+                                        showClear={true}
+                                        emptyMessage={t('NO_RESULTS_FOUND')}
+                                        noResultsMessage={t('TRY_DIFFERENT_SEARCH_TERM')}
+                                        returnFullObject={true}
+                                        itemTemplate={(option) => {
+                                            if (!option) return null;
+                                            return (
+                                                <div className="flex flex-column p-2 gap-1">
+                                                    <div className="font-semibold">
+                                                        {option.contact_name} || {option.reseller_name}
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">
+                                                        {option.phone && (
+                                                            <span className="ml-2 text-gray-500">{option.phone}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
                                         }}
-                                        required={notification.target_type === 'reseller'}
-                                        filterIcon
+                                        valueTemplate={(option) => {
+                                            if (!option) return t('SELECT_RESELLER');
+                                            return (
+                                                <div className="flex flex-column">
+                                                    <span style={{ fontWeight: 'bold' }}>
+                                                        {option.reseller_name}
+                                                    </span>
+                                                    <small className="text-gray-500 text-xs">
+                                                        {option.contact_name} {option.phone && ` | ${option.phone}`}
+                                                    </small>
+                                                </div>
+                                            );
+                                        }}
+                                        onSearch={(searchTerm) => {
+                                            setResellerSearchTerm(searchTerm);
+                                        }}
                                     />
-                                    {submitted && notification.target_type === 'reseller' && !notification.reseller_id && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
                                 </div>
                             )}
                         </div>

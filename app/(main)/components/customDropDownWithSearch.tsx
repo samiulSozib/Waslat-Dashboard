@@ -30,7 +30,10 @@ interface CustomDropdownWithSearchProps<T extends Indexable = any> {
     searchButtonText?: string;
     emptyMessage?: string;
     noResultsMessage?: string;
-    returnFullObject?: boolean; // New prop to control return type
+    returnFullObject?: boolean;
+    isLoading?: boolean;
+    searchPlaceholder?: string;
+    noDataMessage?: string;
 }
 
 function CustomDropdownWithSearch<T extends Indexable = any>({
@@ -57,11 +60,14 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
     searchButtonText = 'Search',
     emptyMessage = 'No results found',
     noResultsMessage = 'Try a different search term',
-    returnFullObject = true // Default to returning the full object
+    returnFullObject = true,
+    isLoading = false,
+    searchPlaceholder = 'Type to search...',
+    noDataMessage = 'No data available'
 }: CustomDropdownWithSearchProps<T>) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchValue, setSearchValue] = useState('');
-    const [filteredOptions, setFilteredOptions] = useState<T[]>(options);
+    const [filteredOptions, setFilteredOptions] = useState<T[]>([]);
     const [hasSearched, setHasSearched] = useState(false);
     const [searchResults, setSearchResults] = useState<T[]>([]);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -74,22 +80,32 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
             if (target.closest('.custom-dropdown-panel')) return;
             if (dropdownRef.current && !dropdownRef.current.contains(target)) {
                 setIsOpen(false);
-                setSearchValue('');
-                setHasSearched(false);
-                setSearchResults([]);
-                setFilteredOptions(options);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [options]);
+    }, []);
+
+    // Update filtered options when options prop changes (API response)
+    useEffect(() => {
+        console.log('Options updated:', options.length);
+        if (hasSearched) {
+            // If we have searched, update the filtered options
+            setFilteredOptions(options);
+            setSearchResults(options);
+
+            // If there are results, keep dropdown open
+            if (options.length > 0) {
+                setIsOpen(true);
+            }
+        }
+    }, [options, hasSearched]);
 
     const getOptionLabel = (option: T): string => {
         if (!option) return '';
         if (typeof option === 'string') return option;
         if (typeof option === 'number') return String(option);
 
-        // Safely access properties using the optionLabel or common keys
         if (optionLabel && option[optionLabel] !== undefined) {
             return String(option[optionLabel]);
         }
@@ -106,7 +122,6 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
         if (!option) return null;
         if (typeof option === 'string' || typeof option === 'number') return option;
 
-        // Safely access properties using the optionValue or common keys
         if (optionValue && option[optionValue] !== undefined) {
             return option[optionValue];
         }
@@ -119,12 +134,10 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
     const getSelectedDisplayValue = (): string => {
         if (!value) return '';
 
-        // If value is an object, try to get its label
         if (typeof value === 'object' && value !== null) {
             return getOptionLabel(value);
         }
 
-        // Find the option that matches the selected value
         const selectedOption = options.find(opt => getOptionValue(opt) === value);
         if (selectedOption) {
             return getOptionLabel(selectedOption);
@@ -133,57 +146,52 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
         return String(value);
     };
 
-    // Get the full object from the value (for display purposes)
-    const getSelectedObject = (): T | null => {
-        if (!value) return null;
-
-        // If value is already an object, return it
-        if (typeof value === 'object' && value !== null) {
-            return value;
-        }
-
-        // Find the option that matches the selected value
-        const selectedOption = options.find(opt => getOptionValue(opt) === value);
-        return selectedOption || null;
-    };
-
     const handleSearch = () => {
-        if (!searchValue.trim()) {
+        const searchTerm = searchValue.trim();
+
+        // If search term is empty, show all options or clear
+        if (!searchTerm) {
+            setHasSearched(false);
+            setFilteredOptions([]);
+            setSearchResults([]);
+            setIsOpen(false);
             return;
         }
 
-        const searchTerm = searchValue.toLowerCase().trim();
-        const results = options.filter((option: T) => {
+        // First, filter locally for immediate feedback
+        const localResults = options.filter((option: T) => {
             if (!option) return false;
             const displayText = getOptionLabel(option)?.toLowerCase() || '';
-            return displayText.includes(searchTerm);
+            return displayText.includes(searchTerm.toLowerCase().trim());
         });
 
-        setSearchResults(results);
-        setFilteredOptions(results);
+        // Set local results immediately
+        setSearchResults(localResults);
+        setFilteredOptions(localResults);
         setHasSearched(true);
         setIsOpen(true);
 
+        // Then call the parent's onSearch callback for API call
         if (onSearch) {
-            onSearch(searchValue);
+            onSearch(searchTerm);
         }
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
+            e.preventDefault();
             handleSearch();
         }
     };
 
     const handleSelect = (option: T) => {
-        // Return either the full object or just the value based on prop
         const selectedValue = returnFullObject ? option : getOptionValue(option);
         onChange(selectedValue);
         setIsOpen(false);
         setSearchValue('');
         setHasSearched(false);
         setSearchResults([]);
-        setFilteredOptions(options);
+        setFilteredOptions([]);
     };
 
     const handleClear = (e: React.MouseEvent) => {
@@ -193,34 +201,15 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
         setSearchValue('');
         setHasSearched(false);
         setSearchResults([]);
-        setFilteredOptions(options);
+        setFilteredOptions([]);
     };
 
     const clearAll = () => {
         setSearchValue('');
         setHasSearched(false);
         setSearchResults([]);
-        setFilteredOptions(options);
+        setFilteredOptions([]);
         setIsOpen(false);
-    };
-
-    const toggleDropdown = () => {
-        if (!disabled) {
-            setIsOpen(!isOpen);
-            if (!isOpen) {
-                // When opening, reset search state
-                setSearchValue('');
-                setHasSearched(false);
-                setSearchResults([]);
-                setFilteredOptions(options);
-                // Focus search input after dropdown opens
-                setTimeout(() => {
-                    if (searchInputRef.current) {
-                        searchInputRef.current.focus();
-                    }
-                }, 100);
-            }
-        }
     };
 
     const renderDefaultItem = (option: T) => {
@@ -235,7 +224,6 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
             return <span style={{ color: '#adb5bd' }}>{placeholder}</span>;
         }
 
-        // If value is an object, use it directly
         if (typeof value === 'object' && value !== null) {
             if (valueTemplate) {
                 return valueTemplate(value);
@@ -243,7 +231,6 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
             return <span style={{ fontWeight: 'bold' }}>{getOptionLabel(value)}</span>;
         }
 
-        // If value is a primitive, find the option
         const selectedOption = options.find(opt => getOptionValue(opt) === value);
         if (selectedOption) {
             if (valueTemplate) {
@@ -255,7 +242,8 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
         return <span style={{ fontWeight: 'bold' }}>{String(value)}</span>;
     };
 
-    const displayOptions = hasSearched ? filteredOptions : options;
+    // Determine which options to display
+    const displayOptions = hasSearched ? filteredOptions : [];
 
     return (
         <div className={`custom-dropdown ${className}`} ref={dropdownRef}>
@@ -273,7 +261,7 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder={filterPlaceholder}
+                    placeholder={searchPlaceholder}
                     style={{
                         flex: 1,
                         padding: '10px 14px',
@@ -288,22 +276,43 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
                 />
                 <button
                     onClick={handleSearch}
+                    disabled={isLoading}
                     style={{
                         padding: '10px 20px',
-                        backgroundColor: '#5C6AC4',
+                        backgroundColor: isLoading ? '#a0a0a0' : '#5C6AC4',
                         color: 'white',
                         border: 'none',
                         borderRadius: '8px',
-                        cursor: 'pointer',
+                        cursor: isLoading ? 'not-allowed' : 'pointer',
                         fontSize: '14px',
                         fontWeight: 'bold',
                         whiteSpace: 'nowrap',
-                        transition: 'background-color 0.2s'
+                        transition: 'background-color 0.2s',
+                        opacity: isLoading ? 0.7 : 1,
+                        minWidth: '80px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a56a8'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#5C6AC4'}
+                    onMouseEnter={(e) => {
+                        if (!isLoading) {
+                            e.currentTarget.style.backgroundColor = '#4a56a8';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (!isLoading) {
+                            e.currentTarget.style.backgroundColor = '#5C6AC4';
+                        }
+                    }}
                 >
-                    {searchButtonText}
+                    {isLoading ? (
+                        <>
+                            <span className="pi pi-spin pi-spinner" style={{ marginRight: '6px' }}></span>
+                            Loading...
+                        </>
+                    ) : (
+                        searchButtonText
+                    )}
                 </button>
             </div>
 
@@ -323,21 +332,23 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
                     }}
                 >
                     <span>
-                        Found {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+                        {isLoading ? 'Searching...' : `Found ${searchResults.length} result${searchResults.length !== 1 ? 's' : ''}`}
                     </span>
-                    <button
-                        onClick={clearAll}
-                        style={{
-                            color: '#5C6AC4',
-                            cursor: 'pointer',
-                            background: 'none',
-                            border: 'none',
-                            fontSize: '13px',
-                            textDecoration: 'underline'
-                        }}
-                    >
-                        Clear
-                    </button>
+                    {!isLoading && searchResults.length > 0 && (
+                        <button
+                            onClick={clearAll}
+                            style={{
+                                color: '#5C6AC4',
+                                cursor: 'pointer',
+                                background: 'none',
+                                border: 'none',
+                                fontSize: '13px',
+                                textDecoration: 'underline'
+                            }}
+                        >
+                            Clear
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -352,20 +363,9 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
                     borderRadius: '8px',
                     border: `2px solid ${error ? '#f44336' : '#e9ecef'}`,
                     marginBottom: '12px',
-                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    cursor: disabled ? 'not-allowed' : 'default',
                     opacity: disabled ? 0.6 : 1,
                     transition: 'border-color 0.2s'
-                }}
-                onClick={toggleDropdown}
-                onMouseEnter={(e) => {
-                    if (!disabled) {
-                        e.currentTarget.style.borderColor = '#5C6AC4';
-                    }
-                }}
-                onMouseLeave={(e) => {
-                    if (!disabled) {
-                        e.currentTarget.style.borderColor = error ? '#f44336' : '#e9ecef';
-                    }
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
@@ -386,37 +386,6 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
                             ✕
                         </span>
                     )}
-                    <button
-                        style={{
-                            padding: '4px 14px',
-                            backgroundColor: 'transparent',
-                            color: '#5C6AC4',
-                            border: '2px solid #5C6AC4',
-                            borderRadius: '6px',
-                            cursor: disabled ? 'not-allowed' : 'pointer',
-                            fontSize: '12px',
-                            fontWeight: 'bold',
-                            transition: 'all 0.2s'
-                        }}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            toggleDropdown();
-                        }}
-                        onMouseEnter={(e) => {
-                            if (!disabled) {
-                                e.currentTarget.style.backgroundColor = '#5C6AC4';
-                                e.currentTarget.style.color = 'white';
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            if (!disabled) {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                                e.currentTarget.style.color = '#5C6AC4';
-                            }
-                        }}
-                    >
-                        {isOpen ? 'Close' : 'Change'}
-                    </button>
                 </div>
             </div>
 
@@ -442,14 +411,13 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
                             backgroundColor: '#f8f9fa',
                             border: '2px solid #e9ecef',
                             borderRadius: '8px',
-                            cursor: 'pointer',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center'
                         }}
                     >
                         <span style={{ color: '#6c757d', fontSize: '14px' }}>
-                            {displayOptions.length} {displayOptions.length === 1 ? 'result' : 'results'}
+                            {isLoading ? 'Searching...' : `${displayOptions.length} ${displayOptions.length === 1 ? 'result' : 'results'}`}
                         </span>
                         <span>▼</span>
                     </div>
@@ -468,10 +436,15 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
                             boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                         }}
                     >
-                        {displayOptions.length > 0 ? (
+                        {isLoading ? (
+                            <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                                <div className="pi pi-spin pi-spinner" style={{ fontSize: '1.5rem', marginBottom: '8px' }}></div>
+                                <div>Loading results...</div>
+                            </div>
+                        ) : displayOptions.length > 0 ? (
                             displayOptions.map((option, index) => (
                                 <div
-                                    key={index}
+                                    key={option.id || index}
                                     style={{
                                         padding: '10px 16px',
                                         cursor: 'pointer',
@@ -490,7 +463,7 @@ function CustomDropdownWithSearch<T extends Indexable = any>({
                             ))
                         ) : (
                             <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
-                                <div>{emptyMessage}</div>
+                                <div>😕 {emptyMessage}</div>
                                 <div style={{ fontSize: '13px', marginTop: '4px' }}>
                                     {noResultsMessage}
                                 </div>

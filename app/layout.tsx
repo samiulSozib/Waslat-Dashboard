@@ -71,6 +71,8 @@ import '../i18n'
 import i18n from 'i18next';
 import '../styles/fonts.scss';
 
+import { useTranslation } from 'react-i18next';
+
 
 interface RootLayoutProps {
     children: ReactNode;
@@ -78,7 +80,7 @@ interface RootLayoutProps {
 
 const RootLayout = ({ children }: RootLayoutProps): JSX.Element => {
 
-
+    const { i18n } = useTranslation();
     const [locale, setLocale] = useState(i18n.language);
     const [direction, setDirection] = useState<'ltr' | 'rtl'>('ltr');
 
@@ -96,6 +98,11 @@ const RootLayout = ({ children }: RootLayoutProps): JSX.Element => {
     //     console.log(direction)
     // },[direction,locale])
 
+
+
+
+const isRTL = ['ar', 'fa', 'ps', 'bn'].includes(i18n.language);
+
     return (
         <html>
             <head lang='en' suppressHydrationWarning>
@@ -106,7 +113,7 @@ const RootLayout = ({ children }: RootLayoutProps): JSX.Element => {
                 ></link>
             </head>
 
-            <body dir={["ar", "fa", "ps","bn"].includes(i18n.language) ? "rtl" : "ltr"}>
+            <body dir={isRTL ? "rtl" : "ltr"}>
                 <Provider store={store}>
                 <PrimeReactProvider>
                     <LayoutProvider>
@@ -126,4 +133,3 @@ const TranslatedRootLayout = appWithTranslation(({ children }: any) => {
 });
 
 export default TranslatedRootLayout;
-

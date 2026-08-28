@@ -1,14 +1,13 @@
 'use client';
-import { useRouter } from 'next/navigation';
+import { AppMenuItemProps } from '@/types';
+import { useTranslation } from 'next-i18next';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Ripple } from 'primereact/ripple';
 import { classNames } from 'primereact/utils';
-import React, { useEffect, useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { CSSTransition } from 'react-transition-group';
 import { MenuContext } from './context/menucontext';
-import { AppMenuItemProps } from '@/types';
-import { usePathname, useSearchParams } from 'next/navigation';
-import i18n from '@/i18n';
 
 const AppMenuitem = (props: AppMenuItemProps) => {
     const pathname = usePathname();
@@ -20,7 +19,11 @@ const AppMenuitem = (props: AppMenuItemProps) => {
     const key = props.parentKey ? props.parentKey + '-' + props.index : String(props.index);
     const isActiveRoute = item!.to && pathname === item!.to;
     const active = activeMenu === key || activeMenu.startsWith(key + '-');
-    
+    const { i18n } = useTranslation();
+
+    const isRTL = ['ar', 'fa', 'ps', 'bn'].includes(i18n.language);
+
+
     const onRouteChange = (url: string) => {
         if (item!.to && item!.to === url) {
             setActiveMenu(key);
@@ -54,11 +57,18 @@ const AppMenuitem = (props: AppMenuItemProps) => {
 
         if (item!.to && !item!.items) {
             event.preventDefault();
-            
+
             setIsNavigating(true);
             setLocalNavigating(true);
-            
+
             setActiveMenu(key);
+
+            // Add a body class to immediately block interactions globally
+            try {
+                document.body.classList.add('menu-navigating');
+            } catch (err) {
+                // ignore (server fallback)
+            }
 
             try {
                 if (item!.replaceUrl) {
@@ -67,15 +77,15 @@ const AppMenuitem = (props: AppMenuItemProps) => {
                     router.push(item!.to);
                 }
 
-                setTimeout(() => {
-                    setIsNavigating(false);
-                    setLocalNavigating(false);
-                }, 1000);
+                // Navigation state will be cleared by MenuProvider when pathname changes.
 
             } catch (error) {
                 console.error('Navigation error:', error);
                 setIsNavigating(false);
                 setLocalNavigating(false);
+                try {
+                    document.body.classList.remove('menu-navigating');
+                } catch (err) { }
             }
         } else {
             if (item!.items) {
@@ -88,7 +98,7 @@ const AppMenuitem = (props: AppMenuItemProps) => {
 
     const subMenu = item!.items && item!.visible !== false && (
         <CSSTransition timeout={{ enter: 1000, exit: 450 }} classNames="layout-submenu" in={props.root ? true : active} key={item!.label}>
-            <ul style={{ 
+            <ul style={{
                 paddingLeft: '1rem',
                 fontSize: '0.875rem' // Smaller font for sub-items
             }}>
@@ -100,9 +110,9 @@ const AppMenuitem = (props: AppMenuItemProps) => {
     );
 
     const menuItemClass = classNames(
-        item!.class, 
-        'p-ripple', 
-        { 
+        item!.class,
+        'p-ripple',
+        {
             'active-route': isActiveRoute,
             'layout-menuitem-disabled': localNavigating && !item!.items
         }
@@ -119,15 +129,15 @@ const AppMenuitem = (props: AppMenuItemProps) => {
     };
 
     return (
-        <li className={classNames({ 
-            'layout-root-menuitem': props.root, 
+        <li className={classNames({
+            'layout-root-menuitem': props.root,
             'active-menuitem': active,
             'layout-menuitem-navigating': localNavigating
         })} style={{
             margin: '0.125rem 0' // Reduced margin
         }}>
             {props.root && item!.visible !== false && (
-                <div className="layout-menuitem-root-text" style={{ 
+                <div className="layout-menuitem-root-text" style={{
                     fontSize: '0.75rem',
                     padding: '0.25rem 0.75rem',
                     marginBottom: '0.25rem'
@@ -136,24 +146,24 @@ const AppMenuitem = (props: AppMenuItemProps) => {
                 </div>
             )}
             {(!item!.to || item!.items) && item!.visible !== false ? (
-                <a 
-                    href={item!.url} 
-                    onClick={(e) => handleNavigation(e, item!.url)} 
-                    className={menuItemClass} 
-                    target={item!.target} 
+                <a
+                    href={item!.url}
+                    onClick={(e) => handleNavigation(e, item!.url)}
+                    className={menuItemClass}
+                    target={item!.target}
                     tabIndex={isNavigating && !localNavigating ? -1 : 0}
-                    style={{ 
+                    style={{
                         pointerEvents: isNavigating && !localNavigating ? 'none' : 'auto',
                         fontSize: getFontSize(),
                         padding: '0.5rem 0.75rem', // Reduced padding
                         minHeight: '2rem' // Reduced height
                     }}
                 >
-                    <i 
+                    <i
                         className={classNames('layout-menuitem-icon', item!.icon)}
                         style={{
-                            marginLeft: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "6px" : "0px",
-                            marginRight: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "0px" : "6px",
+                            marginLeft: isRTL ? "6px" : "0px",
+                            marginRight: isRTL ? "0px" : "6px",
                             fontSize: '0.875rem' // Slightly smaller icons
                         }}
                     >
@@ -169,9 +179,9 @@ const AppMenuitem = (props: AppMenuItemProps) => {
                         }}></i>
                     )}
                     {showSpinner && (
-                        <i 
-                            className="pi pi-spin pi-spinner layout-menuitem-spinner" 
-                            style={{ 
+                        <i
+                            className="pi pi-spin pi-spinner layout-menuitem-spinner"
+                            style={{
                                 marginLeft: '6px',
                                 fontSize: '0.75rem' // Smaller spinner
                             }}
@@ -182,14 +192,14 @@ const AppMenuitem = (props: AppMenuItemProps) => {
             ) : null}
 
             {item!.to && !item!.items && item!.visible !== false ? (
-                <Link 
-                    href={item!.to} 
-                    replace={item!.replaceUrl} 
-                    target={item!.target} 
+                <Link
+                    href={item!.to}
+                    replace={item!.replaceUrl}
+                    target={item!.target}
                     onClick={(e) => handleNavigation(e)}
                     className={menuItemClass}
                     tabIndex={isNavigating && !localNavigating ? -1 : 0}
-                    style={{ 
+                    style={{
                         pointerEvents: isNavigating && !localNavigating ? 'none' : 'auto',
                         fontSize: getFontSize(),
                         padding: '0.5rem 0.75rem', // Reduced padding
@@ -197,11 +207,11 @@ const AppMenuitem = (props: AppMenuItemProps) => {
                     }}
                     scroll={true}
                 >
-                    <i 
+                    <i
                         className={classNames('layout-menuitem-icon', item!.icon)}
                         style={{
-                            marginLeft: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "6px" : "0px",
-                            marginRight: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "0px" : "6px",
+                            marginLeft: isRTL ? "6px" : "0px",
+                            marginRight: isRTL ? "0px" : "6px",
                             fontSize: '0.875rem' // Slightly smaller icons
                         }}
                     >
@@ -217,9 +227,9 @@ const AppMenuitem = (props: AppMenuItemProps) => {
                         }}></i>
                     )}
                     {showSpinner && (
-                        <i 
-                            className="pi pi-spin pi-spinner layout-menuitem-spinner" 
-                            style={{ 
+                        <i
+                            className="pi pi-spin pi-spinner layout-menuitem-spinner"
+                            style={{
                                 marginLeft: '6px',
                                 fontSize: '0.75rem' // Smaller spinner
                             }}

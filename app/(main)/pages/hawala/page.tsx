@@ -30,6 +30,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
 import { customCellStyle } from '../../utilities/customRow';
 import { isRTL } from '../../utilities/rtlUtil';
+import CustomDropdownWithSearch from '@/app/(main)/components/customDropDownWithSearch';
 
 // Form Data Interface
 interface HawalaFormData {
@@ -1313,382 +1314,417 @@ const HawalaPage = () => {
                     </Dialog>
 
                     {/* Add Hawala Dialog */}
-                    <Dialog
-                        visible={addHawalaDialog}
-                        style={{ width: '90vw', maxWidth: '1200px' }}
-                        header={t("ADD_HAWALA_ORDER")}
-                        modal
-                        className="p-fluid"
-                        footer={
-                            <>
-                                <Button
-                                    label={t("CANCEL")}
-                                    icon="pi pi-times"
-                                    severity="danger"
-                                    text
-                                    onClick={closeAddHawalaDialog}
-                                />
-                                <Button
-                                    label={t("SAVE")}
-                                    icon="pi pi-check"
-                                    severity="success"
-                                    onClick={handleAddHawalaSubmit}
-                                />
-                            </>
-                        }
-                        onHide={closeAddHawalaDialog}
-                    >
-                        <div className="grid">
-                            <div className="col-12">
-                                <div className="flex justify-content-end mb-3">
-                                    <Button
-                                        icon="pi pi-info-circle"
-                                        className="p-button-outlined p-button-sm"
-                                        onClick={() => setShowRatesModal(true)}
-                                        tooltip={t("TODAYS_RATE")}
-                                        tooltipOptions={{ position: 'top' }}
-                                    />
-                                </div>
+                   <Dialog
+    visible={addHawalaDialog}
+    style={{ width: '95vw', maxWidth: '1200px' }}
+    header={t("ADD_HAWALA_ORDER")}
+    modal
+    className="p-fluid"
+    breakpoints={{ '960px': '100vw', '640px': '100vw' }}
+    contentStyle={{ padding: '0.5rem 1rem 1rem 1rem' }}
+    footer={
+        <>
+            <Button
+                label={t("CANCEL")}
+                icon="pi pi-times"
+                severity="danger"
+                text
+                onClick={closeAddHawalaDialog}
+            />
+            <Button
+                label={t("SAVE")}
+                icon="pi pi-check"
+                severity="success"
+                onClick={handleAddHawalaSubmit}
+            />
+        </>
+    }
+    onHide={closeAddHawalaDialog}
+>
+    <div className="grid" style={{ padding: '0.5rem 0' }}>
+        <div className="col-12">
+            <div className="flex justify-content-end mb-3">
+                <Button
+                    icon="pi pi-info-circle"
+                    className="p-button-outlined p-button-sm"
+                    onClick={() => setShowRatesModal(true)}
+                    tooltip={t("TODAYS_RATE")}
+                    tooltipOptions={{ position: 'top' }}
+                />
+            </div>
 
-                                <div className="p-4 surface-50 border-round">
-                                    <div className="grid formgrid p-fluid">
-                                        <div className="field col-12 md:col-6">
-                                            <label htmlFor="reseller" style={{ fontWeight: 'bold' }}>
-                                                {t('PAYMENT.FORM.INPUT.RESELLER')} *
-                                            </label>
-                                            <Dropdown
-                                                id="reseller"
-                                                value={formData.reseller}
-                                                options={resellers}
-                                                onChange={(e) => {
-                                                    setFormData((prev) => ({
-                                                        ...prev,
-                                                        reseller: e.value
-                                                    }));
-                                                }}
-                                                optionLabel="reseller_name"
-                                                filter
-                                                filterBy="reseller_name"
-                                                filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                                showFilterClear
-                                                placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
-                                                className={`w-full ${submitted && !formData.reseller ? 'p-invalid' : ''}`}
-                                                panelClassName="min-w-[20rem]"
-                                                onFilter={(e) => {
-                                                    setResellerSearchTerm(e.filter);
-                                                }}
-                                                filterIcon
-                                            />
-                                            {submitted && !formData.reseller && (
-                                                <small className="p-invalid" style={{ color: 'red' }}>
-                                                    {t('THIS_FIELD_IS_REQUIRED')}
-                                                </small>
+            <div className="p-2 surface-50 border-round" style={{ backgroundColor: '#f8fafc' }}>
+                <div className="grid formgrid p-fluid" style={{ margin: '0' }}>
+                    {/* Reseller - Full width on mobile, half on desktop */}
+                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
+                        <label htmlFor="reseller" style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>
+                            {t('PAYMENT.FORM.INPUT.RESELLER')} *
+                        </label>
+                        <CustomDropdownWithSearch
+                            id="reseller"
+                            value={formData.reseller}
+                            options={resellers}
+                            onChange={(selectedOption) => {
+                                setFormData((prev) => ({
+                                    ...prev,
+                                    reseller: selectedOption
+                                }));
+                            }}
+                            optionLabel="reseller_name"
+                            filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                            placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
+                            className="w-full"
+                            panelClassName="min-w-[15rem]"
+                            searchButtonText={t('ECOMMERCE.COMMON.SEARCH')}
+                            error={submitted && !formData.reseller}
+                            errorMessage={t('THIS_FIELD_IS_REQUIRED')}
+                            showClear={true}
+                            emptyMessage={t('NO_RESULTS_FOUND')}
+                            noResultsMessage={t('TRY_DIFFERENT_SEARCH_TERM')}
+                            returnFullObject={true}
+                            itemTemplate={(option) => {
+                                if (!option) return null;
+                                return (
+                                    <div className="flex flex-column p-2 gap-1" style={{ fontSize: '0.9rem' }}>
+                                        <div className="font-semibold">
+                                            {option.contact_name} || {option.reseller_name}
+                                        </div>
+                                        <div className="text-sm text-gray-600">
+                                            {option.phone && (
+                                                <span className="ml-2 text-gray-500">{option.phone}</span>
                                             )}
-                                        </div>
-
-
-
-                                        {/* Sender Information */}
-                                        <div className="field col-12 md:col-6">
-                                            <label htmlFor="senderName" className="font-medium block mb-2">
-                                                {t("SENDER_NAME")} *
-                                            </label>
-                                            <InputText
-                                                id="senderName"
-                                                name="senderName"
-                                                value={formData.senderName}
-                                                onChange={handleInputChange}
-                                                placeholder={t("SENDER_NAME")}
-                                                required
-                                                className={classNames({
-                                                    'p-invalid': submitted && !formData.senderName
-                                                })}
-                                            />
-                                            {submitted && !formData.senderName && (
-                                                <small className="p-invalid" style={{ color: 'red' }}>
-                                                    {t('THIS_FIELD_IS_REQUIRED')}
-                                                </small>
-                                            )}
-                                        </div>
-
-                                        <div className="field col-12 md:col-6">
-                                            <label htmlFor="receiverName" className="font-medium block mb-2">
-                                                {t("RECEIVER_NAME")} *
-                                            </label>
-                                            <InputText
-                                                id="receiverName"
-                                                name="receiverName"
-                                                value={formData.receiverName}
-                                                onChange={handleInputChange}
-                                                placeholder={t("RECEIVER_NAME")}
-                                                required
-                                                className={classNames({
-                                                    'p-invalid': submitted && !formData.receiverName
-                                                })}
-                                            />
-                                            {submitted && !formData.receiverName && (
-                                                <small className="p-invalid" style={{ color: 'red' }}>
-                                                    {t('THIS_FIELD_IS_REQUIRED')}
-                                                </small>
-                                            )}
-                                        </div>
-
-                                        {/* Receiver Details */}
-                                        <div className="field col-12 md:col-6">
-                                            <label htmlFor="receiverFatherName" className="font-medium block mb-2">
-                                                {t("RECEIVER_FATHERS_NAME")} *
-                                            </label>
-                                            <InputText
-                                                id="receiverFatherName"
-                                                name="receiverFatherName"
-                                                value={formData.receiverFatherName}
-                                                onChange={handleInputChange}
-                                                placeholder={t("RECEIVER_FATHERS_NAME")}
-                                                required
-                                                className={classNames({
-                                                    'p-invalid': submitted && !formData.receiverFatherName
-                                                })}
-                                            />
-                                            {submitted && !formData.receiverFatherName && (
-                                                <small className="p-invalid" style={{ color: 'red' }}>
-                                                    {t('THIS_FIELD_IS_REQUIRED')}
-                                                </small>
-                                            )}
-                                        </div>
-
-                                        <div className="field col-12 md:col-6">
-                                            <label htmlFor="receiverIdCardNumber" className="font-medium block mb-2">
-                                                {t("RECEIVER_ID_CARD_NUMBER")} *
-                                            </label>
-                                            <InputText
-                                                id="receiverIdCardNumber"
-                                                name="receiverIdCardNumber"
-                                                value={formData.receiverIdCardNumber}
-                                                onChange={handleInputChange}
-                                                placeholder={t("RECEIVER_ID_CARD_NUMBER")}
-                                                required
-                                                keyfilter="int"
-                                                className={classNames({
-                                                    'p-invalid': submitted && !formData.receiverIdCardNumber
-                                                })}
-                                            />
-                                            {submitted && !formData.receiverIdCardNumber && (
-                                                <small className="p-invalid" style={{ color: 'red' }}>
-                                                    {t('THIS_FIELD_IS_REQUIRED')}
-                                                </small>
-                                            )}
-                                        </div>
-
-                                        {/* Amount and Currency */}
-                                        <div className="field col-12 md:col-6">
-                                            <label htmlFor="hawalaAmount" className="font-medium block mb-2">
-                                                {t("HAWALA_AMOUNT")} *
-                                            </label>
-                                            <InputText
-                                                id="hawalaAmount"
-                                                name="hawalaAmount"
-                                                value={formData.hawalaAmount}
-                                                onChange={handleInputChange}
-                                                placeholder={t("HAWALA_AMOUNT")}
-                                                required
-                                                keyfilter="money"
-                                                className={classNames({
-                                                    'p-invalid': submitted && !formData.hawalaAmount
-                                                })}
-                                            />
-                                            {submitted && !formData.hawalaAmount && (
-                                                <small className="p-invalid" style={{ color: 'red' }}>
-                                                    {t('THIS_FIELD_IS_REQUIRED')}
-                                                </small>
-                                            )}
-                                        </div>
-
-                                        <div className="field col-12 md:col-6">
-                                            <label htmlFor="currencyCodeId" className="font-medium block mb-2">
-                                                {t("DESTINATION_CURRENCY")} *
-                                            </label>
-                                            <Dropdown
-                                                id="currencyCodeId"
-                                                name="currencyCodeId"
-                                                value={formData.currencyCodeId}
-                                                onChange={handleInputChange}
-                                                options={availableToCurrencies}
-                                                optionLabel="name"
-                                                optionValue="id"
-                                                placeholder={t("SELECT_CURRENCY")}
-                                                className={classNames('w-full', {
-                                                    'p-invalid': submitted && !formData.currencyCodeId
-                                                })}
-                                            />
-                                            {submitted && !formData.currencyCodeId && (
-                                                <small className="p-invalid" style={{ color: 'red' }}>
-                                                    {t('THIS_FIELD_IS_REQUIRED')}
-                                                </small>
-                                            )}
-                                        </div>
-
-                                        {/* COMMISSION PAID BY */}
-                                        <div className="field col-12 md:col-6">
-                                            <label className="font-medium block mb-2">
-                                                {t("COMMISSION_PAID_BY")} *
-                                            </label>
-                                            <div className="flex gap-3">
-                                                <div className="field-checkbox">
-                                                    <input
-                                                        type="radio"
-                                                        id="commissionSender"
-                                                        name="commissionPaidBy"
-                                                        value="sender"
-                                                        checked={formData.commissionPaidBy === "sender"}
-                                                        onChange={handleInputChange}
-                                                        className="mr-2"
-                                                    />
-                                                    <label htmlFor="commissionSender">{t("SENDER")}</label>
-                                                </div>
-                                                <div className="field-checkbox">
-                                                    <input
-                                                        type="radio"
-                                                        id="commissionReceiver"
-                                                        name="commissionPaidBy"
-                                                        value="receiver"
-                                                        checked={formData.commissionPaidBy === "receiver"}
-                                                        onChange={handleInputChange}
-                                                        className="mr-2"
-                                                    />
-                                                    <label htmlFor="commissionReceiver">{t("RECEIVER")}</label>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Conversion Details */}
-                                        <div className="col-12 mb-4">
-                                            <Card className="bg-blue-50 border-1 border-blue-200">
-                                                <div className="grid">
-                                                    <div className="col-12 md:col-4 text-center">
-                                                        <div className="text-sm text-blue-600 font-medium">{t("EXCHANGE_RATE")}</div>
-                                                        <div className="text-lg font-bold text-blue-800">
-                                                            {exchangeRate > 0 ? `1 ${resellerCurrencyPreferenceCode} = ${exchangeRate.toFixed(4)}` : t("N/A")}
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-12 md:col-4 text-center">
-                                                        <div className="text-sm text-blue-600 font-medium">{t("FINAL_AMOUNT")}</div>
-                                                        <div className="text-lg font-bold text-blue-800">
-                                                            {finalAmount > 0 ? `${finalAmount.toFixed(2)} ${resellerCurrencyPreferenceCode}` : t("N/A")}
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-12 md:col-4 text-center">
-                                                        <div className="text-sm text-blue-600 font-medium">{t("SOURCE_CURRENCY")}</div>
-                                                        <div className="text-lg font-bold text-blue-800">{resellerCurrencyPreferenceCode}</div>
-                                                    </div>
-                                                </div>
-                                            </Card>
-                                        </div>
-
-                                        {/* Branch and Commission */}
-                                        {/* Branch and Commission */}
-                                        <div className="field col-12 md:col-6">
-                                            <label htmlFor="branchId" className="font-medium block mb-2">
-                                                {t("HAWALA_BRANCH")} *
-                                                {fetchingNextNumber && formData.branchId && (
-                                                    <i className="pi pi-spin pi-spinner ml-2" style={{ fontSize: '1rem' }} />
-                                                )}
-                                            </label>
-                                            <Dropdown
-                                                id="branchId"
-                                                name="branchId"
-                                                value={formData.branchId}
-                                                onChange={(e) => {
-                                                    handleInputChange(e);
-                                                    // Reset custom hawala number when branch changes
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        customHawalaNumber: ""
-                                                    }));
-                                                }}
-                                                options={hawalaBranches}
-                                                optionLabel="name"
-                                                optionValue="id"
-                                                placeholder={t("SELECT_BRANCH")}
-                                                className={classNames('w-full mb-2', {
-                                                    'p-invalid': submitted && !formData.branchId
-                                                })}
-                                            />
-                                            {submitted && !formData.branchId && (
-                                                <small className="p-invalid" style={{ color: 'red' }}>
-                                                    {t('THIS_FIELD_IS_REQUIRED')}
-                                                </small>
-                                            )}
-                                            {formData.branchId && (
-                                                <small className="text-blue-600">
-                                                    {fetchingNextNumber ? t('FETCHING_HAWALA_NUMBER') : t('HAWALA_NUMBER_AUTO_GENERATED')}
-                                                </small>
-                                            )}
-                                        </div>
-
-                                        {/* Custom Hawala Number */}
-                                        {/* Custom Hawala Number */}
-                                        <div className="field col-12 md:col-6">
-                                            <label htmlFor="customHawalaNumber" className="font-medium block mb-2">
-                                                {t("CUSTOM_HAWALA_NUMBER")}
-                                                {fetchingNextNumber && (
-                                                    <i className="pi pi-spin pi-spinner ml-2" style={{ fontSize: '1rem' }} />
-                                                )}
-                                            </label>
-                                            <div className="p-inputgroup mb-2">
-                                                <InputText
-                                                    id="customHawalaNumber"
-                                                    name="customHawalaNumber"
-                                                    value={formData.customHawalaNumber}
-                                                    onChange={handleInputChange}
-                                                    placeholder={fetchingNextNumber ? t('GENERATING_HAWALA_NUMBER') : t("CUSTOM_HAWALA_NUMBER")}
-                                                    className={classNames({
-                                                        'bg-blue-50 border-blue-200': !!formData.customHawalaNumber && !!formData.branchId
-                                                    })}
-                                                />
-                                                {formData.customHawalaNumber && formData.branchId && (
-                                                    <Button
-                                                        icon="pi pi-refresh"
-                                                        className="p-button-outlined p-button-secondary"
-                                                        tooltip={t('REGENERATE_NUMBER')}
-                                                        tooltipOptions={{ position: 'top' }}
-                                                        onClick={() => {
-                                                            // Manually refetch the next number
-                                                            if (formData.branchId) {
-                                                                fetchNextHawalaNumber(formData.branchId);
-                                                            }
-                                                        }}
-                                                    />
-                                                )}
-                                            </div>
-                                            {formData.customHawalaNumber && formData.branchId && (
-                                                <small className="text-green-600">
-                                                    <i className="pi pi-check-circle mr-1"></i>
-                                                    {t('HAWALA_NUMBER_AUTO_GENERATED')}
-                                                </small>
-                                            )}
-                                        </div>
-
-
-
-                                        {/* Admin Note */}
-                                        <div className="field col-12">
-                                            <label htmlFor="adminNote" className="font-medium block mb-2">
-                                                {t("ADMIN_NOTE")}
-                                            </label>
-                                            <InputTextarea
-                                                id="adminNote"
-                                                name="adminNote"
-                                                value={formData.adminNote}
-                                                onChange={handleInputChange}
-                                                placeholder={t("ADMIN_NOTE_PLACEHOLDER")}
-                                                rows={3}
-                                            />
                                         </div>
                                     </div>
-                                </div>
+                                );
+                            }}
+                            valueTemplate={(option) => {
+                                if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
+                                return (
+                                    <div className="flex flex-column" style={{ fontSize: '0.9rem' }}>
+                                        <span style={{ fontWeight: 'bold' }}>
+                                            {option.reseller_name}
+                                        </span>
+                                        <small className="text-gray-500 text-xs">
+                                            {option.contact_name} {option.phone && ` | ${option.phone}`}
+                                        </small>
+                                    </div>
+                                );
+                            }}
+                            onSearch={(searchTerm) => {
+                                setResellerSearchTerm(searchTerm);
+                            }}
+                        />
+                    </div>
+
+                    {/* Sender Name */}
+                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
+                        <label htmlFor="senderName" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
+                            {t("SENDER_NAME")} *
+                        </label>
+                        <InputText
+                            id="senderName"
+                            name="senderName"
+                            value={formData.senderName}
+                            onChange={handleInputChange}
+                            placeholder={t("SENDER_NAME")}
+                            required
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !formData.senderName
+                            })}
+                            style={{ fontSize: '0.95rem' }}
+                        />
+                        {submitted && !formData.senderName && (
+                            <small className="p-invalid" style={{ color: 'red' }}>
+                                {t('THIS_FIELD_IS_REQUIRED')}
+                            </small>
+                        )}
+                    </div>
+
+                    {/* Receiver Name */}
+                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
+                        <label htmlFor="receiverName" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
+                            {t("RECEIVER_NAME")} *
+                        </label>
+                        <InputText
+                            id="receiverName"
+                            name="receiverName"
+                            value={formData.receiverName}
+                            onChange={handleInputChange}
+                            placeholder={t("RECEIVER_NAME")}
+                            required
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !formData.receiverName
+                            })}
+                            style={{ fontSize: '0.95rem' }}
+                        />
+                        {submitted && !formData.receiverName && (
+                            <small className="p-invalid" style={{ color: 'red' }}>
+                                {t('THIS_FIELD_IS_REQUIRED')}
+                            </small>
+                        )}
+                    </div>
+
+                    {/* Receiver Father Name */}
+                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
+                        <label htmlFor="receiverFatherName" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
+                            {t("RECEIVER_FATHERS_NAME")} *
+                        </label>
+                        <InputText
+                            id="receiverFatherName"
+                            name="receiverFatherName"
+                            value={formData.receiverFatherName}
+                            onChange={handleInputChange}
+                            placeholder={t("RECEIVER_FATHERS_NAME")}
+                            required
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !formData.receiverFatherName
+                            })}
+                            style={{ fontSize: '0.95rem' }}
+                        />
+                        {submitted && !formData.receiverFatherName && (
+                            <small className="p-invalid" style={{ color: 'red' }}>
+                                {t('THIS_FIELD_IS_REQUIRED')}
+                            </small>
+                        )}
+                    </div>
+
+                    {/* Receiver ID Card Number */}
+                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
+                        <label htmlFor="receiverIdCardNumber" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
+                            {t("RECEIVER_ID_CARD_NUMBER")} *
+                        </label>
+                        <InputText
+                            id="receiverIdCardNumber"
+                            name="receiverIdCardNumber"
+                            value={formData.receiverIdCardNumber}
+                            onChange={handleInputChange}
+                            placeholder={t("RECEIVER_ID_CARD_NUMBER")}
+                            required
+                            keyfilter="int"
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !formData.receiverIdCardNumber
+                            })}
+                            style={{ fontSize: '0.95rem' }}
+                        />
+                        {submitted && !formData.receiverIdCardNumber && (
+                            <small className="p-invalid" style={{ color: 'red' }}>
+                                {t('THIS_FIELD_IS_REQUIRED')}
+                            </small>
+                        )}
+                    </div>
+
+                    {/* Hawala Amount */}
+                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
+                        <label htmlFor="hawalaAmount" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
+                            {t("HAWALA_AMOUNT")} *
+                        </label>
+                        <InputText
+                            id="hawalaAmount"
+                            name="hawalaAmount"
+                            value={formData.hawalaAmount}
+                            onChange={handleInputChange}
+                            placeholder={t("HAWALA_AMOUNT")}
+                            required
+                            keyfilter="money"
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !formData.hawalaAmount
+                            })}
+                            style={{ fontSize: '0.95rem' }}
+                        />
+                        {submitted && !formData.hawalaAmount && (
+                            <small className="p-invalid" style={{ color: 'red' }}>
+                                {t('THIS_FIELD_IS_REQUIRED')}
+                            </small>
+                        )}
+                    </div>
+
+                    {/* Destination Currency */}
+                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
+                        <label htmlFor="currencyCodeId" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
+                            {t("DESTINATION_CURRENCY")} *
+                        </label>
+                        <Dropdown
+                            id="currencyCodeId"
+                            name="currencyCodeId"
+                            value={formData.currencyCodeId}
+                            onChange={handleInputChange}
+                            options={availableToCurrencies}
+                            optionLabel="name"
+                            optionValue="id"
+                            placeholder={t("SELECT_CURRENCY")}
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !formData.currencyCodeId
+                            })}
+                            style={{ fontSize: '0.95rem' }}
+                        />
+                        {submitted && !formData.currencyCodeId && (
+                            <small className="p-invalid" style={{ color: 'red' }}>
+                                {t('THIS_FIELD_IS_REQUIRED')}
+                            </small>
+                        )}
+                    </div>
+
+                    {/* Commission Paid By */}
+                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
+                        <label className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
+                            {t("COMMISSION_PAID_BY")} *
+                        </label>
+                        <div className="flex flex-wrap gap-3">
+                            <div className="field-checkbox">
+                                <input
+                                    type="radio"
+                                    id="commissionSender"
+                                    name="commissionPaidBy"
+                                    value="sender"
+                                    checked={formData.commissionPaidBy === "sender"}
+                                    onChange={handleInputChange}
+                                    className="mr-2"
+                                />
+                                <label htmlFor="commissionSender">{t("SENDER")}</label>
+                            </div>
+                            <div className="field-checkbox">
+                                <input
+                                    type="radio"
+                                    id="commissionReceiver"
+                                    name="commissionPaidBy"
+                                    value="receiver"
+                                    checked={formData.commissionPaidBy === "receiver"}
+                                    onChange={handleInputChange}
+                                    className="mr-2"
+                                />
+                                <label htmlFor="commissionReceiver">{t("RECEIVER")}</label>
                             </div>
                         </div>
-                    </Dialog>
+                    </div>
+
+                    {/* Conversion Details - Full Width Card */}
+                    <div className="col-12" style={{ padding: '0.5rem' }}>
+                        <Card className="bg-blue-50 border-1 border-blue-200" style={{ margin: '0.25rem 0' }}>
+                            <div className="grid" style={{ margin: '0' }}>
+                                <div className="col-12 sm:col-4 text-center" style={{ padding: '0.5rem' }}>
+                                    <div className="text-sm text-blue-600 font-medium">{t("EXCHANGE_RATE")}</div>
+                                    <div className="text-base md:text-lg font-bold text-blue-800">
+                                        {exchangeRate > 0 ? `1 ${resellerCurrencyPreferenceCode} = ${exchangeRate.toFixed(4)}` : t("N/A")}
+                                    </div>
+                                </div>
+                                <div className="col-12 sm:col-4 text-center" style={{ padding: '0.5rem' }}>
+                                    <div className="text-sm text-blue-600 font-medium">{t("FINAL_AMOUNT")}</div>
+                                    <div className="text-base md:text-lg font-bold text-blue-800">
+                                        {finalAmount > 0 ? `${finalAmount.toFixed(2)} ${resellerCurrencyPreferenceCode}` : t("N/A")}
+                                    </div>
+                                </div>
+                                <div className="col-12 sm:col-4 text-center" style={{ padding: '0.5rem' }}>
+                                    <div className="text-sm text-blue-600 font-medium">{t("SOURCE_CURRENCY")}</div>
+                                    <div className="text-base md:text-lg font-bold text-blue-800">{resellerCurrencyPreferenceCode}</div>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Hawala Branch */}
+                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
+                        <label htmlFor="branchId" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
+                            {t("HAWALA_BRANCH")} *
+                            {fetchingNextNumber && formData.branchId && (
+                                <i className="pi pi-spin pi-spinner ml-2" style={{ fontSize: '1rem' }} />
+                            )}
+                        </label>
+                        <Dropdown
+                            id="branchId"
+                            name="branchId"
+                            value={formData.branchId}
+                            onChange={(e) => {
+                                handleInputChange(e);
+                                setFormData(prev => ({
+                                    ...prev,
+                                    customHawalaNumber: ""
+                                }));
+                            }}
+                            options={hawalaBranches}
+                            optionLabel="name"
+                            optionValue="id"
+                            placeholder={t("SELECT_BRANCH")}
+                            className={classNames('w-full mb-2', {
+                                'p-invalid': submitted && !formData.branchId
+                            })}
+                            style={{ fontSize: '0.95rem' }}
+                        />
+                        {submitted && !formData.branchId && (
+                            <small className="p-invalid" style={{ color: 'red' }}>
+                                {t('THIS_FIELD_IS_REQUIRED')}
+                            </small>
+                        )}
+                        {formData.branchId && (
+                            <small className="text-blue-600" style={{ fontSize: '0.8rem' }}>
+                                {fetchingNextNumber ? t('FETCHING_HAWALA_NUMBER') : t('HAWALA_NUMBER_AUTO_GENERATED')}
+                            </small>
+                        )}
+                    </div>
+
+                    {/* Custom Hawala Number */}
+                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
+                        <label htmlFor="customHawalaNumber" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
+                            {t("CUSTOM_HAWALA_NUMBER")}
+                            {fetchingNextNumber && (
+                                <i className="pi pi-spin pi-spinner ml-2" style={{ fontSize: '1rem' }} />
+                            )}
+                        </label>
+                        <div className="p-inputgroup mb-2" style={{ display: 'flex' }}>
+                            <InputText
+                                id="customHawalaNumber"
+                                name="customHawalaNumber"
+                                value={formData.customHawalaNumber}
+                                onChange={handleInputChange}
+                                placeholder={fetchingNextNumber ? t('GENERATING_HAWALA_NUMBER') : t("CUSTOM_HAWALA_NUMBER")}
+                                className={classNames('w-full', {
+                                    'bg-blue-50 border-blue-200': !!formData.customHawalaNumber && !!formData.branchId
+                                })}
+                                style={{ fontSize: '0.95rem' }}
+                            />
+                            {formData.customHawalaNumber && formData.branchId && (
+                                <Button
+                                    icon="pi pi-refresh"
+                                    className="p-button-outlined p-button-secondary"
+                                    tooltip={t('REGENERATE_NUMBER')}
+                                    tooltipOptions={{ position: 'top' }}
+                                    onClick={() => {
+                                        if (formData.branchId) {
+                                            fetchNextHawalaNumber(formData.branchId);
+                                        }
+                                    }}
+                                    style={{ flexShrink: 0 }}
+                                />
+                            )}
+                        </div>
+                        {formData.customHawalaNumber && formData.branchId && (
+                            <small className="text-green-600" style={{ fontSize: '0.8rem' }}>
+                                <i className="pi pi-check-circle mr-1"></i>
+                                {t('HAWALA_NUMBER_AUTO_GENERATED')}
+                            </small>
+                        )}
+                    </div>
+
+                    {/* Admin Note - Full Width */}
+                    <div className="field col-12" style={{ padding: '0.5rem' }}>
+                        <label htmlFor="adminNote" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
+                            {t("ADMIN_NOTE")}
+                        </label>
+                        <InputTextarea
+                            id="adminNote"
+                            name="adminNote"
+                            value={formData.adminNote}
+                            onChange={handleInputChange}
+                            placeholder={t("ADMIN_NOTE_PLACEHOLDER")}
+                            rows={3}
+                            className="w-full"
+                            style={{ fontSize: '0.95rem', resize: 'vertical' }}
+                        />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</Dialog>
                 </div>
             </div>
         </div>

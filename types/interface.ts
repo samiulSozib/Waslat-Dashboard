@@ -1397,3 +1397,97 @@ export interface VoucherState {
     error: string | null;
     bulkImport: BulkImportState;
 }
+
+
+export interface Product {
+  id: number;
+  provider_table_id: string;
+  title: string;
+  desc: string;
+  operator: string;
+  op_firm: string;
+  type: string;
+  amount: string;
+  price: number;
+  recommended_price: number;
+  validity_days: number;
+  internet_mb: number;
+  minutes: number;
+  sms: number;
+  api_binding: {
+    product_id: number;
+    operator: string;
+    operator_raw: string;
+    op_firm: string;
+    op_firm_raw: string;
+    type: string;
+    amount: string;
+    package_name: string;
+    price: string;
+    recom_price: string;
+    packet_privacy: {
+      UsableDays: number;
+      MinAbroad: string;
+      MinAllDirection: string;
+      MinInNetwork: string;
+      Sms: string;
+      InternetMb: string;
+      isSocial: number;
+      officialSalePrice: string;
+    };
+  };
+  raw: {
+    ProductId: number;
+    Operator: string;
+    OpFirm: string;
+    Type: string;
+    PackageName: string;
+    PackageDescription: string;
+    Amount: string;
+    Price: string;
+    RecomPrice: string;
+    PacketPrivacy: {
+      UsableDays: number;
+      MinAbroad: string;
+      MinAllDirection: string;
+      MinInNetwork: string;
+      Sms: string;
+      InternetMb: string;
+      isSocial: number;
+      officialSalePrice: string;
+    };
+  };
+}
+
+
+// types/paystore.ts
+export interface PaystoreOperator {
+    code: string;
+    product_count: number;
+}
+
+export interface PaystoreGroup {
+    op_firm: string;
+    product_count: number;
+    operators: PaystoreOperator[];
+}
+
+export interface PaystoreOperatorsResponse {
+    success: boolean;
+    code: number;
+    message: string;
+    data: {
+        groups: PaystoreGroup[];
+        total_groups: number;
+    };
+    payload: any[];
+}
+
+export interface PaystoreOperatorsState {
+    loading: boolean;
+    groups: PaystoreGroup[];
+    totalGroups: number;
+    error: string | null;
+    selectedGroup: PaystoreGroup | null;
+    selectedOperator: PaystoreOperator | null;
+}

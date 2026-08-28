@@ -1,41 +1,44 @@
 
 
 
+import { Reseller } from "@/types/interface";
 import axios from "axios";
+import { Toast } from "primereact/toast";
 import { Dispatch } from "redux";
+import Swal from "sweetalert2";
 import {
-    FETCH_RESELLERS_REQUEST,
-    FETCH_RESELLERS_SUCCESS,
-    FETCH_RESELLERS_FAIL,
+    ADD_RESELLER_FAIL,
     ADD_RESELLER_REQUEST,
     ADD_RESELLER_SUCCESS,
-    ADD_RESELLER_FAIL,
-    EDIT_RESELLER_REQUEST,
-    EDIT_RESELLER_SUCCESS,
-    EDIT_RESELLER_FAIL,
-    DELETE_RESELLER_REQUEST,
-    DELETE_RESELLER_SUCCESS,
-    DELETE_RESELLER_FAIL,
-    CHANGE_RESELLER_STATUS_REQUEST,
-    CHANGE_RESELLER_STATUS_SUCCESS,
-    CHANGE_RESELLER_STATUS_FAIL,
-    GET_RESELLER_BY_ID_REQUEST,
-    GET_RESELLER_BY_ID_SUCCESS,
-    GET_RESELLER_BY_ID_FAIL,
+    CHANGE_RESELLER_PASSWORD_FAIL,
     CHANGE_RESELLER_PASSWORD_REQUEST,
     CHANGE_RESELLER_PASSWORD_SUCCESS,
-    CHANGE_RESELLER_PASSWORD_FAIL,
+    CHANGE_RESELLER_PIN_FAIL,
     CHANGE_RESELLER_PIN_REQUEST,
     CHANGE_RESELLER_PIN_SUCCESS,
-    CHANGE_RESELLER_PIN_FAIL,
+    CHANGE_RESELLER_STATUS_FAIL,
+    CHANGE_RESELLER_STATUS_REQUEST,
+    CHANGE_RESELLER_STATUS_SUCCESS,
+    DELETE_RESELLER_FAIL,
+    DELETE_RESELLER_REQUEST,
+    DELETE_RESELLER_SUCCESS,
+    EDIT_RESELLER_FAIL,
+    EDIT_RESELLER_REQUEST,
+    EDIT_RESELLER_SUCCESS,
+    FETCH_RESELLERS_FAIL,
+    FETCH_RESELLERS_REQUEST,
+    FETCH_RESELLERS_SUCCESS,
+    GET_RESELLER_BY_ID_FAIL,
+    GET_RESELLER_BY_ID_REQUEST,
+    GET_RESELLER_BY_ID_SUCCESS,
 } from "../constants/resellerConstants";
-import { Toast } from "primereact/toast";
-import { Reseller } from "@/types/interface";
-import Swal from "sweetalert2";
 
 const getAuthToken = () => {
     return localStorage.getItem("api_token") || "";
 };
+
+// Keep last controller to cancel overlapping requests
+let lastResellersController: AbortController | null = null;
 
 // Fetch Resellers
 export const _fetchResellers = (
@@ -47,6 +50,11 @@ export const _fetchResellers = (
     dispatch({ type: FETCH_RESELLERS_REQUEST });
 
     try {
+        try {
+            if (lastResellersController) lastResellersController.abort();
+        } catch (err) {}
+        lastResellersController = new AbortController();
+
         const token = getAuthToken();
         const queryParams = new URLSearchParams();
 
@@ -66,6 +74,7 @@ export const _fetchResellers = (
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
+                signal: lastResellersController.signal
             }
         );
         //console.log(response.data)
@@ -79,10 +88,13 @@ export const _fetchResellers = (
 
 
     } catch (error: any) {
-        dispatch({
-            type: FETCH_RESELLERS_FAIL,
-            payload: error.message
-        });
+        const isCanceled = error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError';
+        if (!isCanceled) {
+            dispatch({
+                type: FETCH_RESELLERS_FAIL,
+                payload: error.message
+            });
+        }
 
 
     }
