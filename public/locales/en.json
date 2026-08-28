@@ -2287,6 +2287,11 @@
 
   "HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER":"Amount In Letter",
   "NO_RESULTS_FOUND": "No results found",
-  "TRY_DIFFERENT_SEARCH_TERM": "Try a different search term"
+  "TRY_DIFFERENT_SEARCH_TERM": "Try a different search term",
+  "TIP_TYPE_NEW_METHOD_TYPE": "Type a new method type and press Enter to add it",
+  "PAYMENTMETHOD.FORM.INPUT.METHODTYPE": "Payment Method Type",
+  "PAYMENTMETHOD.TABLE.COLUMN.METHODTYPE": "Method Type",
+  "PAYMENTMETHOD.FORM.PLACEHOLDER.METHODTYPE": "Select or type a method type",
+  "SEARCH_METHOD_TYPE": "Search method type..."
 
 }

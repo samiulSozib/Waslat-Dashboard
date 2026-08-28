@@ -320,10 +320,9 @@ export interface PaymentMethod {
     account_number?: string | null;
     sheba_number?: string | null;
 
-
-
     // New notes field from migration
     notes?: string | null;
+    method_type?: 'bank' | 'card' | 'sheba' | 'other' | null;
 
 
 }

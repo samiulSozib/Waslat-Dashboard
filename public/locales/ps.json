@@ -2267,7 +2267,12 @@
 
     "HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER": "مبلغ په تورو",
     "NO_RESULTS_FOUND": "هیچ پایلې ونه موندل شوې",
-    "TRY_DIFFERENT_SEARCH_TERM": "بله کلمه وپلټئ"
+    "TRY_DIFFERENT_SEARCH_TERM": "بله کلمه وپلټئ",
+    "TIP_TYPE_NEW_METHOD_TYPE": "د نوي میتود ډول ټایپ کړئ او د اضافه کولو لپاره Enter فشار ورکړئ",
+  "PAYMENTMETHOD.FORM.INPUT.METHODTYPE": "د تادیې میتود ډول",
+  "PAYMENTMETHOD.TABLE.COLUMN.METHODTYPE": "میتود ډول",
+  "PAYMENTMETHOD.FORM.PLACEHOLDER.METHODTYPE": "د میتود ډول غوره کړئ یا ټایپ کړئ",
+  "SEARCH_METHOD_TYPE": "د میتود ډول وپلټئ..."
 
 
 

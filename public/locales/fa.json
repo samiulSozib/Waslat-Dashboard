@@ -2266,7 +2266,12 @@
 
     "HAWALA.CURRENCY.TABLE.COLUMN.AMOUNT_IN_LETTER": "مبلغ به حروف",
     "NO_RESULTS_FOUND": "نتیجه‌ای یافت نشد",
-    "TRY_DIFFERENT_SEARCH_TERM": "عبارت دیگری را جستجو کنید"
+    "TRY_DIFFERENT_SEARCH_TERM": "عبارت دیگری را جستجو کنید",
+    "TIP_TYPE_NEW_METHOD_TYPE": "نوع روش جدید را تایپ کنید و برای افزودن Enter را فشار دهید",
+  "PAYMENTMETHOD.FORM.INPUT.METHODTYPE": "نوع روش پرداخت",
+  "PAYMENTMETHOD.TABLE.COLUMN.METHODTYPE": "نوع روش",
+  "PAYMENTMETHOD.FORM.PLACEHOLDER.METHODTYPE": "نوع روش را انتخاب یا تایپ کنید",
+  "SEARCH_METHOD_TYPE": "جستجوی نوع روش..."
 
 
 

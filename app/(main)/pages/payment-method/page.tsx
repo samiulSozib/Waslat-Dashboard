@@ -1,30 +1,37 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { _addPaymentMethod, _deletePaymentMethod, _editPaymentMethod, _fetchPaymentMethods } from '@/app/redux/actions/paymentMethodActions';
+import { AppDispatch } from '@/app/redux/store';
+import i18n from '@/i18n';
+import { PaymentMethod } from '@/types/interface';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { FileUpload } from 'primereact/fileupload';
 import { InputText } from 'primereact/inputtext';
+import { InputTextarea } from 'primereact/inputtextarea';
+import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { _fetchCountries } from '@/app/redux/actions/countriesActions';
-import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
-import { AppDispatch } from '@/app/redux/store';
-import { PaymentMethod } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import { _addPaymentMethod, _deletePaymentMethod, _editPaymentMethod, _fetchPaymentMethods } from '@/app/redux/actions/paymentMethodActions';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
-import { InputTextarea } from 'primereact/inputtextarea';
+import { useDispatch, useSelector } from 'react-redux';
+import withAuth from '../../authGuard';
 import { customCellStyleImage } from '../../utilities/customRow';
-import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
+
+// Payment Method Type options
+const PAYMENT_METHOD_TYPES = [
+    { label: 'Bank Account', value: 'bank' },
+    { label: 'Digital Wallet', value: 'digital_wallet' },
+    { label: 'WhatsApp Payment', value: 'whatsapp' },
+    { label: 'Hawala', value: 'hawala' },
+    { label: 'Cash', value: 'cash' },
+    { label: 'Other', value: 'other' },
+];
 
 const PaymentMethodPage = () => {
     let emptyPaymentMethod: PaymentMethod = {
@@ -40,7 +47,8 @@ const PaymentMethodPage = () => {
         card_number: '',
         account_number: '',
         sheba_number: '',
-        notes: ''
+        notes: '',
+        method_type: null,
     };
 
     const [methodDialog, setMethodDialog] = useState(false);
@@ -56,6 +64,9 @@ const PaymentMethodPage = () => {
     const { paymentMethods, loading } = useSelector((state: any) => state.paymentMethodsReducer);
     const { t } = useTranslation();
 
+    // Custom method type input state
+    const [customMethodType, setCustomMethodType] = useState('');
+
     useEffect(() => {
         dispatch(_fetchPaymentMethods());
     }, [dispatch]);
@@ -63,12 +74,14 @@ const PaymentMethodPage = () => {
     const openNew = () => {
         setPaymentMethod(emptyPaymentMethod);
         setSubmitted(false);
+        setCustomMethodType('');
         setMethodDialog(true);
     };
 
     const hideDialog = () => {
         setSubmitted(false);
         setMethodDialog(false);
+        setCustomMethodType('');
     };
 
     const hideDeleteMethodDialog = () => {
@@ -77,6 +90,48 @@ const PaymentMethodPage = () => {
 
     const hideDeleteMethodsDialog = () => {
         setDeleteMethodsDialog(false);
+    };
+
+    // Normalize string to lowercase snake_case
+    const normalizeToSnakeCase = (str: string): string => {
+        return str
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '_') // Replace spaces with underscores
+            .replace(/[^a-z0-9_]/g, ''); // Remove invalid characters
+    };
+
+    // Handle method type selection
+    const handleMethodTypeChange = (e: any) => {
+        const value = e.value;
+        if (value && !PAYMENT_METHOD_TYPES.some(option => option.value === value)) {
+            // This is a custom value, normalize it
+            const normalized = normalizeToSnakeCase(value);
+            setPaymentMethod((prev) => ({
+                ...prev,
+                method_type: normalized as any,
+            }));
+        } else {
+            setPaymentMethod((prev) => ({
+                ...prev,
+                method_type: value,
+            }));
+        }
+        setCustomMethodType('');
+    };
+
+    // Handle custom method type input
+    const handleCustomMethodTypeAdd = (e: any) => {
+        const value = e.value?.trim();
+        if (value) {
+            const normalized = normalizeToSnakeCase(value);
+            // Add to payment method
+            setPaymentMethod((prev) => ({
+                ...prev,
+                method_type: normalized as any,
+            }));
+            setCustomMethodType('');
+        }
     };
 
     const saveMethod = () => {
@@ -90,15 +145,23 @@ const PaymentMethodPage = () => {
             });
             return;
         }
+
+        // Prepare the payment method data
+        const methodData = {
+            ...paymentMethod,
+            method_type: paymentMethod.method_type || null,
+        };
+
         if (paymentMethod.id && paymentMethod.id !== 0) {
-            dispatch(_editPaymentMethod(paymentMethod.id, paymentMethod, toast, t));
+            dispatch(_editPaymentMethod(paymentMethod.id, methodData, toast, t));
         } else {
-            dispatch(_addPaymentMethod(paymentMethod, toast, t));
+            dispatch(_addPaymentMethod(methodData, toast, t));
         }
 
         setMethodDialog(false);
         setPaymentMethod(emptyPaymentMethod);
         setSubmitted(false);
+        setCustomMethodType('');
     };
 
     const editMethod = (paymentMethod: PaymentMethod) => {
@@ -138,6 +201,20 @@ const PaymentMethodPage = () => {
                     />
                 </div>
             </React.Fragment>
+        );
+    };
+
+    // Method Type Body Template for Table
+    const methodTypeBodyTemplate = (rowData: PaymentMethod) => {
+        const type = rowData.method_type;
+        if (!type) return <span className="text-gray-400">-</span>;
+
+        // Find the label for the type
+        const found = PAYMENT_METHOD_TYPES.find(option => option.value === type);
+        return (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {found ? found.label : type}
+            </span>
         );
     };
 
@@ -262,12 +339,14 @@ const PaymentMethodPage = () => {
             <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveMethod} />
         </>
     );
+
     const deleteMethodDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteMethodDialog} />
             <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteMethod} />
         </>
     );
+
     const deleteMethodsDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteMethodsDialog} />
@@ -310,6 +389,7 @@ const PaymentMethodPage = () => {
                         responsiveLayout="scroll"
                     >
                         <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="name" header={t('PAYMENTMETHOD.TABLE.COLUMN.METHODNAME')} body={nameBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="method_type" header={t('PAYMENTMETHOD.TABLE.COLUMN.METHODTYPE')} body={methodTypeBodyTemplate}></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="bank_name" header={t('PAYMENTMETHOD.TABLE.COLUMN.BANKNAME')} body={bankNameBodyTemplate}></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="account_holder_name" header={t('PAYMENTMETHOD.TABLE.COLUMN.ACCOUNTHOLDER')} body={accountHolderBodyTemplate}></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="account_number" header={t('PAYMENTMETHOD.TABLE.COLUMN.ACCOUNTNUMBER')} body={accountNumberBodyTemplate}></Column>
@@ -385,6 +465,66 @@ const PaymentMethodPage = () => {
                                             {t('THIS_FIELD_IS_REQUIRED')}
                                         </small>
                                     )}
+                                </div>
+
+                                {/* Method Type Dropdown - Searchable and Creatable */}
+                                <div className="col-12 md:col-6 field">
+                                    <label htmlFor="method_type" className="font-bold">
+                                        {t('PAYMENTMETHOD.FORM.INPUT.METHODTYPE')}
+                                    </label>
+                                    <Dropdown
+                                        id="method_type"
+                                        value={paymentMethod.method_type}
+                                        options={PAYMENT_METHOD_TYPES}
+                                        onChange={handleMethodTypeChange}
+                                        placeholder={t('PAYMENTMETHOD.FORM.PLACEHOLDER.METHODTYPE')}
+                                        className="w-full"
+                                       
+                                        editable
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && (e.target as HTMLInputElement).value) {
+                                                const value = (e.target as HTMLInputElement).value.trim();
+                                                if (value) {
+                                                    const normalized = normalizeToSnakeCase(value);
+                                                    setPaymentMethod((prev) => ({
+                                                        ...prev,
+                                                        method_type: normalized as any,
+                                                    }));
+                                                    setCustomMethodType('');
+                                                }
+                                            }
+                                        }}
+                                        onBlur={(e) => {
+                                            const value = (e.target as HTMLInputElement).value?.trim();
+                                            if (value && !PAYMENT_METHOD_TYPES.some(option => option.value === paymentMethod.method_type)) {
+                                                const normalized = normalizeToSnakeCase(value);
+                                                setPaymentMethod((prev) => ({
+                                                    ...prev,
+                                                    method_type: normalized as any,
+                                                }));
+                                            }
+                                        }}
+                                        itemTemplate={(option) => (
+                                            <div className="flex items-center gap-2">
+                                                <span>{option.label}</span>
+                                                <span className="text-xs text-gray-400 ml-auto">{option.value}</span>
+                                            </div>
+                                        )}
+                                        valueTemplate={(option) => {
+                                            if (!option) return t('PAYMENTMETHOD.FORM.PLACEHOLDER.METHODTYPE');
+                                            // Handle custom value that might not be in options
+                                            const found = PAYMENT_METHOD_TYPES.find(o => o.value === option);
+                                            return found ? found.label : option;
+                                        }}
+                                    />
+                                    {paymentMethod.method_type && !PAYMENT_METHOD_TYPES.some(o => o.value === paymentMethod.method_type) && (
+                                        <small className="text-blue-500 text-xs mt-1 block">
+                                            Custom type: <strong>{paymentMethod.method_type}</strong>
+                                        </small>
+                                    )}
+                                    <small className="text-gray-400 text-xs mt-1 block">
+                                        {t('TIP_TYPE_NEW_METHOD_TYPE')}
+                                    </small>
                                 </div>
 
                                 <div className="col-12 md:col-6 field">
@@ -520,12 +660,19 @@ const PaymentMethodPage = () => {
                                             }))
                                         }
                                         placeholder="Choose a status"
+                                        className={classNames({
+                                            'p-invalid': submitted && !paymentMethod.status,
+                                        })}
                                     />
+                                    {submitted && !paymentMethod.status && (
+                                        <small className="p-invalid text-red-500">
+                                            {t('THIS_FIELD_IS_REQUIRED')}
+                                        </small>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     </Dialog>
-
 
                     <Dialog visible={deleteMethodDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteMethodDialogFooter} onHide={hideDeleteMethodDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -551,4 +698,3 @@ const PaymentMethodPage = () => {
 };
 
 export default withAuth(PaymentMethodPage);
-
