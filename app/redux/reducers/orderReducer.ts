@@ -91,6 +91,10 @@ import { Order, Pagination } from '@/types/interface';
 //     }
 // };
 
+
+// redux/reducers/orderReducer.ts
+// redux/reducers/orderReducer.ts
+
 import {
     FETCH_ORDERS_REQUEST,
     FETCH_ORDERS_SUCCESS,
@@ -107,8 +111,11 @@ import {
     CHANGE_ORDER_STATUS_REQUEST,
     CHANGE_ORDER_STATUS_SUCCESS,
     CHANGE_ORDER_STATUS_FAIL,
+    CHECK_PAYSTORE_STATUS_REQUEST,
+    CHECK_PAYSTORE_STATUS_SUCCESS,
+    CHECK_PAYSTORE_STATUS_FAIL,
+    CLEAR_PAYSTORE_STATUS
 } from '../constants/orderConstants';
-
 
 interface OrderState {
     loading: boolean;
@@ -117,14 +124,26 @@ interface OrderState {
     pagination: Pagination | null;
 }
 
-const initialState: OrderState = {
+interface PaystoreStatusState {
+    loading: boolean;
+    statusData: any | null;
+    error: string | null;
+}
+
+const initialOrderState: OrderState = {
     loading: false,
     orders: [],
     error: null,
     pagination: null,
 };
 
-export const orderReducer = (state = initialState, action: any): OrderState => {
+const initialPaystoreStatusState: PaystoreStatusState = {
+    loading: false,
+    statusData: null,
+    error: null,
+};
+
+export const orderReducer = (state = initialOrderState, action: any): OrderState => {
     switch (action.type) {
         case FETCH_ORDERS_REQUEST:
         case ADD_ORDER_REQUEST:
@@ -190,7 +209,6 @@ export const orderReducer = (state = initialState, action: any): OrderState => {
                 error: null,
             };
 
-
         case FETCH_ORDERS_FAIL:
         case ADD_ORDER_FAIL:
         case EDIT_ORDER_FAIL:
@@ -201,6 +219,40 @@ export const orderReducer = (state = initialState, action: any): OrderState => {
                 loading: false,
                 error: action.payload,
             };
+
+        default:
+            return state;
+    }
+};
+
+// Separate reducer for PayStore status
+export const paystoreStatusReducer = (state = initialPaystoreStatusState, action: any): PaystoreStatusState => {
+    switch (action.type) {
+        case CHECK_PAYSTORE_STATUS_REQUEST:
+            return {
+                ...state,
+                loading: true,
+                error: null,
+            };
+
+        case CHECK_PAYSTORE_STATUS_SUCCESS:
+            return {
+                ...state,
+                loading: false,
+                statusData: action.payload,
+                error: null,
+            };
+
+        case CHECK_PAYSTORE_STATUS_FAIL:
+            return {
+                ...state,
+                loading: false,
+                statusData: null,
+                error: action.payload,
+            };
+
+        case CLEAR_PAYSTORE_STATUS:
+            return initialPaystoreStatusState;
 
         default:
             return state;

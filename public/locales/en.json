@@ -2292,6 +2292,21 @@
   "PAYMENTMETHOD.FORM.INPUT.METHODTYPE": "Payment Method Type",
   "PAYMENTMETHOD.TABLE.COLUMN.METHODTYPE": "Method Type",
   "PAYMENTMETHOD.FORM.PLACEHOLDER.METHODTYPE": "Select or type a method type",
-  "SEARCH_METHOD_TYPE": "Search method type..."
+  "SEARCH_METHOD_TYPE": "Search method type...",
+
+
+  "CHECK_PAYSTORE_STATUS": "Check PayStore Status",
+  "PAYSTORE_STATUS_CHECK": "PayStore Status Check",
+  "PAYSTORE_STATUS_CHECK_FAILED": "Failed to check PayStore status",
+  "PAYSTORE_PROVIDER_NOT_FOUND": "PayStore provider not found or inactive",
+  "PAYSTORE_STATUS_SUCCESS": "Order completed successfully",
+  "PAYSTORE_STATUS_PENDING": "Order is still processing",
+  "PAYSTORE_STATUS_CANCELLED": "Order was cancelled",
+  "PAYSTORE_STATUS_ERROR": "Unknown status received",
+  "PAYSTORE_STATUS_CODE": "Response Code",
+  "PAYSTORE_TRANSACTION_ID": "Transaction ID",
+  "PAYSTORE_PROVIDER_MESSAGE": "Provider Message",
+  "PAYSTORE_ORDER_STATUS": "Order Status"
+
 
 }

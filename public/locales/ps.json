@@ -2272,7 +2272,21 @@
   "PAYMENTMETHOD.FORM.INPUT.METHODTYPE": "د تادیې میتود ډول",
   "PAYMENTMETHOD.TABLE.COLUMN.METHODTYPE": "میتود ډول",
   "PAYMENTMETHOD.FORM.PLACEHOLDER.METHODTYPE": "د میتود ډول غوره کړئ یا ټایپ کړئ",
-  "SEARCH_METHOD_TYPE": "د میتود ډول وپلټئ..."
+  "SEARCH_METHOD_TYPE": "د میتود ډول وپلټئ...",
+
+
+  "CHECK_PAYSTORE_STATUS": "د PayStore حالت وګورئ",
+  "PAYSTORE_STATUS_CHECK": "د PayStore حالت چک",
+  "PAYSTORE_STATUS_CHECK_FAILED": "د PayStore حالت چک کول ناکام شول",
+  "PAYSTORE_PROVIDER_NOT_FOUND": "د PayStore چمتو کوونکی ونه موندل شو یا غیر فعال دی",
+  "PAYSTORE_STATUS_SUCCESS": "امر په بریالیتوب سره بشپړ شو",
+  "PAYSTORE_STATUS_PENDING": "امر لاهم په پروسس کې دی",
+  "PAYSTORE_STATUS_CANCELLED": "امر لغوه شو",
+  "PAYSTORE_STATUS_ERROR": "نامعلوم حالت ترلاسه شو",
+  "PAYSTORE_STATUS_CODE": "د ځواب کوډ",
+  "PAYSTORE_TRANSACTION_ID": "د معاملې کوډ",
+  "PAYSTORE_PROVIDER_MESSAGE": "د چمتو کونکي پیغام",
+  "PAYSTORE_ORDER_STATUS": "د امر حالت"
 
 
 

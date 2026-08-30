@@ -2271,7 +2271,21 @@
   "PAYMENTMETHOD.FORM.INPUT.METHODTYPE": "نوع روش پرداخت",
   "PAYMENTMETHOD.TABLE.COLUMN.METHODTYPE": "نوع روش",
   "PAYMENTMETHOD.FORM.PLACEHOLDER.METHODTYPE": "نوع روش را انتخاب یا تایپ کنید",
-  "SEARCH_METHOD_TYPE": "جستجوی نوع روش..."
+  "SEARCH_METHOD_TYPE": "جستجوی نوع روش...",
+
+
+  "CHECK_PAYSTORE_STATUS": "بررسی وضعیت PayStore",
+  "PAYSTORE_STATUS_CHECK": "بررسی وضعیت PayStore",
+  "PAYSTORE_STATUS_CHECK_FAILED": "بررسی وضعیت PayStore ناموفق بود",
+  "PAYSTORE_PROVIDER_NOT_FOUND": "ارائه دهنده PayStore یافت نشد یا غیرفعال است",
+  "PAYSTORE_STATUS_SUCCESS": "سفارش با موفقیت تکمیل شد",
+  "PAYSTORE_STATUS_PENDING": "سفارش هنوز در حال پردازش است",
+  "PAYSTORE_STATUS_CANCELLED": "سفارش لغو شد",
+  "PAYSTORE_STATUS_ERROR": "وضعیت ناشناخته دریافت شد",
+  "PAYSTORE_STATUS_CODE": "کد پاسخ",
+  "PAYSTORE_TRANSACTION_ID": "شناسه تراکنش",
+  "PAYSTORE_PROVIDER_MESSAGE": "پیام ارائه دهنده",
+  "PAYSTORE_ORDER_STATUS": "وضعیت سفارش"
 
 
 

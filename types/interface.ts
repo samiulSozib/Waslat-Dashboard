@@ -1490,3 +1490,48 @@ export interface PaystoreOperatorsState {
     selectedGroup: PaystoreGroup | null;
     selectedOperator: PaystoreOperator | null;
 }
+
+
+// types/order.ts (add these to your existing Order interface)
+// types/order.ts
+
+export interface PaystoreStatusResponse {
+    success: boolean;
+    code: number;
+    message: string;
+    data: {
+        order_id: number;
+        order_status: string;
+        is_paid: string;
+        local_transaction_id: string | null;
+        provider: string;
+        provider_id: number;
+        provider_transaction_id: string;
+        provider_status: string; // 'success' | 'pending' | 'cancelled' | 'error'
+        provider_response_code: string;
+        provider_message: string;
+        provider_response: {
+            ResponseCode: string;
+            Message_TR: string;
+            Message_EN: string;
+            HostDateTime: string;
+        };
+        payment: {
+            success: boolean;
+            already_paid: boolean;
+            transaction_id: string;
+        } | null;
+        refund: {
+            success: boolean;
+            refunded: boolean;
+            message: string;
+        } | null;
+    };
+    payload: any[];
+}
+
+export interface PaystoreStatusState {
+    loading: boolean;
+    statusData: PaystoreStatusResponse['data'] | null;
+    error: string | null;
+}

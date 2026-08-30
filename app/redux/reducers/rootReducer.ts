@@ -15,7 +15,7 @@ import { suppliersReducer } from './supplierReducer';
 import { provinceReducer } from './provinceReducer';
 import { districtReducer } from './districtReducer';
 import { resellerReducer } from './resellerReducer';
-import { orderReducer } from './orderReducer';
+import { orderReducer, paystoreStatusReducer } from './orderReducer';
 import { languageReducer } from './languageReducer';
 import { advertisementsReducer } from './advertisementReducer';
 import { balanceReducer } from './balanceReducer';
@@ -94,7 +94,9 @@ const rootReducer=combineReducers({
     withdrawRequestsReducer:withdrawRequestsReducer,
     providerInfoReducer:providerInfoReducer,
     apiKeyReducer:apiKeyReducer,
-    voucherReducer:voucherReducer
+    voucherReducer:voucherReducer,
+    paystoreStatusReducer: paystoreStatusReducer,
+
 })
 
 

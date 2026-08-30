@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 import { _fetchCompanies } from '@/app/redux/actions/companyActions';
-import { _changeOrderStatus, _deleteOrder, _fetchOrders } from '@/app/redux/actions/orderActions';
+import { _changeOrderStatus, _deleteOrder, _fetchOrders, _checkPaystoreStatus } from '@/app/redux/actions/orderActions';
 import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { AppDispatch } from '@/app/redux/store';
 import i18n from '@/i18n';
@@ -38,6 +38,7 @@ const OrderPage = () => {
     const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { orders, pagination, loading } = useSelector((state: any) => state.orderReducer);
+    const { paystoreStatusLoading } = useSelector((state: any) => state.paystoreStatusReducer || {});
     const { companies } = useSelector((state: any) => state.companyReducer);
     const { services } = useSelector((state: any) => state.serviceReducer);
     const [order, setOrder] = useState<Order>();
@@ -88,25 +89,16 @@ const OrderPage = () => {
         }));
     }, [statusParam]);
 
-
     // --- Fetch Orders Whenever Filters OR SearchTag Changes ---
     useEffect(() => {
         dispatch(_fetchOrders(1, searchTag, activeFilters));
     }, [activeFilters, searchTag, dispatch]);
 
-
-    // useEffect(() => {
-    //     dispatch(_fetchCompanies());
-    //     dispatch(_fetchServiceList());
-    // }, [dispatch, filterDialogVisible]);
-
     useEffect(() => {
         if (filterDialogVisible) {
-            // Fetch companies if not already loaded
             if (companies.length === 0) {
                 dispatch(_fetchCompanies());
             }
-            // Fetch services if not already loaded
             if (services.length === 0) {
                 dispatch(_fetchServiceList());
             }
@@ -144,17 +136,12 @@ const OrderPage = () => {
         setDeleteOrdersDialog(true);
     };
 
-    // Add this useEffect hook to your component
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as HTMLElement;
-
-            // Ignore clicks on dropdown panels (they have .p-dropdown-panel class)
             if (target.closest('.p-dropdown-panel')) {
                 return;
             }
-
-            // Normal check for clicking outside the filter dialog
             if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
                 setFilterDialogVisible(false);
             }
@@ -184,16 +171,14 @@ const OrderPage = () => {
         setViewOrderDialog(true);
     };
 
-    // Add this function to download the modal as PNG
     const downloadOrderAsImage = () => {
         const modalElement = document.getElementById('order-view-modal');
         if (!modalElement) return;
 
-        // Use html2canvas to capture the modal as image
         import('html2canvas').then((html2canvas) => {
             html2canvas.default(modalElement, {
                 backgroundColor: '#ffffff',
-                scale: 2, // Higher quality
+                scale: 2,
                 useCORS: true,
                 logging: false
             }).then((canvas) => {
@@ -203,6 +188,16 @@ const OrderPage = () => {
                 link.click();
             });
         });
+    };
+
+    // 🔥 NEW: Handle PayStore status check
+    const handleCheckPaystoreStatus = async (orderId: number) => {
+        try {
+            await dispatch(_checkPaystoreStatus(orderId, toast, t));
+            // Orders will be refreshed automatically in the action
+        } catch (error) {
+            console.error('Error checking PayStore status:', error);
+        }
     };
 
     const rightToolbarTemplate = () => {
@@ -217,7 +212,8 @@ const OrderPage = () => {
                         severity="secondary"
                         onClick={handleRefresh}
                         disabled={refreshing}
-                    />                    <div className="flex-shrink-0 h-10 min-w-0" ref={filterRef} style={{ position: 'relative' }}>
+                    />
+                    <div className="flex-shrink-0 h-10 min-w-0" ref={filterRef} style={{ position: 'relative' }}>
                         <Button className="p-button-info w-full" label={t('ORDER.FILTER.FILTER')} icon="pi pi-filter" style={{ gap: '8px' }} onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
                         {filterDialogVisible && (
                             <div
@@ -235,7 +231,6 @@ const OrderPage = () => {
                             >
                                 <div className="p-card-body" style={{ padding: '1rem' }}>
                                     <div className="grid">
-                                        {/* Status Filter */}
                                         <div className="col-12">
                                             <label htmlFor="statusFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.STATUS')}
@@ -254,7 +249,6 @@ const OrderPage = () => {
                                             />
                                         </div>
 
-                                        {/* Bundle Type Filter */}
                                         <div className="col-12">
                                             <label htmlFor="bundleTypeFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.BUNDLE_TYPE')}
@@ -272,7 +266,6 @@ const OrderPage = () => {
                                             />
                                         </div>
 
-                                        {/* Company Filter */}
                                         <div className="col-12">
                                             <label htmlFor="companyFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.COMPANY')}
@@ -289,7 +282,6 @@ const OrderPage = () => {
                                             />
                                         </div>
 
-                                        {/* Service Filter */}
                                         <div className="col-12">
                                             <label htmlFor="serviceFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.SERVICE')}
@@ -299,7 +291,7 @@ const OrderPage = () => {
                                                 options={services}
                                                 value={filters.filter_service_id}
                                                 onChange={(e) => setFilters({ ...filters, filter_service_id: e.value })}
-                                                optionLabel="service_name" // Adjust based on your service object structure
+                                                optionLabel="service_name"
                                                 optionValue="id"
                                                 placeholder={t('ORDER.FILTER.SELECT_SERVICE')}
                                                 style={{ width: '100%' }}
@@ -321,7 +313,6 @@ const OrderPage = () => {
                                             />
                                         </div>
 
-                                        {/* Date Range Filters */}
                                         <div className="col-12">
                                             <label htmlFor="startDateFilter" style={{ fontSize: '0.8rem' }}>
                                                 {t('ORDER.FILTER.START_DATE')}
@@ -336,7 +327,6 @@ const OrderPage = () => {
                                             <InputText type="date" id="endDateFilter" value={filters.filter_enddate || ''} onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })} style={{ width: '100%' }} />
                                         </div>
 
-                                        {/* Action Buttons */}
                                         <div className="col-12 mt-3 flex justify-content-between gap-2">
                                             <Button
                                                 label={t('RESET')}
@@ -358,10 +348,6 @@ const OrderPage = () => {
                                                 icon="pi pi-check"
                                                 className="p-button-sm"
                                                 onClick={() => {
-                                                    // Apply filters here
-                                                    // You might want to dispatch an action to fetch filtered orders
-                                                    //dispatch(_fetchOrders(1, searchTag, filters));
-                                                    //console.log(filters)
                                                     handleSubmitFilter(filters);
                                                     setFilterDialogVisible(false);
                                                 }}
@@ -373,22 +359,12 @@ const OrderPage = () => {
                         )}
                     </div>
 
-                    <Button className="flex-1  h-10" label={t('EXPORT.EXPORT')} style={{ gap: '8px' }} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+                    <Button className="flex-1 h-10" label={t('EXPORT.EXPORT')} style={{ gap: '8px' }} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
                 </div>
             </React.Fragment>
         );
     };
 
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <React.Fragment>
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left">
-    //                 <i className="pi pi-search" />
-    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
-    //             </span>
-    //         </React.Fragment>
-    //     );
-    // };
     const [localSearchTerm, setLocalSearchTerm] = useState('');
 
     const leftToolbarTemplate = () => {
@@ -449,9 +425,6 @@ const OrderPage = () => {
     const transactionBodyTemplate = (rowData: Order) => {
         return (
             <>
-
-
-                {/* Transaction status check */}
                 {rowData.transaction_id === null || rowData.transaction_id === undefined ? (
                     <div style={{ fontSize: '0.75rem', color: '#ff6b6b', fontStyle: 'italic', marginTop: '4px' }}>
                         {t('TRANSACTION_HAS_NOT_BEEN_CREATED')}
@@ -668,22 +641,14 @@ const OrderPage = () => {
         );
     };
 
-    // const actionBodyTemplate = (rowData: Order) => {
-    //     return (
-    //         <>
-    //             {/* <Button icon="pi pi-pencil" rounded severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"}  onClick={()=>editOrder(rowData)}/> */}
-    //             <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteOrder(rowData)} />
-    //         </>
-    //     );
-    // };
-
+    // 🔥 UPDATED: Action body template with PayStore status check
     const actionBodyTemplate = (rowData: Order) => {
-        const status = Number(rowData.status); // in case it's a string
-
+        const status = Number(rowData.status);
+        // const isPaystore = rowData.provider?.toLowerCase() === 'paystore' || rowData.provider_name?.toLowerCase() === 'paystore';
+        const isPaystore=true;
         let items: any[] = [];
 
         if (status == 0 || (rowData.transaction_id === null && status == 1)) {
-            // Pending
             items = [
                 {
                     label: t('ORDER.STATUS.CONFIRMED'),
@@ -713,10 +678,8 @@ const OrderPage = () => {
                     icon: 'pi pi-times',
                     command: () => confirmChangeStatus(rowData, 2)
                 }
-            ]
-        }
-        else if (status === 2) {
-            // Rejected
+            ];
+        } else if (status === 2) {
             items = [
                 {
                     label: t('ORDER.STATUS.CONFIRMED'),
@@ -729,15 +692,13 @@ const OrderPage = () => {
                     command: () => confirmChangeStatus(rowData, 3)
                 },
             ];
-        }
-        else if (status == 3) {
+        } else if (status == 3) {
             items = [
                 {
                     label: t('ORDER.STATUS.CONFIRMED'),
                     icon: 'pi pi-check',
                     command: () => confirmChangeStatus(rowData, 1)
                 },
-
                 {
                     label: t('ORDER.STATUS.REJECTED'),
                     icon: 'pi pi-times',
@@ -746,11 +707,19 @@ const OrderPage = () => {
             ];
         }
 
+        // 🔥 NEW: Add PayStore Status Check option if it's a PayStore order
+        if (isPaystore) {
+            items.push({
+                label: t('CHECK_PAYSTORE_STATUS'),
+                icon: 'pi pi-sync',
+                command: () => handleCheckPaystoreStatus(rowData.id)
+            });
+        }
+
         if (items.length > 0) {
             return <SplitButton label="" icon="pi pi-cog" model={items} className="p-button-rounded" severity="info" dir="ltr" />;
         }
 
-        // If status is Confirmed (1), show a placeholder button
         if (status === 1) {
             return <SplitButton label="" icon="pi pi-cog" disabled className="p-button-rounded" severity="info" dir="ltr" />;
         }
@@ -759,17 +728,13 @@ const OrderPage = () => {
     };
 
     const confirmChangeStatus = (order: Order, newStatus: number) => {
-        // setOrder(order);
-        // setSelectedStatus(newStatus);
-        // setStatusChangeDialog(true);
         setOrder(order);
         setSelectedStatus(newStatus);
 
         if (newStatus === 2) {
-            // If status is rejected (2)
-            setRejectReasonDialog(true); // Show reject reason dialog first
+            setRejectReasonDialog(true);
         } else {
-            setStatusChangeDialog(true); // For other status changes, show normal confirmation
+            setStatusChangeDialog(true);
         }
     };
 
@@ -779,11 +744,10 @@ const OrderPage = () => {
             return;
         }
 
-        // Dispatch action with rejection reason
         dispatch(_changeOrderStatus(order.id, selectedStatus as number, toast, t, rejectionReason));
         setRejectReasonDialog(false);
         setStatusChangeDialog(false);
-        setRejectionReason(''); // Reset rejection reason
+        setRejectionReason('');
     };
 
     const changeOrderStatus = () => {
@@ -792,21 +756,9 @@ const OrderPage = () => {
             return;
         }
 
-        // Dispatch an action to update the order status
-        // You'll need to implement this action in your orderActions.ts
         dispatch(_changeOrderStatus(order.id, selectedStatus as number, toast, t));
         setStatusChangeDialog(false);
     };
-
-    // const header = (
-    //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-    //         <h5 className="m-0">Manage Products</h5>
-    //         <span className="block mt-2 md:mt-0 p-input-icon-left">
-    //             <i className="pi pi-search" />
-    //             <InputText type="search" onInput={(e) => setGlobalFilter(e.currentTarget.value)} placeholder="Search..." />
-    //         </span>
-    //     </div>
-    // );
 
     const companyDialogFooter = (
         <>
@@ -880,14 +832,13 @@ const OrderPage = () => {
                         dataKey="id"
                         className="datatable-responsive"
                         globalFilter={globalFilter}
-                        // header={header}
                         responsiveLayout="scroll"
-                        paginator={false} // Disable PrimeReact's built-in paginator
+                        paginator={false}
                         rows={pagination?.items_per_page}
                         totalRecords={pagination?.total}
                         currentPageReportTemplate={
                             isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
+                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
                                 : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
@@ -897,7 +848,6 @@ const OrderPage = () => {
                         onRowClick={(e) => viewOrder(e.data as Order)}
                         selectionMode="single"
                     >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={copyButtonBodyTemplate} headerStyle={{ width: '5rem' }}></Column>
 
@@ -933,7 +883,7 @@ const OrderPage = () => {
                         }
                         currentPageReportTemplate={
                             isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
+                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
                                 : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
                         }
                         firstPageLinkIcon={
@@ -949,49 +899,7 @@ const OrderPage = () => {
 
                     />
 
-
                     <Dialog visible={orderDialog} style={{ width: '700px' }} header="Bundle Details" modal className="p-fluid" footer={companyDialogFooter} onHide={hideDialog}>
-                        {/* <div className="formgrid grid">
-                            <div className="field col">
-                                <label htmlFor="name">Bundle Title</label>
-                                <InputText
-                                    id="bundle_title"
-                                    value={bundle.bundle_title}
-                                    onChange={(e) =>
-                                        setBundle((perv) => ({
-                                            ...perv,
-                                            bundle_title: e.target.value,
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    className={classNames({
-                                        'p-invalid': submitted && !bundle.bundle_title
-                                    })}
-                                />
-                                {submitted && !bundle.bundle_title && <small className="p-invalid">Bundle Title is required.</small>}
-                            </div>
-
-                            <div className="field col">
-                                <label htmlFor="name">Bundle Description</label>
-                                <InputText
-                                    id="bundle_description"
-                                    value={bundle.bundle_description}
-                                    onChange={(e) =>
-                                        setBundle((perv) => ({
-                                            ...perv,
-                                            bundle_description: e.target.value,
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    className={classNames({
-                                        'p-invalid': submitted && !bundle.bundle_description
-                                    })}
-                                />
-                                {submitted && !bundle.bundle_description && <small className="p-invalid">Bundle Description is required.</small>}
-                            </div>
-                        </div> */}
                     </Dialog>
 
                     <Dialog visible={deleteOrderDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteOrderDialog}>
@@ -1011,6 +919,7 @@ const OrderPage = () => {
                             {order && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>
+
                     <Dialog
                         visible={statusChangeDialog}
                         style={{ width: '450px' }}
@@ -1070,7 +979,6 @@ const OrderPage = () => {
                         </div>
                     </Dialog>
 
-
                     <Dialog
                         visible={viewOrderDialog}
                         style={{ width: '380px', maxWidth: '95vw', padding: 0 }}
@@ -1120,7 +1028,6 @@ const OrderPage = () => {
 
                                     {/* Content */}
                                     <div style={{ padding: '1.5rem 1rem' }}>
-                                        {/* Key-Value Rows */}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
                                             <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER.TABLE.COLUMN.BUNDLETITLE')}</span>
                                             <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600', textAlign: 'right' }}>{selectedOrder.bundle?.bundle_title || '-'}</span>
@@ -1151,7 +1058,6 @@ const OrderPage = () => {
                                             <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>#{selectedOrder.id}</span>
                                         </div>
 
-                                        {/* Date and Time Row */}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', paddingBottom: '1px', borderBottom: '1px solid #f3f4f6' }}>
                                             <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500' }}>{t('ORDER.TABLE.COLUMN.ORDEREDDATE')}</span>
                                             <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>
@@ -1170,7 +1076,6 @@ const OrderPage = () => {
                                             </span>
                                         </div>
 
-                                        {/* Amount */}
                                         {selectedOrder.bundle?.buying_price && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1px' }}>
                                                 <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: '600' }}>{t('ORDER.TABLE.COLUMN.PAYABLEAMOUNT')}</span>
@@ -1180,7 +1085,6 @@ const OrderPage = () => {
                                             </div>
                                         )}
 
-                                        {/* Rejection Reason */}
                                         {selectedOrder.status == '2' && selectedOrder.reject_reason && (
                                             <div style={{
                                                 marginTop: '1rem',
@@ -1226,7 +1130,6 @@ const OrderPage = () => {
                             )}
                         </div>
                     </Dialog>
-
 
                 </div>
             </div>
