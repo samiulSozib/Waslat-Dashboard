@@ -21,6 +21,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
 import { customCellStyleImage } from '../../utilities/customRow';
 import { isRTL } from '../../utilities/rtlUtil';
+import { ManageTranslationsButton } from '@/app/(main)/components/ManageTranslationsButton';
 
 const AdvertisementPage = () => {
 
@@ -135,6 +136,7 @@ const AdvertisementPage = () => {
                 <div className="flex justify-end items-center space-x-2">
                     <Button style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }} label={t('ADVERTISEMENT.TABLE.CREATEADVERTISEMENT')} icon="pi pi-plus" severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"} onClick={openNew} />
                     {/* <Button style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }} label={t("APP.GENERAL.DELETE")} icon="pi pi-trash" severity="danger" onClick={confirmDeleteSelected} disabled={!selectedCompanies || !(selectedCompanies as any).length} /> */}
+                    <ManageTranslationsButton type="advertisement" />
                 </div>
             </React.Fragment>
         );

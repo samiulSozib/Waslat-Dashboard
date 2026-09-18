@@ -46,6 +46,7 @@ import { withdrawRequestsReducer } from './withdrawalRequestReducer';
 import {providerInfoReducer} from './provideInfoReducer'
 import {apiKeyReducer} from './apiKeyReducer'
 import voucherReducer from './voucherReducer'
+import  translationReducer  from './translationReducer';
 
 const rootReducer=combineReducers({
     currenciesReducer:currenciesReducer,
@@ -95,6 +96,7 @@ const rootReducer=combineReducers({
     providerInfoReducer:providerInfoReducer,
     apiKeyReducer:apiKeyReducer,
     voucherReducer:voucherReducer,
+    translationReducer: translationReducer,
     paystoreStatusReducer: paystoreStatusReducer,
 
 })

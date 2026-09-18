@@ -28,6 +28,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
 import { customCellStyle } from '../../utilities/customRow';
 import { isRTL } from '../../utilities/rtlUtil';
+import { ManageTranslationsButton } from '@/app/(main)/components/ManageTranslationsButton';
 
 const BundlePage = () => {
     let emptyBundle: Bundle = {
@@ -813,6 +814,7 @@ const BundlePage = () => {
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
                         onClick={openNew}
                     />
+                    <ManageTranslationsButton type="bundle" />
                 </div>
             </React.Fragment>
         );
