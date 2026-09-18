@@ -1,12 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
-import React, { useContext } from 'react';
+import { AppMenuItem } from '@/types';
+import { useContext } from 'react';
+import { useTranslation } from 'react-i18next';
 import AppMenuitem from './AppMenuitem';
 import { LayoutContext } from './context/layoutcontext';
 import { MenuProvider } from './context/menucontext';
-import Link from 'next/link';
-import { AppMenuItem } from '@/types';
-import { useTranslation } from 'react-i18next';
 
 const AppMenu = () => {
     const { layoutConfig } = useContext(LayoutContext);
@@ -262,6 +261,11 @@ const AppMenu = () => {
                     label: t('MENU.API_KEYS'),
                     icon: 'pi pi-fw pi-question-circle',
                     to: '/pages/api-keys'
+                },
+                {
+                    label: t('TRANSLATION_WORKSPACE'),
+                    icon: 'pi pi-fw pi-question-circle',
+                    to: '/pages/translation-workspace?type=bundle'
                 },
             ]
         }
