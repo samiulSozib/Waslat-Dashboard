@@ -250,10 +250,12 @@ const TranslationWorkspacePage = () => {
       return;
     }
 
-    const items = Object.entries(dirtyRows).map(([id, fields]) => ({
-      id: Number(id),
-      ...fields,
-    }));
+const items = (
+  Object.entries(dirtyRows) as Array<[string, Record<string, string>]>
+).map(([id, fields]) => ({
+  id: Number(id),
+  ...fields,
+}));
 
     await dispatch(
       _bulkSaveTranslations(selectedType, selectedLanguage, items, toast, t)
