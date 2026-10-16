@@ -1,11 +1,13 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
-import { _addCompany, _deleteCompany, _deleteSelectedCompanies, _editCompany, _fetchCompanies } from '@/app/redux/actions/companyActions';
+
+import { _addCompany, _deleteCompany, _deleteSelectedCompanies, _editCompany, _fetchCompanies, _updateCompanySettings } from '@/app/redux/actions/companyActions';
+import { _fetchProviders } from '@/app/redux/actions/providerActions';
 import { _fetchCountries } from '@/app/redux/actions/countriesActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import i18n from '@/i18n';
-import { Company, Country } from '@/types/interface';
+import { Company, Country, Provider } from '@/types/interface';
 import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
@@ -14,11 +16,14 @@ import { Dialog } from 'primereact/dialog';
 import { Dropdown } from 'primereact/dropdown';
 import { FileUpload } from 'primereact/fileupload';
 import { InputText } from 'primereact/inputtext';
+import { InputNumber } from 'primereact/inputnumber';
+import { InputSwitch } from 'primereact/inputswitch';
+import { Password } from 'primereact/password';
 import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
@@ -26,7 +31,6 @@ import { CustomFields } from '../../components/CustomFields';
 import { customCellStyleImage } from '../../utilities/customRow';
 import { parseInputFormSchema, stringifyInputFormSchema } from '../../utilities/parseInputFormSchema';
 import { isRTL } from '../../utilities/rtlUtil';
-
 const CompanyPage = () => {
     let emptyCompany: Company = {
         id: 0,
@@ -39,9 +43,13 @@ const CompanyPage = () => {
         created_at: '',
         updated_at: '',
         country: null,
-        input_form_schema: []
+        input_form_schema: [],
+        is_robot_enabled: false,
+        is_api_enabled: false,
+        api_provider_id: null,
+        api_key: null,
+        display_order: 0
     };
-
     const [companyDialog, setCompanyDialog] = useState(false);
     const [deleteCompanyDialog, setDeleteCompanyDialog] = useState(false);
     const [deleteCompaniesDialog, setDeleteCompaniesDialog] = useState(false);
@@ -53,42 +61,36 @@ const CompanyPage = () => {
     const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { companies, loading } = useSelector((state: any) => state.companyReducer);
+    const { providers } = useSelector((state: any) => state.providerReducer);
     const { countries } = useSelector((state: any) => state.countriesReducer);
     const { telegramChatIds } = useSelector((state: any) => state.telegramReducer);
     const { t } = useTranslation();
-    const [searchTag, setSearchTag] = useState('');
-
     useEffect(() => {
-        dispatch(_fetchCompanies(searchTag));
+        dispatch(_fetchCompanies());
         dispatch(_fetchCountries());
         dispatch(_fetchTelegramList());
-    }, [dispatch, searchTag]);
-
+        dispatch(_fetchProviders(1, ''));
+    }, [dispatch]);
     const openNew = () => {
         setCompany(emptyCompany);
         setSubmitted(false);
         setCompanyDialog(true);
     };
-
     const hideDialog = () => {
         setSubmitted(false);
         setCompanyDialog(false);
         setCompany(emptyCompany);
     };
-
     const hideDeleteCompanyDialog = () => {
         setDeleteCompanyDialog(false);
         setCompany(emptyCompany);
     };
-
     const hideDeleteCompaniesDialog = () => {
         setDeleteCompaniesDialog(false);
         setCompany(emptyCompany);
     };
-
-    const saveCompany = () => {
+    const saveCompany = async () => {
         setSubmitted(true);
-
         if (!company.company_name || company.company_name.length === 0 || !company.country) {
             toast.current?.show({
                 severity: 'error',
@@ -98,7 +100,6 @@ const CompanyPage = () => {
             });
             return;
         }
-
         // Validate custom fields
         const parsedFields = parseInputFormSchema(company.input_form_schema);
         if (parsedFields && parsedFields.length > 0) {
@@ -113,7 +114,6 @@ const CompanyPage = () => {
                     });
                     return;
                 }
-
                 if (!field.label.en || field.label.en.trim() === '') {
                     toast.current?.show({
                         severity: 'error',
@@ -125,24 +125,20 @@ const CompanyPage = () => {
                 }
             }
         }
-
         // Prepare company data for API
         const companyData = {
             ...company,
             input_form_schema: stringifyInputFormSchema(parsedFields) // Stringify for API
         };
-
         if (company.id && company.id !== 0) {
-            dispatch(_editCompany(companyData, toast, t));
+            try { await dispatch(_editCompany(companyData, toast, t)); } catch { return; }
         } else {
-            dispatch(_addCompany(companyData, toast, t));
+            try { await dispatch(_addCompany(companyData, toast, t)); } catch { return; }
         }
-
         setCompanyDialog(false);
         setCompany(emptyCompany);
         setSubmitted(false);
     };
-
     const editCompany = (company: Company) => {
         const matching = countries.find((r: any) => r.id === company.country?.id);
         console.log(company)
@@ -150,16 +146,19 @@ const CompanyPage = () => {
             ...company,
             country_id: company.country_id,
             country: matching,
-            input_form_schema: parseInputFormSchema(company.input_form_schema)
+            input_form_schema: parseInputFormSchema(company.input_form_schema),
+            is_robot_enabled: Boolean(company.is_robot_enabled),
+            is_api_enabled: Boolean(company.is_api_enabled),
+            api_provider_id: company.api_provider_id == null ? null : Number(company.api_provider_id),
+            api_key: null, // Credential is hidden by Laravel; never prefill a secret.
+            display_order: Number(company.display_order ?? 0)
         });
         setCompanyDialog(true);
     };
-
     const confirmDeleteCompany = (company: Company) => {
         setCompany(company);
         setDeleteCompanyDialog(true);
     };
-
     const deleteCompany = () => {
         if (!company?.id) {
             console.error('Company ID is undefined.');
@@ -168,7 +167,6 @@ const CompanyPage = () => {
         dispatch(_deleteCompany(company?.id, toast, t));
         setDeleteCompanyDialog(false);
     };
-
     const confirmDeleteSelected = () => {
         if (!selectedCompanies || (selectedCompanies as any).length === 0) {
             toast.current?.show({
@@ -181,7 +179,6 @@ const CompanyPage = () => {
         }
         setDeleteCompaniesDialog(true);
     };
-
     const deleteSelectedCompanies = async () => {
         if (!selectedCompanies || (selectedCompanies as any).length === 0) {
             toast.current?.show({
@@ -192,15 +189,12 @@ const CompanyPage = () => {
             });
             return;
         }
-
         const selectedIds = (selectedCompanies as Company[]).map((company) => company.id);
         await _deleteSelectedCompanies(selectedIds, toast, t);
         dispatch(_fetchCompanies());
-
         setSelectedCompanies(null);
         setDeleteCompaniesDialog(false);
     };
-
     const rightToolbarTemplate = () => {
         return (
             <div className="flex justify-end items-center space-x-2">
@@ -208,7 +202,6 @@ const CompanyPage = () => {
             </div>
         );
     };
-
     // const leftToolbarTemplate = () => {
     //     return (
     //         <div className="flex items-center">
@@ -220,52 +213,128 @@ const CompanyPage = () => {
     //     );
     // };
     const [localSearchTerm, setLocalSearchTerm] = useState('');
-
-    const leftToolbarTemplate = () => {
-
-        const handleSearch = () => {
-            setSearchTag(localSearchTerm);
-        };
-
-        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        };
-
-        return (
-            <React.Fragment>
-                <div className="flex align-items-center gap-2">
-                    <span className="p-input-icon-left">
-                        <i className="pi pi-search" />
-                        <InputText
-                            type="search"
-                            value={localSearchTerm}
-                            onChange={(e) => setLocalSearchTerm(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        />
-                    </span>
-                    <Button
-                        label={t('SEARCH')}
-                        onClick={handleSearch}
-                        className="p-button-sm"
-                    />
-                    {localSearchTerm && (
-                        <Button
-                            icon="pi pi-times"
-                            onClick={() => {
-                                setLocalSearchTerm('');
-                                setSearchTag('');
-                            }}
-                            className="p-button-sm p-button-secondary p-button-text"
-
-                        />
-                    )}
-                </div>
-            </React.Fragment>
+    // Client-side filtering of records already fetched, no request per keystroke.
+    const filteredCompanies = useMemo(() => {
+        const search = localSearchTerm.trim().toLocaleLowerCase();
+        const list: Company[] = Array.isArray(companies) ? companies : [];
+        const sorted = [...list].sort((a, b) =>
+            Number(a.display_order ?? 0) - Number(b.display_order ?? 0) || a.id - b.id
         );
+        if (!search) return sorted;
+        return sorted.filter(item => {
+            const provider = (providers || []).find((p: Provider) => p.id === Number(item.api_provider_id));
+            return [
+                item.id, item.company_name, item.company_code,
+                item.country?.country_name, item.telegram_chat_id?.group_name,
+                item.display_order, provider?.name, provider?.code
+            ].filter(value => value !== null && value !== undefined)
+             .join(' ').toLocaleLowerCase().includes(search);
+        });
+    }, [companies, localSearchTerm, providers]);
+
+    const [companyPriorityDrafts, setCompanyPriorityDrafts] = useState<Record<number, number>>({});
+    const [companySavingRows, setCompanySavingRows] = useState<Record<number, boolean>>({});
+
+    // Keep data intact; re-fetch after verified successful partial update.
+    const updateInlineCompany = async (
+        rowId: number,
+        updates: Partial<Pick<Company, 'display_order' | 'is_robot_enabled' | 'is_api_enabled'>>
+    ): Promise<boolean> => {
+        if (companySavingRows[rowId]) return false;
+        if (updates.display_order !== undefined &&
+            (!Number.isInteger(updates.display_order) || updates.display_order < 0)) {
+            toast.current?.show({ severity: 'error', summary: 'Invalid priority', detail: 'Enter a non-negative integer.', life: 3000 });
+            return false;
+        }
+        setCompanySavingRows(prev => ({ ...prev, [rowId]: true }));
+        try {
+            await dispatch(_updateCompanySettings(rowId, updates));
+            await dispatch(_fetchCompanies());
+            toast.current?.show({ severity: 'success', summary: 'Saved', detail: 'Company setting updated.', life: 2500 });
+            return true;
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Company update failed.';
+            toast.current?.show({ severity: 'error', summary: 'Update failed', detail: message, life: 4000 });
+            return false;
+        } finally {
+            setCompanySavingRows(prev => ({ ...prev, [rowId]: false }));
+        }
     };
+
+    const companyPriorityBody = (row: Company) => {
+        const original = Number(row.display_order ?? 0);
+        const edited = companyPriorityDrafts[row.id] ?? original;
+        const saving = Boolean(companySavingRows[row.id]);
+        return <div className="flex align-items-center gap-2" style={{ minWidth: 130 }}>
+            <InputNumber
+                value={edited}
+                min={0}
+                useGrouping={false}
+                disabled={saving}
+                inputStyle={{ width: '65px', textAlign: 'center' }}
+                onValueChange={event => setCompanyPriorityDrafts(prev => ({ ...prev, [row.id]: event.value ?? 0 }))}
+            />
+            <Button
+                type="button"
+                icon={saving ? 'pi pi-spin pi-spinner' : 'pi pi-check'}
+                text
+                rounded
+                severity="success"
+                tooltip="Save priority"
+                disabled={saving || edited === original}
+                onClick={async () => {
+                    const ok = await updateInlineCompany(row.id, { display_order: edited });
+                    if (ok) setCompanyPriorityDrafts(prev => {
+                        const next = { ...prev };
+                        delete next[row.id];
+                        return next;
+                    });
+                }}
+            />
+        </div>;
+    };
+
+    const companyRobotBody = (row: Company) => <InputSwitch
+        checked={Boolean(row.is_robot_enabled)}
+        disabled={Boolean(companySavingRows[row.id])}
+        onChange={event => void updateInlineCompany(row.id, { is_robot_enabled: Boolean(event.value) })}
+    />;
+
+    const companyApiBody = (row: Company) => <InputSwitch
+        checked={Boolean(row.is_api_enabled)}
+        disabled={Boolean(companySavingRows[row.id])}
+        onChange={event => void updateInlineCompany(row.id, { is_api_enabled: Boolean(event.value) })}
+    />;
+
+    const companyProviderBody = (row: Company) => {
+        const provider = (providers || []).find((p: Provider) => p.id === Number(row.api_provider_id));
+        return provider?.name || (row.api_provider_id ? `Provider #${row.api_provider_id}` : '—');
+    };
+
+    const leftToolbarTemplate = () => (
+        <div className="flex align-items-center gap-2 w-full md:w-auto">
+            <span className="p-input-icon-left w-full">
+                <i className="pi pi-search" />
+                <InputText
+                    type="search"
+                    value={localSearchTerm}
+                    onChange={(event) => setLocalSearchTerm(event.target.value)}
+                    placeholder="Search companies locally..."
+                    className="w-full"
+                />
+            </span>
+            {localSearchTerm && (
+                <Button
+                    type="button"
+                    icon="pi pi-times"
+                    text
+                    rounded
+                    aria-label="Clear search"
+                    onClick={() => setLocalSearchTerm('')}
+                />
+            )}
+        </div>
+    );
 
     const nameBodyTemplate = (rowData: Company) => {
         return (
@@ -275,7 +344,6 @@ const CompanyPage = () => {
             </>
         );
     };
-
     const codeBodyTemplate = (rowData: Company) => {
         return (
             <>
@@ -284,7 +352,6 @@ const CompanyPage = () => {
             </>
         );
     };
-
     const imageBodyTemplate = (rowData: Company) => {
         return (
             <>
@@ -304,7 +371,6 @@ const CompanyPage = () => {
             </>
         );
     };
-
     const countryBodyTemplate = (rowData: Company) => {
         return (
             <>
@@ -313,7 +379,6 @@ const CompanyPage = () => {
             </>
         );
     };
-
     const telegramGroupNameBodyTemplate = (rowData: Company) => {
         return (
             <>
@@ -322,7 +387,6 @@ const CompanyPage = () => {
             </>
         );
     };
-
     const customFieldsBodyTemplate = (rowData: Company) => {
         const fieldCount = parseInputFormSchema(rowData.input_form_schema).length;
         return (
@@ -332,7 +396,6 @@ const CompanyPage = () => {
             </>
         );
     };
-
     const actionBodyTemplate = (rowData: Company) => {
         return (
             <>
@@ -341,7 +404,6 @@ const CompanyPage = () => {
             </>
         );
     };
-
     const companyDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
@@ -360,7 +422,6 @@ const CompanyPage = () => {
             <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedCompanies} />
         </>
     );
-
     useEffect(() => {
         if (company.country_id) {
             const selectedCountry = countries.find((country: Country) => country.id === company.country_id);
@@ -372,7 +433,6 @@ const CompanyPage = () => {
             }
         }
     }, [company.country_id, countries]);
-
     return (
         <div className="grid -m-5">
             <div className="col-12">
@@ -380,10 +440,9 @@ const CompanyPage = () => {
                     {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
                     <Toast ref={toast} />
                     <Toolbar className="mb-4 flex flex-col md:flex-row justify-between items-center" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
                     <DataTable
                         ref={dt}
-                        value={companies}
+                        value={filteredCompanies}
                         selection={selectedCompanies}
                         onSelectionChange={(e) => setSelectedCompanies(e.value as any)}
                         dataKey="id"
@@ -405,14 +464,12 @@ const CompanyPage = () => {
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="company_name"
                             header={t('COMPANY.TABLE.COLUMN.COMPANYNAME')}
-
                             body={nameBodyTemplate}
                         ></Column>
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="company_code"
                             header={t('COMPANY_CODE')}
-
                             body={codeBodyTemplate}
                         ></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('COMPANY.TABLE.COLUMN.LOGO')} body={imageBodyTemplate}></Column>
@@ -430,8 +487,12 @@ const CompanyPage = () => {
                         ></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TOTAL_CUSTOM_FIELD')} body={customFieldsBodyTemplate}></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
-                    </DataTable>
-
+                                            <Column header="Priority" body={companyPriorityBody} style={{ minWidth: '135px' }} />
+                        <Column header="Robot" body={companyRobotBody} style={{ minWidth: '80px' }} />
+                        <Column header="API" body={companyApiBody} style={{ minWidth: '80px' }} />
+                        <Column header="API Provider" body={companyProviderBody} style={{ minWidth: '130px' }} />
+                        <Column header="API Key" body={(row: Company) => row.has_api_key ? 'Configured' : '—'} />
+</DataTable>
                     <Dialog visible={companyDialog} style={{ width: '90%', maxWidth: '800px' }} header={t('COMPANY.DETAILS')} modal className="p-fluid" footer={companyDialogFooter} onHide={hideDialog}>
                         <div className="card" style={{ padding: '20px' }}>
                             {company.company_logo && (
@@ -448,7 +509,6 @@ const CompanyPage = () => {
                                 }
                                 style={{ textAlign: 'center', marginBottom: '10px' }}
                             />
-
                             <div className="field">
                                 <label htmlFor="name" style={{ fontWeight: 'bold' }}>
                                     {t('COMPANY.FORM.INPUT.COMPANYNAME')}
@@ -475,7 +535,6 @@ const CompanyPage = () => {
                                     </small>
                                 )}
                             </div>
-
                             <div className="field">
                                 <label htmlFor="name" style={{ fontWeight: 'bold' }}>
                                     {t('COMPANY_CODE')}
@@ -502,7 +561,6 @@ const CompanyPage = () => {
                                     </small>
                                 )}
                             </div>
-
                             <div className="formgrid grid">
                                 <div className="field col">
                                     <label htmlFor="country" style={{ fontWeight: 'bold' }}>
@@ -528,7 +586,6 @@ const CompanyPage = () => {
                                         </small>
                                     )}
                                 </div>
-
                                 <div className="field col">
                                     <label htmlFor="telegram_chat_id" style={{ fontWeight: 'bold' }}>
                                         {t('COMPANY.FORM.INPUT.TELEGRAMID')}
@@ -550,6 +607,40 @@ const CompanyPage = () => {
                                 </div>
                             </div>
                         </div>
+                        <div className="card mt-3" style={{ padding: '20px' }}>
+                            <h5 className="mb-3">Automation & API Settings</h5>
+                            <div className="formgrid grid">
+                                <div className="field col-12 md:col-6">
+                                    <label htmlFor="company_robot_enabled" className="block font-bold mb-2">Robot Enabled</label>
+                                    <InputSwitch inputId="company_robot_enabled"
+                                        checked={Boolean(company.is_robot_enabled)}
+                                        onChange={(e) => setCompany(prev => ({ ...prev, is_robot_enabled: Boolean(e.value) }))} />
+                                </div>
+                                <div className="field col-12 md:col-6">
+                                    <label htmlFor="company_api_enabled" className="block font-bold mb-2">API Enabled</label>
+                                    <InputSwitch inputId="company_api_enabled"
+                                        checked={Boolean(company.is_api_enabled)}
+                                        onChange={(e) => setCompany(prev => ({ ...prev, is_api_enabled: Boolean(e.value) }))} />
+                                </div>
+                                <div className="field col-12 md:col-6">
+                                    <label htmlFor="company_api_provider" className="block font-bold mb-2">API Provider (Optional)</label>
+                                    <Dropdown inputId="company_api_provider"
+                                        value={company.api_provider_id ?? null}
+                                        options={(providers || []).map((provider: Provider) => ({ label: `${provider.name} (${provider.code})`, value: provider.id }))}
+                                        onChange={(e) => setCompany(prev => ({ ...prev, api_provider_id: e.value ?? null }))}
+                                        placeholder="Select API Provider" filter showClear className="w-full" />
+                                </div>
+                                <div className="field col-12 md:col-6">
+                                    <label htmlFor="company_api_key" className="block font-bold mb-2">API Key (Optional)</label>
+                                    <Password inputId="company_api_key" value={company.api_key ?? ''}
+                                        onChange={(e) => setCompany(prev => ({ ...prev, api_key: e.target.value }))}
+                                        feedback={false} toggleMask
+                                        placeholder={company.id ? 'Leave blank to keep existing key' : 'Enter API Key'}
+                                        className="w-full" inputClassName="w-full" />
+                                    {company.id !== 0 && <small className="text-color-secondary">Leave blank to keep the saved key.</small>}
+                                </div>
+                            </div>
+                        </div>
                         <CustomFields
                             fields={parseInputFormSchema(company.input_form_schema)}
                             onFieldsChange={(updatedFields) =>
@@ -561,7 +652,6 @@ const CompanyPage = () => {
                             submitted={submitted}
                         />{' '}
                     </Dialog>
-
                     <Dialog visible={deleteCompanyDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteCompanyDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
@@ -572,7 +662,6 @@ const CompanyPage = () => {
                             )}
                         </div>
                     </Dialog>
-
                     <Dialog visible={deleteCompaniesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteCompaniesDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
@@ -584,5 +673,4 @@ const CompanyPage = () => {
         </div>
     );
 };
-
 export default withAuth(CompanyPage);

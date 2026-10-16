@@ -1,1701 +1,2778 @@
 export interface Admin {
-    id: number;
-    user_id: number;
-    name: string;
-    email: string;
-    phone: string;
-    user_type: string;
-    email_verified_at: string | null;
-    profile_image_url: string;
-    status: number;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-}
 
+    id: number;
+
+    user_id: number;
+
+    name: string;
+
+    email: string;
+
+    phone: string;
+
+    user_type: string;
+
+    email_verified_at: string | null;
+
+    profile_image_url: string;
+
+    status: number;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+}
 
 export interface Currency {
-    id: number;
-    name: string;
-    code: string;
-    symbol: string;
-    ignore_digits_count: string;
-    exchange_rate_per_usd: string;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-}
 
+    id: number;
+
+    name: string;
+
+    code: string;
+
+    symbol: string;
+
+    ignore_digits_count: string;
+
+    exchange_rate_per_usd: string;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+}
 
 export interface UserInfo {
-    id: number;
-    uuid: string;
-    name: string;
-    email: string;
-    phone: string;
-    user_type: string;
-    email_verified_at: string | null;
-    currency_preference_code: string;
-    currency_preference_id: number;
-    fcm_token: string;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-    admin: Admin | null;
-    currency: Currency | null;
-}
 
+    id: number;
+
+    uuid: string;
+
+    name: string;
+
+    email: string;
+
+    phone: string;
+
+    user_type: string;
+
+    email_verified_at: string | null;
+
+    currency_preference_code: string;
+
+    currency_preference_id: number;
+
+    fcm_token: string;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+    admin: Admin | null;
+
+    currency: Currency | null;
+
+}
 
 export interface Bundle {
-    id: number;
-    bundle_code: string;
-    service_id: number;
-    bundle_title: string;
-    bundle_description: string;
-    bundle_type: string | null;
-    validity_type: string;
-    admin_buying_price: string;
-    buying_price: string;
-    selling_price: string;
-    amount: string | null;
-    bundle_image_url: string | null;
-    currency_id: number;
-    expired_date: string | null;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-    service: Service | null;
-    currency: Currency | null;
-    api_provider_id?: number | string | null,
-    api_provider_bundle_id?: number | string | null,
-    api_binding?: ApiBinding | null | string
-}
 
+    id: number;
+
+    bundle_code: string;
+
+    service_id: number;
+
+    bundle_title: string;
+
+    bundle_description: string;
+
+    bundle_type: string | null;
+
+    validity_type: string;
+
+    admin_buying_price: string;
+
+    buying_price: string;
+
+    selling_price: string;
+
+    amount: string | null;
+
+    bundle_image_url: string | null;
+
+    currency_id: number;
+
+    expired_date: string | null;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+    service: Service | null;
+
+    currency: Currency | null;
+
+    api_provider_id?: number | string | null,
+
+    api_provider_bundle_id?: number | string | null,
+
+    api_binding?: ApiBinding | null | string
+
+}
 
 export interface ApiBinding {
+
     // product_type: string;
+
     // operator: string;
+
     // internet_type: string;
+
     // sim_type: string;
+
     // product_id: number | string;
+
     // table_id: number | string;
+
     // name: string;
+
     // days: number | string;
+
     // volume: number | string;
+
     // unit: string;
+
     // periodicity: string;
+
     // Common properties (optional)
+
     product_type?: string;
+
     product_id?: number | string;
+
     name?: string;
+
     price?: number | string;
+
     stock?: number;
+
     description?: string;
 
-
     // Non-MZR provider properties
+
     operator?: string;
+
     internet_type?: string;
+
     sim_type?: string;
+
     table_id?: number | string;
+
     days?: number | string;
+
     volume?: number | string;
+
     unit?: string;
+
     periodicity?: string;
 
-
     // MZR provider properties
+
     category_id?: number;
+
     category_name?: string;
 
-
     // Allow any additional properties for flexibility
-    [key: string]: any;
-}
 
+    [key: string]: any;
+
+}
 
 export interface PaginationLink {
-    url: string | null;
-    label: string;
-    active: boolean;
-    page: number | null;
-}
 
+    url: string | null;
+
+    label: string;
+
+    active: boolean;
+
+    page: number | null;
+
+}
 
 export interface Pagination {
-    page: number;
-    first_page_url: string;
-    from: number;
-    last_page: number;
-    links: PaginationLink[];
-    items_per_page: number;
-    total: number;
-}
 
+    page: number;
+
+    first_page_url: string;
+
+    from: number;
+
+    last_page: number;
+
+    links: PaginationLink[];
+
+    items_per_page: number;
+
+    total: number;
+
+}
 
 export interface CompanyCode {
-    id: number;
-    company_id: number;
-    reserved_digit: string;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-    company: Company | null;
-}
 
+    id: number;
+
+    company_id: number;
+
+    reserved_digit: string;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+    company: Company | null;
+
+}
 
 export interface Telegram_Chat_Id {
-    id: number,
-    chat_id: number,
-    group_name: string,
-    created_at: string,
-    updated_at: string
-}
 
+    id: number,
+
+    chat_id: number,
+
+    group_name: string,
+
+    created_at: string,
+
+    updated_at: string
+
+}
 
 export interface Company {
-    id: number;
-    company_name: string;
-    company_code:string;
-    company_logo: File | string;
-    country_id: number | null;
-    telegram_chat_id: Telegram_Chat_Id | null;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-    country: Country | null;
-    input_form_schema?: string | CustomField[] | null
-   is_robot_enabled?: boolean;
-   is_api_enabled?: boolean;
-   api_key?: string | null;
-   api_provider_id?: number | null;
-}
 
+    display_order?: number;
+
+    has_api_key?: boolean;
+
+    id: number;
+
+    company_name: string;
+
+    company_code:string;
+
+    company_logo: File | string;
+
+    country_id: number | null;
+
+    telegram_chat_id: Telegram_Chat_Id | null;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+    country: Country | null;
+
+    input_form_schema?: string | CustomField[] | null
+
+   is_robot_enabled?: boolean;
+
+   is_api_enabled?: boolean;
+
+   api_key?: string | null;
+
+   api_provider_id?: number | null;
+
+}
 
 export interface Country {
-    id: number;
-    country_name: string;
-    country_flag_image_url: string | File;
-    language_id: number;
-    country_telecom_code: string;
-    phone_number_length: string;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-    currency: Currency | null;
-    language: Language | null
-    currency_id: number
-}
 
+    id: number;
+
+    country_name: string;
+
+    country_flag_image_url: string | File;
+
+    language_id: number;
+
+    country_telecom_code: string;
+
+    phone_number_length: string;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+    currency: Currency | null;
+
+    language: Language | null
+
+    currency_id: number
+
+}
 
 export interface Language {
-    id: number;
-    language_name: string;
-    language_code: string;
-    direction: 'rtl' | 'ltr';
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-}
 
+    id: number;
+
+    language_name: string;
+
+    language_code: string;
+
+    direction: 'rtl' | 'ltr';
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+}
 
 export interface Currency {
-    id: number;
-    name: string;
-    code: string;
-    symbol: string;
-    ignore_digits_count: string;
-    exchange_rate_per_usd: string;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-}
 
+    id: number;
+
+    name: string;
+
+    code: string;
+
+    symbol: string;
+
+    ignore_digits_count: string;
+
+    exchange_rate_per_usd: string;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+}
 
 export interface MoneyTransaction {
-    id: number;
-    reseller_id: number;
-    amount: string;
-    remaining_balance: string | null;
-    transaction_type: string | null;
-    transaction_source: string | null;
-    currency_code: string | null;
-    currency_id: number;
-    status: string;
-    initiator_id: number;
-    initiator_type: string;
-    transaction_reason: string;
-    created_at: string;
-    updated_at: string;
-    deleted_at: string | null;
-    sub_reseller_id: string | null;
-    reseller: Reseller | null;
-    currency: Currency | null;
-    order?: Order;
-}
 
+    id: number;
+
+    reseller_id: number;
+
+    amount: string;
+
+    remaining_balance: string | null;
+
+    transaction_type: string | null;
+
+    transaction_source: string | null;
+
+    currency_code: string | null;
+
+    currency_id: number;
+
+    status: string;
+
+    initiator_id: number;
+
+    initiator_type: string;
+
+    transaction_reason: string;
+
+    created_at: string;
+
+    updated_at: string;
+
+    deleted_at: string | null;
+
+    sub_reseller_id: string | null;
+
+    reseller: Reseller | null;
+
+    currency: Currency | null;
+
+    order?: Order;
+
+}
 
 export interface Reseller {
-    id: number;
-    user_id: number;
-    parent_id: number | null;
-    uuid: string;
-    reseller_name: string;
-    contact_name: string;
-    reseller_type: string;
-    email_verified_at: string | null;
-    account_password: string;
-    personal_pin: string;
-    remember_token: string | null;
-    profile_image_url: string | File;
-    email: string;
-    phone: string;
-    country_id: number | string;
-    province_id: number | string;
-    districts_id: number | string;
-    is_reseller_verified: number;
-    status: number;
-    payment: string;
-    balance: number;
-    loan_balance: string;
-    total_payments_received: string;
-    total_balance_sent: string;
-    net_payment_balance: string;
-    fcm_token: string | null;
-    created_at: string;
-    updated_at: string;
-    deleted_at: string | null;
-    user: User | null;
-    code: Currency | string | null,
-    country?: Country | null | string;
-    province: string | null;
-    district: string | null;
-    reseller_group_id: number,
-    can_create_sub_resellers: number,
-    sub_reseller_limit: number | string,
-    sub_resellers_can_create_sub_resellers: number,
-    total_earning_balance?: number | string,
-    parent_reseller_id?: number | null | string,
-    parent_reseller_name?: string | null,
-    parent_reseller_profile_image_url?: string | null,
-    parent_reseller_phone?: string | null
-    reseller_identity_attachment?: File | string | null,
-    extra_optional_proof?: File | string | null,
-    can_set_commission_group?: boolean,
-    can_set_selling_price_group?: boolean,
-    can_send_payment_request?: boolean,
-    can_ask_loan_balance?: boolean,
-    can_see_our_contact?: boolean,
-    can_see_parent_contact?: boolean,
-    can_send_hawala?: boolean,
-    max_loan_balance_request_amount?: number | string,
-    min_loan_balance_request_amount?: number | string,
-    afg_custom_recharge_adjust_type: string;
-    afg_custom_recharge_adjust_mode: string;
-    afg_custom_recharge_adjust_value: number;
-}
 
+    id: number;
+
+    user_id: number;
+
+    parent_id: number | null;
+
+    uuid: string;
+
+    reseller_name: string;
+
+    contact_name: string;
+
+    reseller_type: string;
+
+    email_verified_at: string | null;
+
+    account_password: string;
+
+    personal_pin: string;
+
+    remember_token: string | null;
+
+    profile_image_url: string | File;
+
+    email: string;
+
+    phone: string;
+
+    country_id: number | string;
+
+    province_id: number | string;
+
+    districts_id: number | string;
+
+    is_reseller_verified: number;
+
+    status: number;
+
+    payment: string;
+
+    balance: number;
+
+    loan_balance: string;
+
+    total_payments_received: string;
+
+    total_balance_sent: string;
+
+    net_payment_balance: string;
+
+    fcm_token: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+    deleted_at: string | null;
+
+    user: User | null;
+
+    code: Currency | string | null,
+
+    country?: Country | null | string;
+
+    province: string | null;
+
+    district: string | null;
+
+    reseller_group_id: number,
+
+    can_create_sub_resellers: number,
+
+    sub_reseller_limit: number | string,
+
+    sub_resellers_can_create_sub_resellers: number,
+
+    total_earning_balance?: number | string,
+
+    parent_reseller_id?: number | null | string,
+
+    parent_reseller_name?: string | null,
+
+    parent_reseller_profile_image_url?: string | null,
+
+    parent_reseller_phone?: string | null
+
+    reseller_identity_attachment?: File | string | null,
+
+    extra_optional_proof?: File | string | null,
+
+    can_set_commission_group?: boolean,
+
+    can_set_selling_price_group?: boolean,
+
+    can_send_payment_request?: boolean,
+
+    can_ask_loan_balance?: boolean,
+
+    can_see_our_contact?: boolean,
+
+    can_see_parent_contact?: boolean,
+
+    can_send_hawala?: boolean,
+
+    max_loan_balance_request_amount?: number | string,
+
+    min_loan_balance_request_amount?: number | string,
+
+    afg_custom_recharge_adjust_type: string;
+
+    afg_custom_recharge_adjust_mode: string;
+
+    afg_custom_recharge_adjust_value: number;
+
+}
 
 export interface User {
-    id: number;
-    uuid: string;
-    name: string;
-    email: string;
-    phone: string;
-    user_type: string;
-    email_verified_at: string | null;
-    currency_preference_code: string;
-    currency_preference_id: number;
-    fcm_token: string | null;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-    currency: Currency | null;
-    roles?: Roles[] | null,
-    password?: string,
-    confirm_password?: string
-}
 
+    id: number;
+
+    uuid: string;
+
+    name: string;
+
+    email: string;
+
+    phone: string;
+
+    user_type: string;
+
+    email_verified_at: string | null;
+
+    currency_preference_code: string;
+
+    currency_preference_id: number;
+
+    fcm_token: string | null;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+    currency: Currency | null;
+
+    roles?: Roles[] | null,
+
+    password?: string,
+
+    confirm_password?: string
+
+}
 
 // export interface PaymentMethod {
+
 //     id: number;
+
 //     method_name: string;
+
 //     account_details: string;
+
 //     account_image: File | string;
+
 //     status: number;
+
 //     created_at: string;
+
 //     updated_at: string;
+
 // }
 
-
 export interface PaymentMethod {
-    id: number;
-    method_name: string;
-    account_details: string;
-    account_image: File | string;
-    status: number;
-    created_at: string;
-    updated_at: string;
 
+    id: number;
+
+    method_name: string;
+
+    account_details: string;
+
+    account_image: File | string;
+
+    status: number;
+
+    created_at: string;
+
+    updated_at: string;
 
     // New fields from migration (nullable)
+
     bank_name?: string | null;
+
     account_holder_name?: string | null;
+
     card_number?: string | null;
+
     account_number?: string | null;
+
     sheba_number?: string | null;
 
-
     // New notes field from migration
+
     notes?: string | null;
+
     method_type?: 'bank' | 'card' | 'sheba' | 'other' | null;
 
-
-
-
 }
-
 
 export interface Supplier {
-    id: number;
-    supplier_name: string;
-    contact_details: string | null;
-    address: string;
-    status: number;
-    created_at: string;
-    updated_at: string;
-}
 
+    id: number;
+
+    supplier_name: string;
+
+    contact_details: string | null;
+
+    address: string;
+
+    status: number;
+
+    created_at: string;
+
+    updated_at: string;
+
+}
 
 export interface PurchasedProduct {
-    id: number;
-    supplier_id: number;
-    service_id: number;
-    product_name: string;
-    quantity: number;
-    purchase_price: string;
-    purchase_date: string;
-    status: number;
-    created_at: string;
-    updated_at: string;
-    supplier: Supplier | null;
-    service: Service | null;
-}
 
+    id: number;
+
+    supplier_id: number;
+
+    service_id: number;
+
+    product_name: string;
+
+    quantity: number;
+
+    purchase_price: string;
+
+    purchase_date: string;
+
+    status: number;
+
+    created_at: string;
+
+    updated_at: string;
+
+    supplier: Supplier | null;
+
+    service: Service | null;
+
+}
 
 export interface ServiceCategory {
-    id: number;
-    category_name: string;
-    type: string;
-    service_category_sub_type_id: number | null;
-    category_image_url: string | File;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-    input_form_schema?: string | CustomField[] | null
-}
 
+    id: number;
+
+    category_name: string;
+
+    type: string;
+
+    service_category_sub_type_id: number | null;
+
+    category_image_url: string | File;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+    input_form_schema?: string | CustomField[] | null
+
+    display_order?: number | null;
+  requires_country_selection?: boolean | number | string | null;
+
+}
 
 export interface Service {
-    id: number;
-    service_category_id: number;
-    service_name: string,
-    company_id: number;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-    service_category: ServiceCategory | null;
-    company: Company | null;
-    input_form_schema?: string | CustomField[] | null;
-    telegram_chat_id?: Telegram_Chat_Id | null;
-   is_robot_enabled?: boolean;
-   is_api_enabled?: boolean;
-   api_key?: string | null;
-   api_provider_id?: number | null;
-}
 
+    id: number;
+
+    service_category_id: number;
+
+    service_name: string,
+
+    company_id: number;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+    service_category: ServiceCategory | null;
+
+    company: Company | null;
+
+    input_form_schema?: string | CustomField[] | null;
+
+    telegram_chat_id?: Telegram_Chat_Id | null;
+
+   is_robot_enabled?: boolean;
+
+   is_api_enabled?: boolean;
+
+   api_key?: string | null;
+
+   api_provider_id?: number | null;
+
+   display_order?: number;
+
+   has_api_key?: boolean;
+
+}
 
 export interface Supplier {
-    id: number;
-    supplier_name: string;
-    contact_details: string | null;
-    address: string;
-    status: number;
-    created_at: string;
-    updated_at: string;
-}
 
+    id: number;
+
+    supplier_name: string;
+
+    contact_details: string | null;
+
+    address: string;
+
+    status: number;
+
+    created_at: string;
+
+    updated_at: string;
+
+}
 
 export interface TelegramChat {
+
     id: number;
+
     chat_id: number;
+
     group_name: string;
+
     created_at: string;
+
     updated_at: string;
+
 }
-
-
-
 
 export interface Province {
-    id: number,
-    province_name: string,
-    country_id: number,
-    deleted_at: string,
-    created_at: string,
-    updated_at: string,
-    country: Country | null
-}
 
+    id: number,
+
+    province_name: string,
+
+    country_id: number,
+
+    deleted_at: string,
+
+    created_at: string,
+
+    updated_at: string,
+
+    country: Country | null
+
+}
 
 export interface District {
+
     id: number,
+
     district_name: string,
+
     province_id: number,
+
     delete_at: string,
+
     created_at: string,
+
     updated_at: string,
+
     province: Province | null
+
 }
-
-
-
 
 export interface Order {
+
     id: number;
+
     reseller_id: number;
+
     rechargeble_account: string;
+
     bundle: Bundle | null;
+
     is_custom_recharge: number;
+
     order_type: string;
+
     transaction_id: string | null;
+
     is_paid: number;
+
     status: number | string | null;
+
     reject_reason: string | null;
+
     deleted_at: string | null;
+
     created_at: string;
+
     updated_at: string;
+
     vpn_activation_qr_code_image: string | null;
+
     vpn_activation_link: string | null;
+
     reseller: Reseller | null;
+
     performed_by_name?: string | null
+
 }
-
-
-
 
 export interface Advertisement {
+
     id: number,
+
     advertisement_title: string,
+
     ad_slider_image_url: string | File,
+
     status: number,
+
     deleted_at: string | null,
+
     created_at: string | null,
+
     updated_at: string | null
+
 }
-
-
-
 
 export interface Balance {
-    id: number,
-    reseller_id: number,
-    transaction_type: string,
-    payment_id: number | null,
-    amount: string,
-    remaining_balance: string,
-    currency_id: number,
-    description: string,
-    created_at: string,
-    updated_at: string,
-    reseller: Reseller | null,
-    currency: Currency | null,
-    payment_method_id?: number | null,
-    payment_amount?: string,
-    payment_currency_id?: number,
-    payment_status?: string,
-    payment_notes?: string,
-    payment_date?: string,
-    performed_by_name?: string | null,
-    status?: string | null,
-    is_reseller_loan_request?: string | null
-}
 
+    id: number,
+
+    reseller_id: number,
+
+    transaction_type: string,
+
+    payment_id: number | null,
+
+    amount: string,
+
+    remaining_balance: string,
+
+    currency_id: number,
+
+    description: string,
+
+    created_at: string,
+
+    updated_at: string,
+
+    reseller: Reseller | null,
+
+    currency: Currency | null,
+
+    payment_method_id?: number | null,
+
+    payment_amount?: string,
+
+    payment_currency_id?: number,
+
+    payment_status?: string,
+
+    payment_notes?: string,
+
+    payment_date?: string,
+
+    performed_by_name?: string | null,
+
+    status?: string | null,
+
+    is_reseller_loan_request?: string | null
+
+}
 
 export interface Payment {
-    id: number,
-    reseller_id: number,
-    payment_method_id: number,
-    amount: string,
-    remaining_payment_amount: string,
-    currency_id: number,
-    transaction_id: number | null,
-    status: string,
-    notes: string,
-    payment_date: string,
-    created_at: string,
-    updated_date: string,
-    reseller: Reseller | null,
-    payment_method: PaymentMethod | null,
-    currency: Currency | null,
-    performed_by_name?: string | null,
-    operation_type?: string | null,
-    payment_image?: string | null,
-    extra_image_1?: string | null,
-    extra_image_2?: string | null
-}
 
+    id: number,
+
+    reseller_id: number,
+
+    payment_method_id: number,
+
+    amount: string,
+
+    remaining_payment_amount: string,
+
+    currency_id: number,
+
+    transaction_id: number | null,
+
+    status: string,
+
+    notes: string,
+
+    payment_date: string,
+
+    created_at: string,
+
+    updated_date: string,
+
+    reseller: Reseller | null,
+
+    payment_method: PaymentMethod | null,
+
+    currency: Currency | null,
+
+    performed_by_name?: string | null,
+
+    operation_type?: string | null,
+
+    payment_image?: string | null,
+
+    extra_image_1?: string | null,
+
+    extra_image_2?: string | null
+
+}
 
 export interface Roles {
+
     id: number,
+
     name: string,
+
     guard_name: string,
+
     created_at: string,
+
     updated_at: string
+
 }
-
-
-
 
 export interface ResellerGroup {
-    id: number,
-    name: string,
-    discount_type: string,
-    discount_value: string,
-    can_create_sub_resellers: number,
-    can_sub_reseller_create_subs: number,
-    sub_reseller_limit: number | string,
-    status: string,
-    notes: string,
-    created_at: string,
-    updated_at: string,
-    afg_custom_recharge_adjust_type: string;
-    afg_custom_recharge_adjust_mode: string;
-    afg_custom_recharge_adjust_value: number;
-}
 
+    id: number,
+
+    name: string,
+
+    discount_type: string,
+
+    discount_value: string,
+
+    can_create_sub_resellers: number,
+
+    can_sub_reseller_create_subs: number,
+
+    sub_reseller_limit: number | string,
+
+    status: string,
+
+    notes: string,
+
+    created_at: string,
+
+    updated_at: string,
+
+    afg_custom_recharge_adjust_type: string;
+
+    afg_custom_recharge_adjust_mode: string;
+
+    afg_custom_recharge_adjust_value: number;
+
+}
 
 export interface Permission {
-    id: number,
-    name: string,
-    guard_name: string,
-    created_at: string,
-    updated_at: string,
-    pivot: null
-}
 
+    id: number,
+
+    name: string,
+
+    guard_name: string,
+
+    created_at: string,
+
+    updated_at: string,
+
+    pivot: null
+
+}
 
 export interface GroupDiscount {
-    id: number,
-    reseller_group_id: number,
-    service_id: number,
-    bundle_id: number,
-    discount_type: string,
-    discount_value: string,
-    created_at: string | null,
-    updated_at: string | null,
-    reseller_group: ResellerGroup | null,
-    service: Service | null,
-    bundle: Bundle | null
-}
 
+    id: number,
+
+    reseller_group_id: number,
+
+    service_id: number,
+
+    bundle_id: number,
+
+    discount_type: string,
+
+    discount_value: string,
+
+    created_at: string | null,
+
+    updated_at: string | null,
+
+    reseller_group: ResellerGroup | null,
+
+    service: Service | null,
+
+    bundle: Bundle | null
+
+}
 
 export interface HawalaBranch {
-    id?: number,
-    name?: string,
-    email?: string,
-    password?: string,
-    address?: string,
-    phone_number?: string,
-    commission_type?: 'percentage' | 'fixed',
-    amount?: number,
-    status?: 'active' | 'inactive',
 
+    id?: number,
+
+    name?: string,
+
+    email?: string,
+
+    password?: string,
+
+    address?: string,
+
+    phone_number?: string,
+
+    commission_type?: 'percentage' | 'fixed',
+
+    amount?: number,
+
+    status?: 'active' | 'inactive',
 
 }
 
-
 export interface Hawala {
+
     id?: number | string;
+
     reseller_id?: number | string;
+
     reseller?: Reseller | null;
 
-
     hawala_number?: string;
+
     sender_name?: string;
+
     receiver_name?: string;
+
     receiver_father_name?: string | null;
+
     receiver_id_card_number?: string | null;
 
-
     hawala_amount?: string | number;
+
     hawala_amount_currency_id?: number | string;
+
     hawala_amount_currency_code?: string;
+
     hawala_amount_currency_rate?: string | number;
 
-
     reseller_prefered_currency_id?: number | string;
-    reseller_prefered_currency_code?: string;
-    reseller_prefered_currency_rate?: string | number;
 
+    reseller_prefered_currency_code?: string;
+
+    reseller_prefered_currency_rate?: string | number;
 
     converted_amount_taken_from_reseller?: string | number;
 
-
     commission_amount?: string | number;
+
     commission_paid_by_sender?: boolean;
+
     commission_paid_by_receiver?: boolean;
 
-
     reseller_commission_share?: string | number | null;
+
     branch_commission_share?: string | number | null;
+
     admin_commission_share?: string | number | null;
 
-
     admin_note?: string | null;
-    branch?: HawalaBranch | null; // Replace `any` with your `Branch` type if available
+
+    branch?: HawalaBranch | null; // Replace \\\`any\\\` with your \\\`Branch\\\` type if available
+
     hawala_branch_id?: number | string | null;
 
-
     status?: string | number;
+
     is_paid?: boolean | number;
 
-
     rechargeble_account?: string;
+
     transaction_id?: string | number | null;
+
     bundle?: Bundle | null;
 
-
     created_at?: Date | string | null;
+
     updated_at?: Date | string | null;
+
     hawala_custom_number?: string | null
+
 }
-
-
-
 
 export interface GroupPricing {
+
     id: number,
+
     reseller_group_id: number,
+
     service_id: number,
+
     created_at: string | null,
+
     updated_at: string | null,
+
     reseller_group: ResellerGroup | null,
+
     service: Service | null,
+
     status: number | string,
+
     fixed_fee: number | null,
+
     markup_percentage: number | null,
+
     use_fixed_fee: boolean | null,
+
     use_markup: boolean | null
 
-
 }
-
-
-
 
 export interface HawalaCurrency {
-    id: number;
-    from_currency_id: number;
-    from_currency: Currency | null,
-    to_currency_id: number;
-    to_currency: Currency | null,
-    amount: number,
-    amount_in_letter:string,
-    buy_rate: string | null;
-    sell_rate: string | null
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-}
 
+    id: number;
+
+    from_currency_id: number;
+
+    from_currency: Currency | null,
+
+    to_currency_id: number;
+
+    to_currency: Currency | null,
+
+    amount: number,
+
+    amount_in_letter:string,
+
+    buy_rate: string | null;
+
+    sell_rate: string | null
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+}
 
 export interface CustomerPricing {
-    id: number,
-    amount: string | null | number,
-    commission_type: string | null,
-    reseller: Reseller | null,
-    reseller_id: number | null | string,
-    service: Service | null,
-    service_id: number | string | null,
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-}
 
+    id: number,
+
+    amount: string | null | number,
+
+    commission_type: string | null,
+
+    reseller: Reseller | null,
+
+    reseller_id: number | null | string,
+
+    service: Service | null,
+
+    service_id: number | string | null,
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+}
 
 export interface EarningBalance {
+
     id: number,
+
     amount: string | number,
+
     status: string | null,
+
     reviewed_by: null | string | number,
+
     reviewed_at: null | string,
+
     admin_note: null | string,
+
     created_at: string;
+
     updated_at: string;
+
     reseller: Reseller
+
 }
-
-
-
 
 export interface HelpArticle {
+
     id: number,
+
     title?: string | null,
+
     description?: string | null,
+
     related_image?: string | null | File,
+
     slug?: string | null,
+
     category?: string | null,
+
     section?: string | null,
+
     is_active?: boolean,
+
     order?: string | number | null,
+
     created_at: string;
+
     updated_at: string;
+
 }
-
-
-
 
 export interface PaymentType {
+
     id: number,
+
     name: string,
+
     description: string,
+
     created_at: string;
+
     updated_at: string;
+
 }
-
-
-
-
-
 
 // export interface UserList {
+
 //     id: number;
+
 //     uuid: string;
+
 //     name: string;
+
 //     email: string;
+
 //     phone: string;
+
 //     user_type: string;
+
 //     email_verified_at: string | null;
+
 //     currency_preference_code: string;
+
 //     currency_preference_id: number;
+
 //     fcm_token: string | null;
+
 //     deleted_at: string | null;
+
 //     created_at: string;
+
 //     updated_at: string;
+
 //     currency: Currency|null;
+
 //     roles:Roles[]|null
+
 // }
 
-
-
-
 // reseller pagination, edit
+
 // reseller group delete api problem
 
-
 export interface CustomField {
+
     name: string;
+
     type: string;
+
     label: {
+
         en: string;
+
         fa: string;
+
     };
+
     placeholder: {
+
         en: string;
+
         fa: string;
+
     };
+
     keyboard: string;
+
     validators: {
+
         required: boolean;
+
         minLength: number;
+
         maxLength: number;
+
     };
+
     examples: string[];
+
 }
-
-
-
 
 // types/interface.ts (add this to your existing interface file)
+
 export interface AppSettings {
+
     is_instant_confirm: boolean;
+
     maintenance_mode: boolean;
+
     allow_new_registrations: boolean;
+
     default_currency: string;
+
     exchange_rate_usd_afn: number;
+
     support_phone: string;
+
     support_email: string;
+
     support_whatsapp: string;
+
     alternative_contact_phone: string;
+
     alternative_whatsapp: string;
+
     telegram_username: string;
+
     telegram_url: string;
+
     facebook_page_url: string;
+
     instagram_handle: string;
+
     instagram_url: string;
+
     twitter_url: string;
+
     tiktok_url: string;
+
     youtube_url: string;
+
     website_url: string;
+
     app_name: string;
+
     app_name_i18n: {
+
         en: string;
+
         fa: string;
+
         ps: string;
+
     };
+
     app_slogan: string;
+
     app_slogan_i18n: {
+
         en: string;
+
         fa: string;
+
         ps: string;
+
     };
+
     logo_url: string;
+
     mobile_app_primary_color: string;
+
     mobile_app_secondary_color: string;
+
     primary_color_font_color: string;
+
     secondary_color_font_color: string;
+
     extra_settings: {
+
         max_order_per_day: number;
+
         min_topup_amount: number;
+
         max_topup_amount: number;
+
     };
+
     integration_settings: {
+
         SETARAGAN_API_BASE_URL: string;
+
         SETARAGAN_API_USERNAME: string;
+
         SETARAGAN_API_AUTHKEY: string;
+
         SETARAGAN_MSISDN: string;
+
         SETARAGAN_REQUEST_ID: string;
+
         TELEGRAM_WEBHOOK_URL: string;
+
         TELEGRAM_BOT_TOKEN: string;
+
     };
+
     afg_custom_recharge_adjust_type: string | null | undefined;
+
     afg_custom_recharge_adjust_mode: string;
+
     afg_custom_recharge_adjust_value: number;
+
     afg_custom_recharge_selling_price_adjust_type?: string,
+
     afg_custom_recharge_selling_price_adjust_mode?: string,
+
     afg_custom_recharge_selling_price_adjust_value?: number,
+
     setaragan_admin_buying_price_percentage?: number,
+
     custom_recharge_api_provider_id: number | null, // Add this line
 
-
      // New Telegram Settings
+
     telegram_enabled: boolean;
+
     telegram_send_payments: boolean;
+
     telegram_payment_chat_ids: string[];
+
     telegram_send_balances: boolean;
+
     telegram_balance_chat_ids: string[];
+
     telegram_send_transactions: boolean;
+
     telegram_transaction_chat_ids: string[];
+
     telegram_send_vouchers: boolean;
+
     telegram_voucher_chat_ids: string[];
 
-
 }
-
-
-
-
-
 
 export interface Provider {
+
     id: number;
+
     code: string;
+
     name: string;
+
     base_url: string;
+
     is_active: boolean;
+
     failover_priority: string | null;
+
     timeout_seconds: string | null;
+
     capabilities: string[];
+
     endpoints: {
+
         topup?: string | null;
+
         status?: string | null;
+
         balance?: string | null;
+
         default?: string | null;
+
         internet?: string | null;
+
         products?: string | null;
+
         [key: string]: string | null | undefined;
+
     };
+
     method_names: {
+
         pin?: string | null;
+
         bill?: string | null;
+
         topup?: string | null;
+
         credit?: string | null;
+
         status?: string | null;
+
         addfund?: string | null;
+
         balance?: string | null;
+
         internet?: string | null;
+
         products?: string | null;
+
         check_bill?: string | null;
+
         buy_product?: string | null;
+
         trans_status?: string | null;
+
         available_pin?: string | null;
+
         retrieve_product_info?: string | null;
+
         [key: string]: string | null | undefined;
+
     };
+
     ip_whitelist: string[];
+
     metadata: {
+
         notes?: string | null;
+
         headers?: {
+
             [key: string]: string;
+
         } | null;
+
         credentials?: {
+
             [key: string]: string;
+
         } | null;
+
         callback_url?: string | null;
+
         test_mode_supported?: boolean | null;
+
         products_require_params?: boolean | null;
+
         [key: string]: any;
+
     } | null;
+
     created_at: string | null;
+
     updated_at: string | null;
+
     deleted_at: string | null;
+
 }
-
-
-
 
 export interface SingleProvider {
-    id: number;
-    code: string;
-    name: string;
-}
 
+    id: number;
+
+    code: string;
+
+    name: string;
+
+}
 
 export interface Meta {
-    table_id: string;
-    product_type: string;
-    operator: string;
-    name: string;
-    id: string;
-    gross_price: number;
-    amount: number;
-    periodicity: string;
-    days: string;
-    volume: string;
-    unit: string;
-    sim_type: string;
-    course: string;
-    course_range: string;
-    type: string;
-    amount_rial: number;
-    gross_price_rial: number;
-    internet_type: string;
-}
 
+    table_id: string;
+
+    product_type: string;
+
+    operator: string;
+
+    name: string;
+
+    id: string;
+
+    gross_price: number;
+
+    amount: number;
+
+    periodicity: string;
+
+    days: string;
+
+    volume: string;
+
+    unit: string;
+
+    sim_type: string;
+
+    course: string;
+
+    course_range: string;
+
+    type: string;
+
+    amount_rial: number;
+
+    gross_price_rial: number;
+
+    internet_type: string;
+
+}
 
 export interface Internet {
+
     provider_product_id: string;
+
     provider_table_id: string;
+
     category: string;
+
     label: string;
+
     operator: string;
+
     internet_type: string;
+
     sim_type: string;
+
     days: number;
+
     volume: string;
+
     unit: string;
+
     amount: number;
+
     gross_price: number;
+
     amount_rial: number;
+
     gross_price_rial: number;
+
     currency_hint: string;
+
     type_label: string;
+
     meta: Meta;
+
 }
+
 export interface RawInternet {
+
     table_id: string;
+
     product_type: string;
+
     operator: string;
+
     name: string;
+
     id: string;
+
     gross_price: number;
+
     amount: number;
+
     periodicity: string;
+
     days: string;
+
     volume: string;
+
     unit: string;
+
     sim_type: string;
+
     course: string;
+
     course_range: string;
+
     type: string;
+
     amount_rial: number;
+
     gross_price_rial: number;
+
     internet_type: string;
+
     meta?: Meta;
+
     price?: number;
+
     stock?: number;
+
     description?: string;
 
-
 }
+
 export interface RawBundles {
 
-
     id: string;
-    title: string;
-    desc: string;
-    price: string;
-    tprice: string;
-}
 
+    title: string;
+
+    desc: string;
+
+    price: string;
+
+    tprice: string;
+
+}
 
 export interface SingleProviderResponse {
+
     provider: SingleProvider;
+
     internets: Internet[];
+
     rawInternets: RawInternet[];
+
     rawBundles: RawBundles[];
+
 }
-
-
-
 
 export interface PriceAdjustmentPayload {
-    adjustment_type: 'percentage' | 'fixed';
-    adjustment_value: number;
-    base_price?: 'admin_buying_price' | 'buying_price';
-    service_ids?: number[];
-    confirmation?: boolean;
-}
 
+    adjustment_type: 'percentage' | 'fixed';
+
+    adjustment_value: number;
+
+    base_price?: 'admin_buying_price' | 'buying_price';
+
+    service_ids?: number[];
+
+    confirmation?: boolean;
+
+}
 
 export interface BulkBundlePricePayload {
-    adjustment_type: 'percentage' | 'fixed';
-    adjustment_value: number;
-    adjustment_direction?: 'increase' | 'decrease'
-    base_price?: 'admin_buying_price' | 'buying_price' | 'selling_price';
-    service_ids?: number[];
-    confirmation?: boolean;
-}
 
+    adjustment_type: 'percentage' | 'fixed';
+
+    adjustment_value: number;
+
+    adjustment_direction?: 'increase' | 'decrease'
+
+    base_price?: 'admin_buying_price' | 'buying_price' | 'selling_price';
+
+    service_ids?: number[];
+
+    confirmation?: boolean;
+
+}
 
 export interface PriceAdjustmentPreview {
+
     bundle_id: number;
+
     bundle_title: string;
+
     current_admin_buying_price: string;
+
     current_buying_price: string;
+
     current_selling_price: string;
+
     new_buying_price: string;
+
     new_selling_price: string;
+
     price_change: string;
+
     service_name: string;
+
     company_name: string;
+
 }
-
-
-
 
 export interface HawalaNumberSeries {
+
     id: number;
+
     branch_id: number;
+
     branch?: HawalaBranch | null;
+
     prefix: string;
+
     current_number: number;
+
     reset_daily: boolean;
+
     is_active: boolean;
+
 }
-
-
-
 
 export interface SupportContacts {
+
     id: number;
+
     title: string;
+
     description: string;
+
     phone: string;
+
     is_whatsapp: boolean;
+
     is_phone: boolean;
+
     status: "active" | "inactive";
+
     links: {
+
         telegram: string;
+
         website: string;
+
     };
+
 }
-
-
-
 
 export interface Notification {
-    id: number;
-    title?: string;
-    message?: string;
-    reseller_id?: number;
-    status?: number | boolean;
-    target_type?: string | null;
-    media?: null | string | File;
-    created_at?: string | null;
-    is_read?: boolean
-}
 
+    id: number;
+
+    title?: string;
+
+    message?: string;
+
+    reseller_id?: number;
+
+    status?: number | boolean;
+
+    target_type?: string | null;
+
+    media?: null | string | File;
+
+    created_at?: string | null;
+
+    is_read?: boolean
+
+}
 
 export interface WithdrawalPolicy {
+
     id: number;
+
     currency_id: number;
+
     commission_type: 'percentage' | 'fixed';
+
     commission_value: number;
+
     min_withdraw_amount: number;
+
     max_withdraw_amount: number;
+
     status: boolean;
+
     currency?: Currency
+
 }
-
-
-
 
 export interface WithdrawRequest {
-    id: number;
-    reseller_id: number;
-    currency_id: number;
-    amount: number;
-    net_amount: number;
-    commission_amount: number;
-    admin_note?: string;
-    status: number;
-    created_at: string;
-    updated_at: string;
-    reseller?: Reseller;
-    currency?: Currency;
-    bank_details?: {
-        bank_name?: string;
-        account_holder_name?: string;
-        account_number?: string;
-        iban?: string;
-        branch?: string;
-        swift_code?: string
-    }
-}
 
+    id: number;
+
+    reseller_id: number;
+
+    currency_id: number;
+
+    amount: number;
+
+    net_amount: number;
+
+    commission_amount: number;
+
+    admin_note?: string;
+
+    status: number;
+
+    created_at: string;
+
+    updated_at: string;
+
+    reseller?: Reseller;
+
+    currency?: Currency;
+
+    bank_details?: {
+
+        bank_name?: string;
+
+        account_holder_name?: string;
+
+        account_number?: string;
+
+        iban?: string;
+
+        branch?: string;
+
+        swift_code?: string
+
+    }
+
+}
 
 export interface ApiInfoProvider {
-    id: number;
-    code: string;
-    name: string;
-    has_credentials: boolean;
-}
 
+    id: number;
+
+    code: string;
+
+    name: string;
+
+    has_credentials: boolean;
+
+}
 
 export interface ApiInfoAccountInfo {
-    balance: number;
-    currency: string;
-    last_updated: string; // Format: "YYYY-MM-DD HH:mm:ss"
-}
 
+    balance: number;
+
+    currency: string;
+
+    last_updated: string; // Format: "YYYY-MM-DD HH:mm:ss"
+
+}
 
 export interface ApiInfoUser {
-    uid: string;
-    name: string;
-    balance: number;
-    lang: string;
-}
 
+    uid: string;
+
+    name: string;
+
+    balance: number;
+
+    lang: string;
+
+}
 
 export interface ApiInfoTransaction {
-    id: number;
-    phone: string;
-    created_at: string; // ISO format: "YYYY-MM-DDTHH:mm:ss.sssZ"
-    finalAmount: number;
-    type: string; // Could be more specific like 'recharge' | 'balance' | etc.
-    b_name: string;
-}
 
+    id: number;
+
+    phone: string;
+
+    created_at: string; // ISO format: "YYYY-MM-DDTHH:mm:ss.sssZ"
+
+    finalAmount: number;
+
+    type: string; // Could be more specific like 'recharge' | 'balance' | etc.
+
+    b_name: string;
+
+}
 
 export interface AccountData {
-    provider: ApiInfoProvider;
-    account_info: ApiInfoAccountInfo;
-    user: ApiInfoUser;
-    recent_transactions: ApiInfoTransaction[];
-}
 
+    provider: ApiInfoProvider;
+
+    account_info: ApiInfoAccountInfo;
+
+    user: ApiInfoUser;
+
+    recent_transactions: ApiInfoTransaction[];
+
+}
 
 export interface ApiKey {
+
     id: number;
+
     key: string;
+
     name: string;
+
     is_active: boolean;
+
     expires_at: string; // ISO format: "YYYY-MM-DDTHH:mm:ss.000000Z"
+
     last_used_at: string | null; // ISO format or null if never used
+
     allowed_ips: string[];
+
     rate_limit: number;
+
     created_at: string; // ISO format: "YYYY-MM-DDTHH:mm:ss.000000Z"
+
     updated_at: string; // ISO format: "YYYY-MM-DDTHH:mm:ss.000000Z"
+
     reseller: Reseller | null;
+
 }
-
-
-
 
 // interfaces/providerProductsInterface.ts
-export interface Category {
-    id: number;
-    name: string;
-    icon: string | null;
-    product_count: number;
-    is_auto: boolean;
-    purchase_type: 'voucher' | 'recharge';
-}
 
+export interface Category {
+
+    id: number;
+
+    name: string;
+
+    icon: string | null;
+
+    product_count: number;
+
+    is_auto: boolean;
+
+    purchase_type: 'voucher' | 'recharge';
+
+}
 
 export interface Product {
+
     id: number;
+
     name: string;
+
     description: string;
+
     category_id: number;
+
     category_title: string;
+
     price: number;
+
     stock: number;
+
 }
 
-
-
-
 // ============================
+
 // Base/Common Interfaces
-// ============================
-
-
-export interface ServiceCategory {
-    id: number;
-    category_name: string;
-    type: string;
-}
-
-
-
-
-
-
-
-
-
-
-
 
 // ============================
+
+// ============================
+
 // Voucher Related Interfaces
-// ============================
 
+// ============================
 
 export interface Voucher {
-    id?: number;
-    company_name: string;
-    bundle_title: string;
-    bundle: Bundle;
-    voucher_code?: string;
-    provider?: string;
-    expires_at?: string;
-    notes?: string;
-    metadata?: any;
-    status?: string;
-    created_at?: string;
-    updated_at?: string;
-}
 
+    id?: number;
+
+    company_name: string;
+
+    bundle_title: string;
+
+    bundle: Bundle;
+
+    voucher_code?: string;
+
+    provider?: string;
+
+    expires_at?: string;
+
+    notes?: string;
+
+    metadata?: any;
+
+    status?: string;
+
+    created_at?: string;
+
+    updated_at?: string;
+
+}
 
 export interface VoucherStatistics {
-    total: number;
-    available: number;
-    used: number;
-    reserved: number;
-    expired: number;
-}
 
+    total: number;
+
+    available: number;
+
+    used: number;
+
+    reserved: number;
+
+    expired: number;
+
+}
 
 export interface VoucherPagination {
-    current_page: number;
-    per_page: number;
-    total: number;
-    total_pages: number;
-}
 
+    current_page: number;
+
+    per_page: number;
+
+    total: number;
+
+    total_pages: number;
+
+}
 
 export interface VoucherListResponse {
-    success: boolean;
-    code: number;
-    message: string;
-    data: {
-        vouchers: Voucher[];
-        statistics: VoucherStatistics;
-        pagination: VoucherPagination;
-    };
-    payload: any[];
-}
 
+    success: boolean;
+
+    code: number;
+
+    message: string;
+
+    data: {
+
+        vouchers: Voucher[];
+
+        statistics: VoucherStatistics;
+
+        pagination: VoucherPagination;
+
+    };
+
+    payload: any[];
+
+}
 
 export interface SingleVoucherResponse {
+
     success: boolean;
+
     code: number;
+
     message: string;
+
     data: {
+
         voucher: Voucher;
+
     };
+
     payload: any[];
+
 }
 
-
 // ============================
+
 // Create/Update Voucher
-// ============================
 
+// ============================
 
 export interface CreateVoucherPayload {
-    bundle_id: number;
-    voucher_code: string;
-    provider: string;
-    expires_at: string;
-    notes?: string;
-    metadata?: {
-        region?: string;
-        source?: string;
-        [key: string]: any;
-    };
-}
 
+    bundle_id: number;
+
+    voucher_code: string;
+
+    provider: string;
+
+    expires_at: string;
+
+    notes?: string;
+
+    metadata?: {
+
+        region?: string;
+
+        source?: string;
+
+        [key: string]: any;
+
+    };
+
+}
 
 export interface UpdateVoucherPayload {
+
     voucher_code?: string;
+
     notes?: string;
+
     expires_at?: string;
+
     metadata?: any;
+
     status?: string;
+
 }
 
-
 // ============================
+
 // Bulk Import Interfaces
-// ============================
 
+// ============================
 
 export interface BulkImportVoucher {
-    code: string;
-    expires_at: string;
-    notes?: string;
-    metadata?: {
-        region?: string;
-        batch?: string;
-        [key: string]: any;
-    };
-}
 
+    code: string;
+
+    expires_at: string;
+
+    notes?: string;
+
+    metadata?: {
+
+        region?: string;
+
+        batch?: string;
+
+        [key: string]: any;
+
+    };
+
+}
 
 export interface BulkImportPayload {
-    bundle_id: number;
-    provider: string;
-    vouchers: BulkImportVoucher[];
-}
 
+    bundle_id: number;
+
+    provider: string;
+
+    vouchers: BulkImportVoucher[];
+
+}
 
 export interface BulkImportSummary {
-    total: number;
-    imported: number;
-    failed: number;
-    errors?: Array<{
-        index: number;
-        code: string;
-        error: string;
-    }>;
-}
 
+    total: number;
+
+    imported: number;
+
+    failed: number;
+
+    errors?: Array<{
+
+        index: number;
+
+        code: string;
+
+        error: string;
+
+    }>;
+
+}
 
 export interface BulkImportResponse {
+
     success: boolean;
+
     code: number;
+
     message: string;
+
     data: {
+
         vouchers: Voucher[];
+
         summary: BulkImportSummary;
+
     };
+
     payload: any[];
+
 }
 
-
 // ============================
+
 // Social Companies Interfaces
-// ============================
 
+// ============================
 
 export interface SocialCompany {
-    id: number;
-    company_name: string;
-    company_logo: string;
-    country_id: string;
-    telegram_chat_id: string;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-    input_form_schema: any | null;
-    performed_by: any | null;
-    services_count: string;
-    total_vouchers: number;
-    available_vouchers: number;
-}
 
+    id: number;
+
+    company_name: string;
+
+    company_logo: string;
+
+    country_id: string;
+
+    telegram_chat_id: string;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+    input_form_schema: any | null;
+
+    performed_by: any | null;
+
+    services_count: string;
+
+    total_vouchers: number;
+
+    available_vouchers: number;
+
+}
 
 export interface SocialCompaniesResponse {
+
     success: boolean;
+
     code: number;
+
     message: string;
+
     data: {
+
         companies: SocialCompany[];
+
     };
+
     payload: any[];
+
 }
 
-
 // ============================
+
 // Bundle Stats Interfaces
-// ============================
 
+// ============================
 
 export interface BundleService {
-    id: number;
-    service_category_id: string;
-    company_id: string;
-    telegram_chat_id: string | null;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-    input_form_schema: any | null;
-    performed_by: any | null;
-    company: Company;
-    service_category: ServiceCategory;
-}
 
+    id: number;
+
+    service_category_id: string;
+
+    company_id: string;
+
+    telegram_chat_id: string | null;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+    input_form_schema: any | null;
+
+    performed_by: any | null;
+
+    company: Company;
+
+    service_category: ServiceCategory;
+
+}
 
 export interface BundleStat {
-    id: number;
-    bundle_code: string;
-    service_id: string;
-    bundle_title: string;
-    bundle_description: string;
-    bundle_type: string;
-    validity_type: string;
-    admin_buying_price: string;
-    buying_price: string;
-    selling_price: string;
-    required_credit_amount_to_activate_bundle: string | null;
-    discount_amount: string;
-    discounted_price: string | null;
-    discount_type: string | null;
-    discount_source_id: string | null;
-    discount_source_type: string | null;
-    amount: string | null;
-    bundle_image_url: string | null;
-    currency_id: string;
-    expired_date: string | null;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-    performed_by: any | null;
-    api_provider_id: string | null;
-    api_provider_bundle_id: string | null;
-    api_binding: any | null;
-    total: string;
-    available: string;
-    used: string;
-    reserved: string;
-    company_name: string;
-    category_type: string;
-    service: BundleService;
-}
 
+    id: number;
+
+    bundle_code: string;
+
+    service_id: string;
+
+    bundle_title: string;
+
+    bundle_description: string;
+
+    bundle_type: string;
+
+    validity_type: string;
+
+    admin_buying_price: string;
+
+    buying_price: string;
+
+    selling_price: string;
+
+    required_credit_amount_to_activate_bundle: string | null;
+
+    discount_amount: string;
+
+    discounted_price: string | null;
+
+    discount_type: string | null;
+
+    discount_source_id: string | null;
+
+    discount_source_type: string | null;
+
+    amount: string | null;
+
+    bundle_image_url: string | null;
+
+    currency_id: string;
+
+    expired_date: string | null;
+
+    deleted_at: string | null;
+
+    created_at: string;
+
+    updated_at: string;
+
+    performed_by: any | null;
+
+    api_provider_id: string | null;
+
+    api_provider_bundle_id: string | null;
+
+    api_binding: any | null;
+
+    total: string;
+
+    available: string;
+
+    used: string;
+
+    reserved: string;
+
+    company_name: string;
+
+    category_type: string;
+
+    service: BundleService;
+
+}
 
 export interface BundleStatsResponse {
+
     success: boolean;
+
     code: number;
+
     message: string;
+
     data: {
+
         bundles: BundleStat[];
+
     };
+
     payload: any[];
+
 }
 
-
 // ============================
+
 // Voucher Filter/Query Params
-// ============================
 
+// ============================
 
 export interface VoucherQueryParams {
+
     bundle_id?: number;
+
     page?: number;
+
     items_per_page?: number;
+
     status?: 'available' | 'used' | 'reserved' | 'expired' | 'all';
+
     search?: string;
+
     provider?: string;
+
 }
 
-
 // ============================
+
 // Redux State Interfaces
-// ============================
 
+// ============================
 
 export interface BulkImportState {
-    loading: boolean;
-    success: boolean;
-    error: string | null;
-    summary: BulkImportSummary | null;
-}
 
+    loading: boolean;
+
+    success: boolean;
+
+    error: string | null;
+
+    summary: BulkImportSummary | null;
+
+}
 
 export interface VoucherState {
+
     vouchers: Voucher[];
+
     currentVoucher: Voucher | null;
+
     statistics: VoucherStatistics | null;
+
     pagination: VoucherPagination | null;
+
     socialCompanies: SocialCompany[];
+
     bundleStats: BundleStat[];
+
     loading: boolean;
+
     error: string | null;
+
     bulkImport: BulkImportState;
+
 }
-
-
-
 
 export interface Product {
+
   id: number;
+
   provider_table_id: string;
+
   title: string;
+
   desc: string;
+
   operator: string;
+
   op_firm: string;
+
   type: string;
+
   amount: string;
+
   price: number;
+
   recommended_price: number;
+
   validity_days: number;
+
   internet_mb: number;
+
   minutes: number;
+
   sms: number;
+
   api_binding: {
+
     product_id: number;
+
     operator: string;
+
     operator_raw: string;
+
     op_firm: string;
+
     op_firm_raw: string;
+
     type: string;
+
     amount: string;
+
     package_name: string;
+
     price: string;
+
     recom_price: string;
+
     packet_privacy: {
+
       UsableDays: number;
+
       MinAbroad: string;
+
       MinAllDirection: string;
+
       MinInNetwork: string;
+
       Sms: string;
+
       InternetMb: string;
+
       isSocial: number;
+
       officialSalePrice: string;
+
     };
+
   };
+
   raw: {
+
     ProductId: number;
+
     Operator: string;
+
     OpFirm: string;
+
     Type: string;
+
     PackageName: string;
+
     PackageDescription: string;
+
     Amount: string;
+
     Price: string;
+
     RecomPrice: string;
+
     PacketPrivacy: {
+
       UsableDays: number;
+
       MinAbroad: string;
+
       MinAllDirection: string;
+
       MinInNetwork: string;
+
       Sms: string;
+
       InternetMb: string;
+
       isSocial: number;
+
       officialSalePrice: string;
+
     };
+
   };
+
 }
-
-
-
 
 // types/paystore.ts
-export interface PaystoreOperator {
-    code: string;
-    product_count: number;
-}
 
+export interface PaystoreOperator {
+
+    code: string;
+
+    product_count: number;
+
+}
 
 export interface PaystoreGroup {
-    op_firm: string;
-    product_count: number;
-    operators: PaystoreOperator[];
-}
 
+    op_firm: string;
+
+    product_count: number;
+
+    operators: PaystoreOperator[];
+
+}
 
 export interface PaystoreOperatorsResponse {
-    success: boolean;
-    code: number;
-    message: string;
-    data: {
-        groups: PaystoreGroup[];
-        total_groups: number;
-    };
-    payload: any[];
-}
 
+    success: boolean;
+
+    code: number;
+
+    message: string;
+
+    data: {
+
+        groups: PaystoreGroup[];
+
+        total_groups: number;
+
+    };
+
+    payload: any[];
+
+}
 
 export interface PaystoreOperatorsState {
+
     loading: boolean;
+
     groups: PaystoreGroup[];
+
     totalGroups: number;
+
     error: string | null;
+
     selectedGroup: PaystoreGroup | null;
+
     selectedOperator: PaystoreOperator | null;
+
 }
-
-
-
 
 // types/order.ts (add these to your existing Order interface)
+
 // types/order.ts
 
-
 export interface PaystoreStatusResponse {
+
     success: boolean;
+
     code: number;
+
     message: string;
+
     data: {
+
         order_id: number;
+
         order_status: string;
+
         is_paid: string;
+
         local_transaction_id: string | null;
+
         provider: string;
+
         provider_id: number;
+
         provider_transaction_id: string;
+
         provider_status: string; // 'success' | 'pending' | 'cancelled' | 'error'
+
         provider_response_code: string;
+
         provider_message: string;
+
         provider_response: {
+
             ResponseCode: string;
+
             Message_TR: string;
+
             Message_EN: string;
+
             HostDateTime: string;
+
         };
+
         payment: {
+
             success: boolean;
+
             already_paid: boolean;
+
             transaction_id: string;
+
         } | null;
+
         refund: {
+
             success: boolean;
+
             refunded: boolean;
+
             message: string;
+
         } | null;
+
     };
+
     payload: any[];
+
 }
 
-
 export interface PaystoreStatusState {
+
     loading: boolean;
+
     statusData: PaystoreStatusResponse['data'] | null;
+
     error: string | null;
+
 }

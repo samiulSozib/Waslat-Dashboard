@@ -237,6 +237,7 @@ export const _addService = (newServiceData: Service, toast: React.RefObject<Toas
       company_id: newServiceData.company?.id,
       input_form_schema:newServiceData.input_form_schema,
       telegram_chat_id: newServiceData.telegram_chat_id?.id?.toString() || null,
+      display_order: Number(newServiceData.display_order ?? 0),
       is_robot_enabled: Boolean(newServiceData.is_robot_enabled),
       is_api_enabled: Boolean(newServiceData.is_api_enabled),
       api_provider_id: newServiceData.api_provider_id ?? null,
@@ -292,6 +293,7 @@ export const _editService = (serviceId: number, updatedServiceData: Service, toa
       company_id: updatedServiceData.company?.id,
       input_form_schema:updatedServiceData.input_form_schema,
       telegram_chat_id: updatedServiceData.telegram_chat_id?.id?.toString() || null,
+      display_order: Number(updatedServiceData.display_order ?? 0),
       is_robot_enabled: Boolean(updatedServiceData.is_robot_enabled),
       is_api_enabled: Boolean(updatedServiceData.is_api_enabled),
       api_provider_id: updatedServiceData.api_provider_id ?? null,
@@ -402,3 +404,20 @@ export const _deleteSelectedServices = async (
 };
 
 
+
+// Partial update for inline table settings. Does not touch other service fields.
+export const _updateServiceSettings = (
+  serviceId: number,
+  changes: Partial<Pick<Service, 'display_order' | 'is_robot_enabled' | 'is_api_enabled' | 'api_provider_id'>>
+) => async (dispatch: Dispatch): Promise<void> => {
+  dispatch({ type: EDIT_SERVICE_REQUEST });
+  try {
+    const response = await axios.put(`${BASE_URL}/services/${serviceId}`, changes, {
+      headers: { Authorization: `Bearer ${getAuthToken()}` }
+    });
+    dispatch({ type: EDIT_SERVICE_SUCCESS, payload: response.data.data.service });
+  } catch (error: any) {
+    dispatch({ type: EDIT_SERVICE_FAIL, payload: error?.response?.data?.message || error.message });
+    throw error;
+  }
+};

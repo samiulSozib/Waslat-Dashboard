@@ -1,413 +1,181 @@
-// import { Dispatch } from "redux";
-// import axios from "axios";
-
-// import {
-//   FETCH_SERVICE_CATEGORY_LIST_REQUEST,
-//   FETCH_SERVICE_CATEGORY_LIST_SUCCESS,
-//   FETCH_SERVICE_CATEGORY_LIST_FAIL,
-//   DELETE_SERVICE_CATEGORY_REQUEST,
-//   DELETE_SERVICE_CATEGORY_SUCCESS,
-//   DELETE_SERVICE_CATEGORY_FAIL,
-//   ADD_SERVICE_CATEGORY_REQUEST,
-//   ADD_SERVICE_CATEGORY_SUCCESS,
-//   ADD_SERVICE_CATEGORY_FAIL,
-//   EDIT_SERVICE_CATEGORY_REQUEST,
-//   EDIT_SERVICE_CATEGORY_SUCCESS,
-//   EDIT_SERVICE_CATEGORY_FAIL,
-// } from "../constants/serviceCategoryConstants";
-// import { Toast } from "primereact/toast";
-// import { ServiceCategory } from "@/types/interface";
-
-// const getAuthToken = () => {
-//     return localStorage.getItem("api_token") || ""; // Get the token or return an empty string if not found
-//   };
-
-// // FETCH SERVICE CATEGORIES
-// export const _fetchServiceCategories = () => async (dispatch: Dispatch) => {
-//   dispatch({ type: FETCH_SERVICE_CATEGORY_LIST_REQUEST });
-
-//   try {
-//     const token = getAuthToken();
-//     const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/service_categories`, {
-//       headers: {
-//         Authorization: `Bearer ${token}`,
-//       },
-//     });
-//     dispatch({ type: FETCH_SERVICE_CATEGORY_LIST_SUCCESS, payload: response.data.data.servicecategories });
-//   } catch (error: any) {
-//     dispatch({ type: FETCH_SERVICE_CATEGORY_LIST_FAIL, payload: error.message });
-//   }
-// };
-
-// // DELETE SERVICE CATEGORY
-// export const _deleteServiceCategory = (categoryId: number, toast: React.RefObject<Toast>) => async (dispatch: Dispatch) => {
-//   dispatch({ type: DELETE_SERVICE_CATEGORY_REQUEST });
-
-//   try {
-//     const token = getAuthToken();
-//     await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/service_categories/${categoryId}`, {
-//       headers: {
-//         Authorization: `Bearer ${token}`,
-//       },
-//     });
-
-//     dispatch({ type: DELETE_SERVICE_CATEGORY_SUCCESS, payload: categoryId });
-//     toast.current?.show({
-//       severity: "success",
-//       summary: "Successful",
-//       detail: "Service category deleted",
-//       life: 3000,
-//     });
-//   } catch (error: any) {
-//     dispatch({ type: DELETE_SERVICE_CATEGORY_FAIL, payload: error.message });
-//     toast.current?.show({
-//       severity: "error",
-//       summary: "Error",
-//       detail: "Failed to delete service category",
-//       life: 3000,
-//     });
-//   }
-// };
-
-// // ADD SERVICE CATEGORY
-// export const _addServiceCategory = (newCategory: Partial<ServiceCategory>, toast: React.RefObject<Toast>) => async (dispatch: Dispatch) => {
-//   dispatch({ type: ADD_SERVICE_CATEGORY_REQUEST });
-
-//   try {
-//     //console.log(newCategory)
-//     const body={
-//         category_name:newCategory.category_name,
-//         type:newCategory.type
-//     }
-//     const token = getAuthToken();
-//     const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/service_categories`, body, {
-//       headers: {
-//         Authorization: `Bearer ${token}`,
-//         "Content-Type": "application/json",
-//       },
-//     });
-//     //console.log(response)
-
-//     dispatch({ type: ADD_SERVICE_CATEGORY_SUCCESS, payload: response.data.data.servicecategory });
-//     toast.current?.show({
-//       severity: "success",
-//       summary: "Successful",
-//       detail: "Service category added",
-//       life: 3000,
-//     });
-//   } catch (error: any) {
-//     dispatch({ type: ADD_SERVICE_CATEGORY_FAIL, payload: error.message });
-//     toast.current?.show({
-//       severity: "error",
-//       summary: "Error",
-//       detail: "Failed to add service category",
-//       life: 3000,
-//     });
-//   }
-// };
-
-// // EDIT SERVICE CATEGORY
-// export const _editServiceCategory = (updatedCategory: ServiceCategory, toast: React.RefObject<Toast>) => async (dispatch: Dispatch) => {
-//   dispatch({ type: EDIT_SERVICE_CATEGORY_REQUEST });
-
-//   try {
-//     const body={
-//         category_name:updatedCategory.category_name,
-//         type:updatedCategory.type
-//     }
-//     const token = getAuthToken();
-//     const response = await axios.put(`${process.env.NEXT_PUBLIC_BASE_URL}/service_categories/${updatedCategory.id}`, body, {
-//       headers: {
-//         Authorization: `Bearer ${token}`,
-//         "Content-Type": "application/json",
-//       },
-//     });
-
-//     dispatch({ type: EDIT_SERVICE_CATEGORY_SUCCESS, payload: response.data.data.servicecategory });
-//     toast.current?.show({
-//       severity: "success",
-//       summary: "Successful",
-//       detail: "Service category updated",
-//       life: 3000,
-//     });
-//   } catch (error: any) {
-//     dispatch({ type: EDIT_SERVICE_CATEGORY_FAIL, payload: error.message });
-//     toast.current?.show({
-//       severity: "error",
-//       summary: "Error",
-//       detail: "Failed to update service category",
-//       life: 3000,
-//     });
-//   }
-// };
-
-import { Dispatch } from "redux";
-import axios from "axios";
+import { Dispatch } from 'redux';
+import axios from 'axios';
 import {
-  FETCH_SERVICE_CATEGORY_LIST_REQUEST,
-  FETCH_SERVICE_CATEGORY_LIST_SUCCESS,
-  FETCH_SERVICE_CATEGORY_LIST_FAIL,
-  DELETE_SERVICE_CATEGORY_REQUEST,
-  DELETE_SERVICE_CATEGORY_SUCCESS,
-  DELETE_SERVICE_CATEGORY_FAIL,
-  ADD_SERVICE_CATEGORY_REQUEST,
-  ADD_SERVICE_CATEGORY_SUCCESS,
-  ADD_SERVICE_CATEGORY_FAIL,
-  EDIT_SERVICE_CATEGORY_REQUEST,
-  EDIT_SERVICE_CATEGORY_SUCCESS,
-  EDIT_SERVICE_CATEGORY_FAIL,
-} from "../constants/serviceCategoryConstants";
-import { Toast } from "primereact/toast";
-import { ServiceCategory } from "@/types/interface";
+    FETCH_SERVICE_CATEGORY_LIST_REQUEST,
+    FETCH_SERVICE_CATEGORY_LIST_SUCCESS,
+    FETCH_SERVICE_CATEGORY_LIST_FAIL,
+    DELETE_SERVICE_CATEGORY_REQUEST,
+    DELETE_SERVICE_CATEGORY_SUCCESS,
+    DELETE_SERVICE_CATEGORY_FAIL,
+    ADD_SERVICE_CATEGORY_REQUEST,
+    ADD_SERVICE_CATEGORY_SUCCESS,
+    ADD_SERVICE_CATEGORY_FAIL,
+    EDIT_SERVICE_CATEGORY_REQUEST,
+    EDIT_SERVICE_CATEGORY_SUCCESS,
+    EDIT_SERVICE_CATEGORY_FAIL,
+} from '../constants/serviceCategoryConstants';
+import { Toast } from 'primereact/toast';
+import { ServiceCategory } from '@/types/interface';
 
-const getAuthToken = () => {
-  return localStorage.getItem("api_token") || "";
+const getAuthToken = () => localStorage.getItem('api_token') || '';
+const baseUrl = () => `${process.env.NEXT_PUBLIC_BASE_URL}/service_categories`;
+const headers = () => ({ Authorization: `Bearer ${getAuthToken()}`, Accept: 'application/json' });
+
+const getErrorMessage = (error: any, fallback: string): string => {
+    const errors = error?.response?.data?.errors;
+    if (errors) return Object.values(errors).flat().join(', ') || fallback;
+    return error?.response?.data?.message || error?.message || fallback;
+};
+
+const assertSuccess = (response: any) => {
+    if (response.data?.success === false || response.data?.status === 'error') {
+        throw new Error(response.data?.message || 'Server rejected the update');
+    }
+};
+
+const appendCategoryFields = (formData: FormData, category: ServiceCategory) => {
+    formData.append('category_name', category.category_name);
+    formData.append('type', category.type);
+    formData.append('display_order', String(Number(category.display_order ?? 0)));
+    formData.append('requires_country_selection',
+        category.requires_country_selection === false ||
+        category.requires_country_selection === 0 ||
+        String(category.requires_country_selection) === '0' ||
+        String(category.requires_country_selection) === 'false'
+            ? '0' : '1'
+    );
+    if (category.category_image_url && typeof category.category_image_url !== 'string') {
+        formData.append('category_image_url', category.category_image_url);
+    }
+    formData.append('input_form_schema', typeof category.input_form_schema === 'string'
+        ? category.input_form_schema
+        : JSON.stringify(category.input_form_schema ?? []));
 };
 
 // Fetch Service Categories
-export const _fetchServiceCategories = (
-) => async (dispatch: Dispatch) => {
-  dispatch({ type: FETCH_SERVICE_CATEGORY_LIST_REQUEST });
-
-  try {
-    const token = getAuthToken();
-    const response = await axios.get(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/service_categories`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    dispatch({
-      type: FETCH_SERVICE_CATEGORY_LIST_SUCCESS,
-      payload: response.data.data.servicecategories,
-    });
-
-
-  } catch (error: any) {
-    dispatch({
-      type: FETCH_SERVICE_CATEGORY_LIST_FAIL,
-      payload: error.message,
-    });
-
-
-  }
+export const _fetchServiceCategories = () => async (dispatch: Dispatch) => {
+    dispatch({ type: FETCH_SERVICE_CATEGORY_LIST_REQUEST });
+    try {
+        const response = await axios.get(baseUrl(), { headers: headers() });
+        dispatch({ type: FETCH_SERVICE_CATEGORY_LIST_SUCCESS, payload: response.data.data.servicecategories });
+    } catch (error: any) {
+        dispatch({ type: FETCH_SERVICE_CATEGORY_LIST_FAIL, payload: getErrorMessage(error, 'Unable to fetch categories') });
+        throw error;
+    }
 };
 
 // Add Service Category
 export const _addServiceCategory = (
-  newCategory: ServiceCategory,
-  toast: React.RefObject<Toast>,
-  t: (key: string) => string
+    newCategory: ServiceCategory,
+    toast: React.RefObject<Toast>,
+    t: (key: string) => string
 ) => async (dispatch: Dispatch) => {
-  dispatch({ type: ADD_SERVICE_CATEGORY_REQUEST });
-
-  try {
-    const formData=new FormData()
-    formData.append('category_name',newCategory.category_name)
-    formData.append('type',newCategory.type)
-
-    if (newCategory.category_image_url && typeof newCategory.category_image_url !== 'string') {
-        formData.append('category_image_url', newCategory.category_image_url);
+    dispatch({ type: ADD_SERVICE_CATEGORY_REQUEST });
+    try {
+        const formData = new FormData();
+        appendCategoryFields(formData, newCategory);
+        const response = await axios.post(baseUrl(), formData, { headers: headers() });
+        assertSuccess(response);
+        dispatch({ type: ADD_SERVICE_CATEGORY_SUCCESS, payload: response.data.data.servicecategory });
+        toast.current?.show({ severity: 'success', summary: t('SUCCESS'), detail: t('SERVICE_CATEGORY_ADDED'), life: 3000 });
+        return true;
+    } catch (error: any) {
+        dispatch({ type: ADD_SERVICE_CATEGORY_FAIL, payload: getErrorMessage(error, 'Unable to create category') });
+        toast.current?.show({ severity: 'error', summary: t('ERROR'), detail: getErrorMessage(error, t('SERVICE_CATEGORY_ADD_FAILED')), life: 3000 });
+        return false;
     }
-
-    formData.append("input_form_schema",JSON.stringify(newCategory.input_form_schema))
-
-
-
-    const token = getAuthToken();
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/service_categories`,
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    dispatch({
-      type: ADD_SERVICE_CATEGORY_SUCCESS,
-      payload: response.data.data.servicecategory,
-    });
-
-    toast.current?.show({
-      severity: "success",
-      summary: t("SUCCESS"),
-      detail: t("SERVICE_CATEGORY_ADDED"),
-      life: 3000,
-    });
-  } catch (error: any) {
-    dispatch({
-      type: ADD_SERVICE_CATEGORY_FAIL,
-      payload: error.message,
-    });
-
-    let errorMessage = t("SERVICE_CATEGORY_ADD_FAILED");
-    if (error.response?.status === 422 && error.response.data?.errors) {
-      const errorMessages = Object.values(error.response.data.errors)
-        .flat()
-        .join(', ');
-      errorMessage = errorMessages || t("VALIDATION_FAILED");
-    } else if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    }
-
-    toast.current?.show({
-      severity: "error",
-      summary: t("ERROR"),
-      detail: errorMessage,
-      life: 3000,
-    });
-  }
 };
 
-// Edit Service Category
+// Edit Service Category. Keep existing multipart POST convention.
 export const _editServiceCategory = (
-  updatedCategory: ServiceCategory,
-  toast: React.RefObject<Toast>,
-  t: (key: string) => string
+    updatedCategory: ServiceCategory,
+    toast: React.RefObject<Toast>,
+    t: (key: string) => string
 ) => async (dispatch: Dispatch) => {
-  dispatch({ type: EDIT_SERVICE_CATEGORY_REQUEST });
-
-  try {
-   const formData=new FormData()
-    formData.append('category_name',updatedCategory.category_name)
-    formData.append('type',updatedCategory.type)
-
-    if (updatedCategory.category_image_url && typeof updatedCategory.category_image_url !== 'string') {
-        formData.append('category_image_url', updatedCategory.category_image_url);
+    dispatch({ type: EDIT_SERVICE_CATEGORY_REQUEST });
+    try {
+        const formData = new FormData();
+        appendCategoryFields(formData, updatedCategory);
+        const response = await axios.post(`${baseUrl()}/${updatedCategory.id}`, formData, { headers: headers() });
+        assertSuccess(response);
+        dispatch({ type: EDIT_SERVICE_CATEGORY_SUCCESS, payload: response.data.data.servicecategory });
+        toast.current?.show({ severity: 'success', summary: t('SUCCESS'), detail: t('SERVICE_CATEGORY_UPDATED'), life: 3000 });
+        return true;
+    } catch (error: any) {
+        dispatch({ type: EDIT_SERVICE_CATEGORY_FAIL, payload: getErrorMessage(error, 'Unable to edit category') });
+        toast.current?.show({ severity: 'error', summary: t('ERROR'), detail: getErrorMessage(error, t('SERVICE_CATEGORY_UPDATE_FAILED')), life: 3000 });
+        return false;
     }
-        formData.append("input_form_schema",JSON.stringify(updatedCategory.input_form_schema))
-
-
-    const token = getAuthToken();
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/service_categories/${updatedCategory.id}`,
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-    console.log(response)
-    const data=response.data.data.servicecategory
-    dispatch({
-      type: EDIT_SERVICE_CATEGORY_SUCCESS,
-      payload: data,
-    });
-
-    toast.current?.show({
-      severity: "success",
-      summary: t("SUCCESS"),
-      detail: t("SERVICE_CATEGORY_UPDATED"),
-      life: 3000,
-    });
-  } catch (error: any) {
-    console.log(error)
-    dispatch({
-      type: EDIT_SERVICE_CATEGORY_FAIL,
-      payload: error.message,
-    });
-
-    let errorMessage = t("SERVICE_CATEGORY_UPDATE_FAILED");
-    if (error.response?.status === 422 && error.response.data?.errors) {
-      const errorMessages = Object.values(error.response.data.errors)
-        .flat()
-        .join(', ');
-      errorMessage = errorMessages || t("VALIDATION_FAILED");
-    } else if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    }
-
-    toast.current?.show({
-      severity: "error",
-      summary: t("ERROR"),
-      detail: errorMessage,
-      life: 3000,
-    });
-  }
 };
 
 // Delete Service Category
 export const _deleteServiceCategory = (
-  categoryId: number,
-  toast: React.RefObject<Toast>,
-  t: (key: string) => string
+    categoryId: number,
+    toast: React.RefObject<Toast>,
+    t: (key: string) => string
 ) => async (dispatch: Dispatch) => {
-  dispatch({ type: DELETE_SERVICE_CATEGORY_REQUEST });
-
-  try {
-    const token = getAuthToken();
-    await axios.delete(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/service_categories/${categoryId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    dispatch({
-      type: DELETE_SERVICE_CATEGORY_SUCCESS,
-      payload: categoryId,
-    });
-
-    toast.current?.show({
-      severity: "success",
-      summary: t("SUCCESS"),
-      detail: t("SERVICE_CATEGORY_DELETED"),
-      life: 3000,
-    });
-  } catch (error: any) {
-    dispatch({
-      type: DELETE_SERVICE_CATEGORY_FAIL,
-      payload: error.message,
-    });
-
-    toast.current?.show({
-      severity: "error",
-      summary: t("ERROR"),
-      detail: t("SERVICE_CATEGORY_DELETE_FAILED"),
-      life: 3000,
-    });
-  }
+    dispatch({ type: DELETE_SERVICE_CATEGORY_REQUEST });
+    try {
+        await axios.delete(`${baseUrl()}/${categoryId}`, { headers: headers() });
+        dispatch({ type: DELETE_SERVICE_CATEGORY_SUCCESS, payload: categoryId });
+        toast.current?.show({ severity: 'success', summary: t('SUCCESS'), detail: t('SERVICE_CATEGORY_DELETED'), life: 3000 });
+    } catch (error: any) {
+        dispatch({ type: DELETE_SERVICE_CATEGORY_FAIL, payload: getErrorMessage(error, 'Unable to delete category') });
+        toast.current?.show({ severity: 'error', summary: t('ERROR'), detail: t('SERVICE_CATEGORY_DELETE_FAILED'), life: 3000 });
+    }
 };
-
 
 export const _deleteSelectedServiceCategories = async (
-  serviceCategoriesIds: number[],
-  toast: React.RefObject<Toast>,
-  t: (key: string) => string
+    serviceCategoriesIds: number[],
+    toast: React.RefObject<Toast>,
+    t: (key: string) => string
 ) => {
-  const token = getAuthToken();
-
-  try {
-    for (const id of serviceCategoriesIds) {
-      await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/service_categories/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    try {
+        for (const id of serviceCategoriesIds) {
+            await axios.delete(`${baseUrl()}/${id}`, { headers: headers() });
+        }
+        toast.current?.show({ severity: 'success', summary: t('SUCCESS'), detail: t('SERVICE_CATEGORIES_DELETED'), life: 3000 });
+    } catch (error: any) {
+        toast.current?.show({ severity: 'error', summary: t('ERROR'), detail: t('SERVICE_CATEGORIES_DELETE_FAILED'), life: 3000 });
     }
-
-    toast.current?.show({
-      severity: 'success',
-      summary: t('SUCCESS'),
-      detail: t('SERVICE_CATEGORIES_DELETED'),
-      life: 3000,
-    });
-  } catch (error: any) {
-    toast.current?.show({
-      severity: 'error',
-      summary: t('ERROR'),
-      detail: t('SERVICE_CATEGORIES_DELETE_FAILED'),
-      life: 3000,
-    });
-  }
 };
+
+// Save ONLY display_order without touching image, custom fields or country setting.
+export const _updateServiceCategoryPriority = (categoryId: number, displayOrder: number) =>
+    async (dispatch: Dispatch): Promise<void> => {
+        dispatch({ type: EDIT_SERVICE_CATEGORY_REQUEST });
+        try {
+            const formData = new FormData();
+            formData.append('display_order', String(displayOrder));
+            const response = await axios.post(`${baseUrl()}/${categoryId}`, formData, { headers: headers() });
+            assertSuccess(response);
+            const received = response.data?.data?.servicecategory;
+            if (received?.id) {
+                dispatch({ type: EDIT_SERVICE_CATEGORY_SUCCESS, payload: received });
+            }
+        } catch (error: any) {
+            const message = getErrorMessage(error, 'Unable to save category priority');
+            dispatch({ type: EDIT_SERVICE_CATEGORY_FAIL, payload: message });
+            throw new Error(message);
+        }
+    };
+
+// Save ONLY requires_country_selection without touching other category data.
+export const _updateServiceCategoryCountrySelection = (categoryId: number, required: boolean) =>
+    async (dispatch: Dispatch): Promise<void> => {
+        dispatch({ type: EDIT_SERVICE_CATEGORY_REQUEST });
+        try {
+            const formData = new FormData();
+            formData.append('requires_country_selection', required ? '1' : '0');
+            const response = await axios.post(`${baseUrl()}/${categoryId}`, formData, { headers: headers() });
+            assertSuccess(response);
+            const received = response.data?.data?.servicecategory;
+            if (received?.id) {
+                dispatch({ type: EDIT_SERVICE_CATEGORY_SUCCESS, payload: received });
+            }
+        } catch (error: any) {
+            const message = getErrorMessage(error, 'Unable to save country-selection setting');
+            dispatch({ type: EDIT_SERVICE_CATEGORY_FAIL, payload: message });
+            throw new Error(message);
+        }
+    };
