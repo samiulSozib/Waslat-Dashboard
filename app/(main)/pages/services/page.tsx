@@ -1,12 +1,13 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 import { _fetchCompanies } from '@/app/redux/actions/companyActions';
+import { _fetchProviders } from '@/app/redux/actions/providerActions';
 import { _addService, _deleteSelectedServices, _deleteService, _editService, _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import i18n from '@/i18n';
-import { Company, Service } from '@/types/interface';
+import { Company, Service, Provider } from '@/types/interface';
 import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
@@ -15,6 +16,8 @@ import { Dialog } from 'primereact/dialog';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
 import { ProgressBar } from 'primereact/progressbar';
+import { InputSwitch } from 'primereact/inputswitch';
+import { Password } from 'primereact/password';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
@@ -26,6 +29,7 @@ import { CustomFields } from '../../components/CustomFields';
 import { customCellStyleImage } from '../../utilities/customRow';
 import { parseInputFormSchema, stringifyInputFormSchema } from '../../utilities/parseInputFormSchema';
 import { isRTL } from '../../utilities/rtlUtil';
+
 
 const Services = () => {
     let emptyService: Service = {
@@ -40,7 +44,12 @@ const Services = () => {
         company: null,
         input_form_schema: [],
         telegram_chat_id: null,
+        is_robot_enabled: false,
+        is_api_enabled: false,
+        api_provider_id: null,
+        api_key: null,
     };
+
 
     const [serviceDialog, setServiceDialog] = useState(false);
     const [deleteServiceDialog, setDeleteServiceDialog] = useState(false);
@@ -56,17 +65,23 @@ const Services = () => {
     const { services, loading } = useSelector((state: any) => state.serviceReducer);
     const { serviceCategories } = useSelector((state: any) => state.serviceCategoryReducer);
     const { telegramChatIds } = useSelector((state: any) => state.telegramReducer);
+    const { providers } = useSelector((state: any) => state.providerReducer);
+
 
     const { t } = useTranslation();
     const [searchTag, setSearchTag] = useState('');
+
 
     useEffect(() => {
         dispatch(_fetchServiceList(searchTag));
         dispatch(_fetchCompanies());
         dispatch(_fetchServiceCategories());
         dispatch(_fetchTelegramList());
+        dispatch(_fetchProviders());
+
 
     }, [dispatch, searchTag]);
+
 
     const openNew = () => {
         setService(emptyService);
@@ -74,24 +89,29 @@ const Services = () => {
         setServiceDialog(true);
     };
 
+
     const hideDialog = () => {
         setSubmitted(false);
         setServiceDialog(false);
         setService(emptyService);
     };
 
+
     const hideDeleteServiceDialog = () => {
         setDeleteServiceDialog(false);
         setService(emptyService);
     };
+
 
     const hideDeleteServicesDialog = () => {
         setDeleteServicesDialog(false);
         setService(emptyService);
     };
 
+
     const saveService = () => {
         setSubmitted(true);
+
 
         if (!service.service_name || !service.company || !service.service_category) {
             toast.current?.show({
@@ -102,6 +122,7 @@ const Services = () => {
             });
             return;
         }
+
 
         // Validate custom fields
         const parsedFields = parseInputFormSchema(service.input_form_schema);
@@ -118,6 +139,7 @@ const Services = () => {
                     return;
                 }
 
+
                 if (!field.label.en || field.label.en.trim() === '') {
                     toast.current?.show({
                         severity: 'error',
@@ -130,10 +152,12 @@ const Services = () => {
             }
         }
 
+
         const serviceData = {
             ...service,
             input_form_schema: stringifyInputFormSchema(parsedFields) // Stringify for API
         };
+
 
         if (service.id && service.id !== 0) {
             dispatch(_editService(service.id, serviceData, toast, t));
@@ -141,24 +165,38 @@ const Services = () => {
             dispatch(_addService(serviceData, toast, t));
         }
 
+
         setServiceDialog(false);
         setService(emptyService);
         setSubmitted(false);
     };
 
+
     const editService = (service: Service) => {
         //console.log(service)
         const matchingCompany = companies.find((r: any) => r.id === service.company?.id);
 
-        setService({ ...service, company: matchingCompany, input_form_schema: parseInputFormSchema(service.input_form_schema) });
+
+        setService({
+            ...service,
+            company: matchingCompany,
+            input_form_schema: parseInputFormSchema(service.input_form_schema),
+            is_robot_enabled: Boolean(service.is_robot_enabled),
+            is_api_enabled: Boolean(service.is_api_enabled),
+            api_provider_id: service.api_provider_id == null ? null : Number(service.api_provider_id),
+            api_key: null // Existing secret is intentionally never loaded into the form.
+        });
+
 
         setServiceDialog(true);
     };
+
 
     const confirmDeleteService = (service: Service) => {
         setService(service);
         setDeleteServiceDialog(true);
     };
+
 
     const deleteService = () => {
         if (!service?.id) {
@@ -168,6 +206,7 @@ const Services = () => {
         dispatch(_deleteService(service?.id, toast, t));
         setDeleteServiceDialog(false);
     };
+
 
     const confirmDeleteSelected = () => {
         if (!selectedServices || (selectedServices as any).length === 0) {
@@ -182,6 +221,7 @@ const Services = () => {
         setDeleteServicesDialog(true);
     };
 
+
     const deleteSelectedServices = async () => {
         if (!selectedServices || (selectedServices as any).length === 0) {
             toast.current?.show({
@@ -193,14 +233,18 @@ const Services = () => {
             return;
         }
 
+
         const selectedIds = (selectedServices as Service[]).map((service) => service.id);
+
 
         await _deleteSelectedServices(selectedIds, toast, t);
         dispatch(_fetchServiceList());
 
+
         setSelectedServices(null);
         setDeleteServicesDialog(false);
     };
+
 
     const rightToolbarTemplate = () => {
         const hasSelectedServices = selectedServices && (selectedServices as any).length > 0;
@@ -216,6 +260,7 @@ const Services = () => {
                         onClick={openNew}
                     />
 
+
                     {/* <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                         label={t('APP.GENERAL.DELETE')}
@@ -229,6 +274,7 @@ const Services = () => {
         );
     };
 
+
     // const leftToolbarTemplate = () => {
     //     return (
     //         <div className="flex items-center">
@@ -240,19 +286,24 @@ const Services = () => {
     //     );
     // };
 
+
     const [localSearchTerm, setLocalSearchTerm] = useState('');
 
+
     const leftToolbarTemplate = () => {
+
 
         const handleSearch = () => {
             setSearchTag(localSearchTerm);
         };
+
 
         const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
             if (e.key === 'Enter') {
                 handleSearch();
             }
         };
+
 
         return (
             <React.Fragment>
@@ -281,12 +332,14 @@ const Services = () => {
                             }}
                             className="p-button-sm p-button-secondary p-button-text"
 
+
                         />
                     )}
                 </div>
             </React.Fragment>
         );
     };
+
 
     const countryNameBodyTemplate = (rowData: Service) => {
         return (
@@ -296,6 +349,7 @@ const Services = () => {
             </>
         );
     };
+
 
     const companyInfoBodyTemplate = (rowData: Service) => {
         return (
@@ -323,6 +377,7 @@ const Services = () => {
         );
     };
 
+
     const serviceCategoryNameBodyTemplate = (rowData: Service) => {
         return (
             <>
@@ -332,6 +387,7 @@ const Services = () => {
         );
     };
 
+
     const telegramGroupNameBodyTemplate = (rowData: Service) => {
         return (
             <>
@@ -340,6 +396,7 @@ const Services = () => {
             </>
         );
     };
+
 
     const customFieldsBodyTemplate = (rowData: Service) => {
         const fieldCount = parseInputFormSchema(rowData.input_form_schema).length;
@@ -351,6 +408,7 @@ const Services = () => {
         );
     };
 
+
     const actionBodyTemplate = (rowData: Service) => {
         return (
             <>
@@ -359,6 +417,7 @@ const Services = () => {
             </>
         );
     };
+
 
     // const header = (
     //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
@@ -369,6 +428,7 @@ const Services = () => {
     //         </span>
     //     </div>
     // );
+
 
     const companyDialogFooter = (
         <>
@@ -389,9 +449,11 @@ const Services = () => {
         </>
     );
 
+
     useEffect(() => {
         if (service.company_id) {
             const selectedCompany = companies.find((company: Company) => company.id === service.company_id);
+
 
             if (selectedCompany) {
                 setService((prev) => ({
@@ -402,6 +464,7 @@ const Services = () => {
         }
     }, [service.company_id, companies]);
 
+
     return (
         <div className="grid crud-demo -m-5">
             <div className="col-12">
@@ -409,6 +472,7 @@ const Services = () => {
                     {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
                     <Toast ref={toast} />
                     <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
+
 
                     <DataTable
                         ref={dt}
@@ -441,6 +505,7 @@ const Services = () => {
                             field="Company Name"
                             header={t('SERVICE.TABLE.COLUMN.COMPANYNAME')}
 
+
                             body={companyInfoBodyTemplate}
                         ></Column>
                         <Column
@@ -449,11 +514,13 @@ const Services = () => {
                             header={t('SERVICE.TABLE.COLUMN.COUNTRY')}
                             body={countryNameBodyTemplate}
 
+
                         ></Column>
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="Service Category"
                             header={t('SERVICE.TABLE.COLUMN.SERVICECATEGORY')}
+
 
                             body={serviceCategoryNameBodyTemplate}
                         ></Column>
@@ -465,8 +532,10 @@ const Services = () => {
                         ></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TOTAL_CUSTOM_FIELD')} body={customFieldsBodyTemplate}></Column>
 
+
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
+
 
                     <Dialog visible={serviceDialog} style={{ width: '700px', padding: '5px' }} header={t('SERVICE.DETAILS')} modal className="p-fluid" footer={companyDialogFooter} onHide={hideDialog}>
                         <div className="card" style={{ padding: '40px' }}>
@@ -496,6 +565,7 @@ const Services = () => {
                                     </small>
                                 )}
                             </div>
+
 
                             <div className="formgrid grid">
                                 <div className="field col">
@@ -552,6 +622,7 @@ const Services = () => {
                                 </div>
                             </div>
 
+
                             <div className='formgrid grid'>
                                 <div className="field col">
                                     <label htmlFor="telegram_chat_id" style={{ fontWeight: 'bold' }}>
@@ -574,8 +645,60 @@ const Services = () => {
                                 </div>
                             </div>
 
+
                         </div>
-                        <CustomFields
+                        <div className="card" style={{ padding: '20px', marginTop: '12px' }}>
+                        <h5>Automation & API Settings</h5>
+                        <div className="formgrid grid">
+                            <div className="field col-12 md:col-6">
+                                <label htmlFor="service_robot_enabled" className="block font-bold mb-2">Robot Enabled</label>
+                                <InputSwitch
+                                    inputId="service_robot_enabled"
+                                    checked={Boolean(service.is_robot_enabled)}
+                                    onChange={(e) => setService(prev => ({ ...prev, is_robot_enabled: Boolean(e.value) }))}
+                                />
+                            </div>
+                            <div className="field col-12 md:col-6">
+                                <label htmlFor="service_api_enabled" className="block font-bold mb-2">API Enabled</label>
+                                <InputSwitch
+                                    inputId="service_api_enabled"
+                                    checked={Boolean(service.is_api_enabled)}
+                                    onChange={(e) => setService(prev => ({ ...prev, is_api_enabled: Boolean(e.value) }))}
+                                />
+                            </div>
+                            <div className="field col-12 md:col-6">
+                                <label htmlFor="service_api_provider" className="block font-bold mb-2">API Provider (Optional)</label>
+                                <Dropdown
+                                    inputId="service_api_provider"
+                                    value={service.api_provider_id ?? null}
+                                    options={(providers || []).map((provider: Provider) => ({
+                                        label: `${provider.name} (${provider.code})`,
+                                        value: provider.id
+                                    }))}
+                                    onChange={(e) => setService(prev => ({ ...prev, api_provider_id: e.value ?? null }))}
+                                    placeholder="Select API Provider"
+                                    filter
+                                    showClear
+                                    className="w-full"
+                                />
+                            </div>
+                            <div className="field col-12 md:col-6">
+                                <label htmlFor="service_api_key" className="block font-bold mb-2">API Key (Optional)</label>
+                                <Password
+                                    inputId="service_api_key"
+                                    value={service.api_key ?? ''}
+                                    onChange={(e) => setService(prev => ({ ...prev, api_key: e.target.value }))}
+                                    feedback={false}
+                                    toggleMask
+                                    placeholder={service.id ? 'Leave blank to keep existing key' : 'Enter API Key'}
+                                    className="w-full"
+                                    inputClassName="w-full"
+                                    autoComplete="new-password"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <CustomFields
                             fields={parseInputFormSchema(service.input_form_schema)}
                             onFieldsChange={(updatedFields) =>
                                 setService({
@@ -586,6 +709,7 @@ const Services = () => {
                             submitted={submitted}
                         />{' '}
                     </Dialog>
+
 
                     <Dialog visible={deleteServiceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteServiceDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -598,6 +722,7 @@ const Services = () => {
                         </div>
                     </Dialog>
 
+
                     <Dialog visible={deleteServicesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteServicesDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
@@ -609,5 +734,6 @@ const Services = () => {
         </div>
     );
 };
+
 
 export default withAuth(Services);

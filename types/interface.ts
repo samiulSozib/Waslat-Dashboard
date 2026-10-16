@@ -13,6 +13,7 @@ export interface Admin {
     updated_at: string;
 }
 
+
 export interface Currency {
     id: number;
     name: string;
@@ -24,6 +25,7 @@ export interface Currency {
     created_at: string;
     updated_at: string;
 }
+
 
 export interface UserInfo {
     id: number;
@@ -42,6 +44,7 @@ export interface UserInfo {
     admin: Admin | null;
     currency: Currency | null;
 }
+
 
 export interface Bundle {
     id: number;
@@ -68,6 +71,7 @@ export interface Bundle {
     api_binding?: ApiBinding | null | string
 }
 
+
 export interface ApiBinding {
     // product_type: string;
     // operator: string;
@@ -88,6 +92,7 @@ export interface ApiBinding {
     stock?: number;
     description?: string;
 
+
     // Non-MZR provider properties
     operator?: string;
     internet_type?: string;
@@ -98,13 +103,16 @@ export interface ApiBinding {
     unit?: string;
     periodicity?: string;
 
+
     // MZR provider properties
     category_id?: number;
     category_name?: string;
 
+
     // Allow any additional properties for flexibility
     [key: string]: any;
 }
+
 
 export interface PaginationLink {
     url: string | null;
@@ -112,6 +120,7 @@ export interface PaginationLink {
     active: boolean;
     page: number | null;
 }
+
 
 export interface Pagination {
     page: number;
@@ -123,6 +132,7 @@ export interface Pagination {
     total: number;
 }
 
+
 export interface CompanyCode {
     id: number;
     company_id: number;
@@ -133,6 +143,7 @@ export interface CompanyCode {
     company: Company | null;
 }
 
+
 export interface Telegram_Chat_Id {
     id: number,
     chat_id: number,
@@ -140,6 +151,7 @@ export interface Telegram_Chat_Id {
     created_at: string,
     updated_at: string
 }
+
 
 export interface Company {
     id: number;
@@ -153,7 +165,12 @@ export interface Company {
     updated_at: string;
     country: Country | null;
     input_form_schema?: string | CustomField[] | null
+   is_robot_enabled?: boolean;
+   is_api_enabled?: boolean;
+   api_key?: string | null;
+   api_provider_id?: number | null;
 }
+
 
 export interface Country {
     id: number;
@@ -170,6 +187,7 @@ export interface Country {
     currency_id: number
 }
 
+
 export interface Language {
     id: number;
     language_name: string;
@@ -179,6 +197,7 @@ export interface Language {
     created_at: string;
     updated_at: string;
 }
+
 
 export interface Currency {
     id: number;
@@ -191,6 +210,7 @@ export interface Currency {
     created_at: string;
     updated_at: string;
 }
+
 
 export interface MoneyTransaction {
     id: number;
@@ -213,6 +233,7 @@ export interface MoneyTransaction {
     currency: Currency | null;
     order?: Order;
 }
+
 
 export interface Reseller {
     id: number;
@@ -274,6 +295,7 @@ export interface Reseller {
     afg_custom_recharge_adjust_value: number;
 }
 
+
 export interface User {
     id: number;
     uuid: string;
@@ -294,6 +316,7 @@ export interface User {
     confirm_password?: string
 }
 
+
 // export interface PaymentMethod {
 //     id: number;
 //     method_name: string;
@@ -304,6 +327,7 @@ export interface User {
 //     updated_at: string;
 // }
 
+
 export interface PaymentMethod {
     id: number;
     method_name: string;
@@ -313,6 +337,7 @@ export interface PaymentMethod {
     created_at: string;
     updated_at: string;
 
+
     // New fields from migration (nullable)
     bank_name?: string | null;
     account_holder_name?: string | null;
@@ -320,12 +345,16 @@ export interface PaymentMethod {
     account_number?: string | null;
     sheba_number?: string | null;
 
+
     // New notes field from migration
     notes?: string | null;
     method_type?: 'bank' | 'card' | 'sheba' | 'other' | null;
 
 
+
+
 }
+
 
 export interface Supplier {
     id: number;
@@ -336,6 +365,7 @@ export interface Supplier {
     created_at: string;
     updated_at: string;
 }
+
 
 export interface PurchasedProduct {
     id: number;
@@ -352,6 +382,7 @@ export interface PurchasedProduct {
     service: Service | null;
 }
 
+
 export interface ServiceCategory {
     id: number;
     category_name: string;
@@ -363,6 +394,7 @@ export interface ServiceCategory {
     updated_at: string;
     input_form_schema?: string | CustomField[] | null
 }
+
 
 export interface Service {
     id: number;
@@ -376,7 +408,12 @@ export interface Service {
     company: Company | null;
     input_form_schema?: string | CustomField[] | null;
     telegram_chat_id?: Telegram_Chat_Id | null;
+   is_robot_enabled?: boolean;
+   is_api_enabled?: boolean;
+   api_key?: string | null;
+   api_provider_id?: number | null;
 }
+
 
 export interface Supplier {
     id: number;
@@ -388,6 +425,7 @@ export interface Supplier {
     updated_at: string;
 }
 
+
 export interface TelegramChat {
     id: number;
     chat_id: number;
@@ -395,6 +433,8 @@ export interface TelegramChat {
     created_at: string;
     updated_at: string;
 }
+
+
 
 
 export interface Province {
@@ -407,6 +447,7 @@ export interface Province {
     country: Country | null
 }
 
+
 export interface District {
     id: number,
     district_name: string,
@@ -416,6 +457,8 @@ export interface District {
     updated_at: string,
     province: Province | null
 }
+
+
 
 
 export interface Order {
@@ -439,6 +482,8 @@ export interface Order {
 }
 
 
+
+
 export interface Advertisement {
     id: number,
     advertisement_title: string,
@@ -448,6 +493,8 @@ export interface Advertisement {
     created_at: string | null,
     updated_at: string | null
 }
+
+
 
 
 export interface Balance {
@@ -474,6 +521,7 @@ export interface Balance {
     is_reseller_loan_request?: string | null
 }
 
+
 export interface Payment {
     id: number,
     reseller_id: number,
@@ -497,6 +545,7 @@ export interface Payment {
     extra_image_2?: string | null
 }
 
+
 export interface Roles {
     id: number,
     name: string,
@@ -504,6 +553,8 @@ export interface Roles {
     created_at: string,
     updated_at: string
 }
+
+
 
 
 export interface ResellerGroup {
@@ -523,6 +574,7 @@ export interface ResellerGroup {
     afg_custom_recharge_adjust_value: number;
 }
 
+
 export interface Permission {
     id: number,
     name: string,
@@ -531,6 +583,7 @@ export interface Permission {
     updated_at: string,
     pivot: null
 }
+
 
 export interface GroupDiscount {
     id: number,
@@ -546,6 +599,7 @@ export interface GroupDiscount {
     bundle: Bundle | null
 }
 
+
 export interface HawalaBranch {
     id?: number,
     name?: string,
@@ -557,12 +611,15 @@ export interface HawalaBranch {
     amount?: number,
     status?: 'active' | 'inactive',
 
+
 }
+
 
 export interface Hawala {
     id?: number | string;
     reseller_id?: number | string;
     reseller?: Reseller | null;
+
 
     hawala_number?: string;
     sender_name?: string;
@@ -570,40 +627,51 @@ export interface Hawala {
     receiver_father_name?: string | null;
     receiver_id_card_number?: string | null;
 
+
     hawala_amount?: string | number;
     hawala_amount_currency_id?: number | string;
     hawala_amount_currency_code?: string;
     hawala_amount_currency_rate?: string | number;
 
+
     reseller_prefered_currency_id?: number | string;
     reseller_prefered_currency_code?: string;
     reseller_prefered_currency_rate?: string | number;
 
+
     converted_amount_taken_from_reseller?: string | number;
+
 
     commission_amount?: string | number;
     commission_paid_by_sender?: boolean;
     commission_paid_by_receiver?: boolean;
 
+
     reseller_commission_share?: string | number | null;
     branch_commission_share?: string | number | null;
     admin_commission_share?: string | number | null;
+
 
     admin_note?: string | null;
     branch?: HawalaBranch | null; // Replace `any` with your `Branch` type if available
     hawala_branch_id?: number | string | null;
 
+
     status?: string | number;
     is_paid?: boolean | number;
+
 
     rechargeble_account?: string;
     transaction_id?: string | number | null;
     bundle?: Bundle | null;
 
+
     created_at?: Date | string | null;
     updated_at?: Date | string | null;
     hawala_custom_number?: string | null
 }
+
+
 
 
 export interface GroupPricing {
@@ -620,7 +688,10 @@ export interface GroupPricing {
     use_fixed_fee: boolean | null,
     use_markup: boolean | null
 
+
 }
+
+
 
 
 export interface HawalaCurrency {
@@ -638,6 +709,7 @@ export interface HawalaCurrency {
     updated_at: string;
 }
 
+
 export interface CustomerPricing {
     id: number,
     amount: string | null | number,
@@ -651,6 +723,7 @@ export interface CustomerPricing {
     updated_at: string;
 }
 
+
 export interface EarningBalance {
     id: number,
     amount: string | number,
@@ -662,6 +735,8 @@ export interface EarningBalance {
     updated_at: string;
     reseller: Reseller
 }
+
+
 
 
 export interface HelpArticle {
@@ -679,6 +754,8 @@ export interface HelpArticle {
 }
 
 
+
+
 export interface PaymentType {
     id: number,
     name: string,
@@ -686,6 +763,9 @@ export interface PaymentType {
     created_at: string;
     updated_at: string;
 }
+
+
+
 
 
 
@@ -708,8 +788,11 @@ export interface PaymentType {
 // }
 
 
+
+
 // reseller pagination, edit
 // reseller group delete api problem
+
 
 export interface CustomField {
     name: string;
@@ -730,6 +813,8 @@ export interface CustomField {
     };
     examples: string[];
 }
+
+
 
 
 // types/interface.ts (add this to your existing interface file)
@@ -793,6 +878,7 @@ export interface AppSettings {
     setaragan_admin_buying_price_percentage?: number,
     custom_recharge_api_provider_id: number | null, // Add this line
 
+
      // New Telegram Settings
     telegram_enabled: boolean;
     telegram_send_payments: boolean;
@@ -804,7 +890,11 @@ export interface AppSettings {
     telegram_send_vouchers: boolean;
     telegram_voucher_chat_ids: string[];
 
+
 }
+
+
+
 
 
 
@@ -863,11 +953,14 @@ export interface Provider {
 }
 
 
+
+
 export interface SingleProvider {
     id: number;
     code: string;
     name: string;
 }
+
 
 export interface Meta {
     table_id: string;
@@ -889,6 +982,7 @@ export interface Meta {
     gross_price_rial: number;
     internet_type: string;
 }
+
 
 export interface Internet {
     provider_product_id: string;
@@ -933,8 +1027,10 @@ export interface RawInternet {
     stock?: number;
     description?: string;
 
+
 }
 export interface RawBundles {
+
 
     id: string;
     title: string;
@@ -943,12 +1039,15 @@ export interface RawBundles {
     tprice: string;
 }
 
+
 export interface SingleProviderResponse {
     provider: SingleProvider;
     internets: Internet[];
     rawInternets: RawInternet[];
     rawBundles: RawBundles[];
 }
+
+
 
 
 export interface PriceAdjustmentPayload {
@@ -959,6 +1058,7 @@ export interface PriceAdjustmentPayload {
     confirmation?: boolean;
 }
 
+
 export interface BulkBundlePricePayload {
     adjustment_type: 'percentage' | 'fixed';
     adjustment_value: number;
@@ -967,6 +1067,7 @@ export interface BulkBundlePricePayload {
     service_ids?: number[];
     confirmation?: boolean;
 }
+
 
 export interface PriceAdjustmentPreview {
     bundle_id: number;
@@ -982,6 +1083,8 @@ export interface PriceAdjustmentPreview {
 }
 
 
+
+
 export interface HawalaNumberSeries {
     id: number;
     branch_id: number;
@@ -991,6 +1094,8 @@ export interface HawalaNumberSeries {
     reset_daily: boolean;
     is_active: boolean;
 }
+
+
 
 
 export interface SupportContacts {
@@ -1008,6 +1113,8 @@ export interface SupportContacts {
 }
 
 
+
+
 export interface Notification {
     id: number;
     title?: string;
@@ -1020,6 +1127,7 @@ export interface Notification {
     is_read?: boolean
 }
 
+
 export interface WithdrawalPolicy {
     id: number;
     currency_id: number;
@@ -1030,6 +1138,8 @@ export interface WithdrawalPolicy {
     status: boolean;
     currency?: Currency
 }
+
+
 
 
 export interface WithdrawRequest {
@@ -1055,6 +1165,7 @@ export interface WithdrawRequest {
     }
 }
 
+
 export interface ApiInfoProvider {
     id: number;
     code: string;
@@ -1062,11 +1173,13 @@ export interface ApiInfoProvider {
     has_credentials: boolean;
 }
 
+
 export interface ApiInfoAccountInfo {
     balance: number;
     currency: string;
     last_updated: string; // Format: "YYYY-MM-DD HH:mm:ss"
 }
+
 
 export interface ApiInfoUser {
     uid: string;
@@ -1074,6 +1187,7 @@ export interface ApiInfoUser {
     balance: number;
     lang: string;
 }
+
 
 export interface ApiInfoTransaction {
     id: number;
@@ -1084,12 +1198,14 @@ export interface ApiInfoTransaction {
     b_name: string;
 }
 
+
 export interface AccountData {
     provider: ApiInfoProvider;
     account_info: ApiInfoAccountInfo;
     user: ApiInfoUser;
     recent_transactions: ApiInfoTransaction[];
 }
+
 
 export interface ApiKey {
     id: number;
@@ -1106,6 +1222,8 @@ export interface ApiKey {
 }
 
 
+
+
 // interfaces/providerProductsInterface.ts
 export interface Category {
     id: number;
@@ -1115,6 +1233,7 @@ export interface Category {
     is_auto: boolean;
     purchase_type: 'voucher' | 'recharge';
 }
+
 
 export interface Product {
     id: number;
@@ -1127,9 +1246,12 @@ export interface Product {
 }
 
 
+
+
 // ============================
 // Base/Common Interfaces
 // ============================
+
 
 export interface ServiceCategory {
     id: number;
@@ -1142,9 +1264,16 @@ export interface ServiceCategory {
 
 
 
+
+
+
+
+
+
 // ============================
 // Voucher Related Interfaces
 // ============================
+
 
 export interface Voucher {
     id?: number;
@@ -1161,6 +1290,7 @@ export interface Voucher {
     updated_at?: string;
 }
 
+
 export interface VoucherStatistics {
     total: number;
     available: number;
@@ -1169,12 +1299,14 @@ export interface VoucherStatistics {
     expired: number;
 }
 
+
 export interface VoucherPagination {
     current_page: number;
     per_page: number;
     total: number;
     total_pages: number;
 }
+
 
 export interface VoucherListResponse {
     success: boolean;
@@ -1188,6 +1320,7 @@ export interface VoucherListResponse {
     payload: any[];
 }
 
+
 export interface SingleVoucherResponse {
     success: boolean;
     code: number;
@@ -1198,9 +1331,11 @@ export interface SingleVoucherResponse {
     payload: any[];
 }
 
+
 // ============================
 // Create/Update Voucher
 // ============================
+
 
 export interface CreateVoucherPayload {
     bundle_id: number;
@@ -1215,6 +1350,7 @@ export interface CreateVoucherPayload {
     };
 }
 
+
 export interface UpdateVoucherPayload {
     voucher_code?: string;
     notes?: string;
@@ -1223,9 +1359,11 @@ export interface UpdateVoucherPayload {
     status?: string;
 }
 
+
 // ============================
 // Bulk Import Interfaces
 // ============================
+
 
 export interface BulkImportVoucher {
     code: string;
@@ -1238,11 +1376,13 @@ export interface BulkImportVoucher {
     };
 }
 
+
 export interface BulkImportPayload {
     bundle_id: number;
     provider: string;
     vouchers: BulkImportVoucher[];
 }
+
 
 export interface BulkImportSummary {
     total: number;
@@ -1255,6 +1395,7 @@ export interface BulkImportSummary {
     }>;
 }
 
+
 export interface BulkImportResponse {
     success: boolean;
     code: number;
@@ -1266,9 +1407,11 @@ export interface BulkImportResponse {
     payload: any[];
 }
 
+
 // ============================
 // Social Companies Interfaces
 // ============================
+
 
 export interface SocialCompany {
     id: number;
@@ -1286,6 +1429,7 @@ export interface SocialCompany {
     available_vouchers: number;
 }
 
+
 export interface SocialCompaniesResponse {
     success: boolean;
     code: number;
@@ -1296,9 +1440,11 @@ export interface SocialCompaniesResponse {
     payload: any[];
 }
 
+
 // ============================
 // Bundle Stats Interfaces
 // ============================
+
 
 export interface BundleService {
     id: number;
@@ -1313,6 +1459,7 @@ export interface BundleService {
     company: Company;
     service_category: ServiceCategory;
 }
+
 
 export interface BundleStat {
     id: number;
@@ -1351,6 +1498,7 @@ export interface BundleStat {
     service: BundleService;
 }
 
+
 export interface BundleStatsResponse {
     success: boolean;
     code: number;
@@ -1361,9 +1509,11 @@ export interface BundleStatsResponse {
     payload: any[];
 }
 
+
 // ============================
 // Voucher Filter/Query Params
 // ============================
+
 
 export interface VoucherQueryParams {
     bundle_id?: number;
@@ -1374,9 +1524,11 @@ export interface VoucherQueryParams {
     provider?: string;
 }
 
+
 // ============================
 // Redux State Interfaces
 // ============================
+
 
 export interface BulkImportState {
     loading: boolean;
@@ -1384,6 +1536,7 @@ export interface BulkImportState {
     error: string | null;
     summary: BulkImportSummary | null;
 }
+
 
 export interface VoucherState {
     vouchers: Voucher[];
@@ -1396,6 +1549,8 @@ export interface VoucherState {
     error: string | null;
     bulkImport: BulkImportState;
 }
+
+
 
 
 export interface Product {
@@ -1459,17 +1614,21 @@ export interface Product {
 }
 
 
+
+
 // types/paystore.ts
 export interface PaystoreOperator {
     code: string;
     product_count: number;
 }
 
+
 export interface PaystoreGroup {
     op_firm: string;
     product_count: number;
     operators: PaystoreOperator[];
 }
+
 
 export interface PaystoreOperatorsResponse {
     success: boolean;
@@ -1482,6 +1641,7 @@ export interface PaystoreOperatorsResponse {
     payload: any[];
 }
 
+
 export interface PaystoreOperatorsState {
     loading: boolean;
     groups: PaystoreGroup[];
@@ -1492,8 +1652,11 @@ export interface PaystoreOperatorsState {
 }
 
 
+
+
 // types/order.ts (add these to your existing Order interface)
 // types/order.ts
+
 
 export interface PaystoreStatusResponse {
     success: boolean;
@@ -1529,6 +1692,7 @@ export interface PaystoreStatusResponse {
     };
     payload: any[];
 }
+
 
 export interface PaystoreStatusState {
     loading: boolean;
