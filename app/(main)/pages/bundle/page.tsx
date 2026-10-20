@@ -120,6 +120,63 @@ const BundlePage = () => {
     const [selectedPaystoreGroup, setSelectedPaystoreGroup] = useState<PaystoreGroup | null>(null);
     const [selectedPaystoreOperator, setSelectedPaystoreOperator] = useState<PaystoreOperator | null>(null);
 
+    // INAX: one API request, then all filtering is local to the frontend.
+    const [inaxResponseProducts, setInaxResponseProducts] = useState<any[]>([]);
+    const [inaxLoading, setInaxLoading] = useState(false);
+    const [selectedInaxCategory, setSelectedInaxCategory] = useState<string | null>(null);
+    const [selectedInaxOperator, setSelectedInaxOperator] = useState<string | null>(null);
+    const [selectedInaxSimType, setSelectedInaxSimType] = useState<string | null>(null);
+
+    const flattenInaxProducts = (payload: any): any[] => {
+        // Accept both original INAX data.categories[].bundles and an already
+        // flattened Redux response, without making another HTTP request.
+        const root = payload?.payload?.data || payload?.data || payload?.payload || payload;
+        const categories = root?.categories || payload?.categories;
+        if (Array.isArray(categories)) {
+            return categories.flatMap((category: any) =>
+                (Array.isArray(category.bundles) ? category.bundles : []).map((item: any) => ({
+                    ...item,
+                    category: item.category || category.code || category.name,
+                    table_id: item.table_id || item.provider_table_id,
+                    name: item.name || item.title,
+                    operator: item.operator || item.meta?.operator,
+                    sim_type: item.sim_type || item.meta?.sim_type,
+                    internet_type: item.internet_type || item.meta?.internet_type
+                }))
+            );
+        }
+        const possible = Array.isArray(root) ? root : (root?.bundles || root?.rawInternets || root?.rawBundles || root?.products || root?.data?.bundles);
+        if (!Array.isArray(possible)) return [];
+        return possible.map((item: any) => ({
+            ...item,
+            category: item.category || item.category_name || 'Other',
+            table_id: item.table_id || item.provider_table_id,
+            name: item.name || item.title,
+            operator: item.operator || item.meta?.operator,
+            sim_type: item.sim_type || item.meta?.sim_type,
+            internet_type: item.internet_type || item.meta?.internet_type
+        }));
+    };
+
+    const inaxProducts = React.useMemo(() => {
+        const primary = inaxResponseProducts.length ? inaxResponseProducts : flattenInaxProducts(rawInternets);
+        const fallback = primary.length ? primary : flattenInaxProducts(rawBundles);
+        return fallback;
+    }, [inaxResponseProducts, rawInternets, rawBundles]);
+    const inaxCategories = React.useMemo(() =>
+        Array.from(new Set(inaxProducts.map((p: any) => String(p.category || 'Other')))).sort(), [inaxProducts]);
+    const inaxCategoryProducts = React.useMemo(() => inaxProducts.filter((p: any) =>
+        !selectedInaxCategory || String(p.category || 'Other') === selectedInaxCategory), [inaxProducts, selectedInaxCategory]);
+    const inaxOperators = React.useMemo(() =>
+        Array.from(new Set(inaxCategoryProducts.map((p: any) => String(p.operator || p.meta?.operator || 'Other')))).sort(), [inaxCategoryProducts]);
+    const inaxOperatorProducts = React.useMemo(() => inaxCategoryProducts.filter((p: any) =>
+        !selectedInaxOperator || String(p.operator || p.meta?.operator || 'Other') === selectedInaxOperator), [inaxCategoryProducts, selectedInaxOperator]);
+    const inaxSimTypes = React.useMemo(() =>
+        Array.from(new Set(inaxOperatorProducts.map((p: any) => String(p.sim_type || p.meta?.sim_type || 'Other')))).sort(), [inaxOperatorProducts]);
+    const filteredInaxProducts = React.useMemo(() => inaxOperatorProducts.filter((p: any) =>
+        !selectedInaxSimType || String(p.sim_type || p.meta?.sim_type || 'Other') === selectedInaxSimType), [inaxOperatorProducts, selectedInaxSimType]);
+    const inaxProductLabel = (p: any) => `${p.title || p.name || `Product #${p.id}`} — ${p.sim_type || p.meta?.sim_type || 'SIM N/A'} — ${p.tprice ?? p.price ?? '-'} ${p.currency || 'IRT'}`;
+
     // ManshorPay states
     const [manshorPayServices, setManshorPayServices] = useState<any[]>([]);
     const [selectedManshorPayService, setSelectedManshorPayService] = useState<any | null>(null);
@@ -381,25 +438,37 @@ const BundlePage = () => {
 
     // For other providers (non-paystore, non-mzr, non-manshorpay)
     useEffect(() => {
-        if (
-            selectedProvider &&
-            selectedCapability &&
-            selectedProvider.code !== 'mzr' &&
-            selectedProvider.code !== 'paystore' &&
-            selectedProvider.code !== 'manshorpay'
-        ) {
-            console.log('📦 Fetching bundles for provider:', selectedProvider.code);
+        if (!selectedProvider || ['mzr', 'paystore', 'manshorpay', 'inax'].includes(selectedProvider.code) || !selectedCapability) return;
+        dispatch(_fetchSingleProvider(selectedProvider.id, selectedProvider.code, selectedCapability, bundle.service?.company?.company_name ?? ''));
 
-            dispatch(
-                _fetchSingleProvider(
+    }, [dispatch, selectedProvider, selectedCapability, bundle.service?.company?.company_name]);
+
+    // INAX uses existing provider Redux action only once per provider choice.
+    // Category/operator/SIM dropdowns filter its returned products in memory.
+    useEffect(() => {
+        if (selectedProvider?.code !== 'inax') return;
+        let active = true;
+        const fetchInax = async () => {
+            setInaxLoading(true);
+            try {
+                const result: any = await dispatch(_fetchSingleProvider(
                     selectedProvider.id,
                     selectedProvider.code,
-                    selectedCapability,
-                    bundle.service?.company?.company_name ?? ''
-                )
-            );
-        }
-    }, [dispatch, selectedProvider, selectedCapability, bundle.service?.company?.company_name]);
+                    (selectedProvider.capabilities && selectedProvider.capabilities[0]) || 'internet',
+                    ''
+                ));
+                if (!active) return;
+                const items = flattenInaxProducts(result);
+                if (items.length) setInaxResponseProducts(items);
+            } catch (error) {
+                console.error('INAX products fetch failed:', error);
+            } finally {
+                if (active) setInaxLoading(false);
+            }
+        };
+        fetchInax();
+        return () => { active = false; };
+    }, [dispatch, selectedProvider?.id, selectedProvider?.code]);
 
     // Debug effect
     useEffect(() => {
@@ -434,6 +503,10 @@ const BundlePage = () => {
         setManshorPayServices([]);
         setSelectedManshorPayService(null);
         setManshorPayProducts([]);
+        setInaxResponseProducts([]);
+        setSelectedInaxCategory(null);
+        setSelectedInaxOperator(null);
+        setSelectedInaxSimType(null);
     };
 
     const hideDialog = () => {
@@ -451,6 +524,10 @@ const BundlePage = () => {
         setManshorPayServices([]);
         setSelectedManshorPayService(null);
         setManshorPayProducts([]);
+        setInaxResponseProducts([]);
+        setSelectedInaxCategory(null);
+        setSelectedInaxOperator(null);
+        setSelectedInaxSimType(null);
     };
 
     const hideDeleteServiceDialog = () => {
@@ -510,6 +587,11 @@ const BundlePage = () => {
             detail: 'Please select a ManshorPay service and product before saving.',
             life: 3000
         });
+        return;
+    }
+
+    if (selectedProvider?.code === 'inax' && !selectedProviderBundle) {
+        toast.current?.show({ severity: 'warn', summary: t('VALIDATION_WARNING'), detail: 'Please select an INAX product before saving.', life: 3000 });
         return;
     }
 
@@ -745,6 +827,44 @@ const BundlePage = () => {
                 });
         }
     }
+    // INAX: retain both product ID and unique provider table ID.
+    else if (selectedProvider?.code === 'inax' && selectedProviderBundle) {
+        const product: any = selectedProviderBundle;
+        const providerData = {
+            api_provider_id: selectedProvider.id,
+            api_provider_bundle_id: String(product.id),
+            api_binding: {
+                product_id: product.id,
+                table_id: product.table_id || product.provider_table_id,
+                provider_table_id: product.table_id || product.provider_table_id,
+                category: product.category,
+                name: product.name || product.title,
+                title: product.title || product.name,
+                operator: product.operator || product.meta?.operator,
+                sim_type: product.sim_type || product.meta?.sim_type,
+                internet_type: product.internet_type || product.meta?.internet_type,
+                validity: product.validity,
+                days: product.meta?.days ?? product.days,
+                volume: product.meta?.volume ?? product.volume,
+                unit: product.meta?.unit ?? product.unit,
+                type_label: product.meta?.type_label,
+                price: product.price,
+                tprice: product.tprice,
+                currency: product.currency,
+                amount_rial: product.meta?.amount_rial,
+                gross_price_rial: product.meta?.gross_price_rial
+            }
+        };
+        const saveBinding = (newBundle: any) => {
+            if (newBundle?.id) dispatch(_setProvider(newBundle.id, providerData, toast, t));
+        };
+        bundle.api_provider_id = selectedProvider.id;
+        if (bundle.id && bundle.id !== 0) {
+            dispatch(_editBundle(bundle.id, bundle, toast, t)).then(saveBinding);
+        } else {
+            dispatch(_addBundle(bundle, toast, t)).then(saveBinding);
+        }
+    }
     // For non-mzr, non-paystore, non-manshorpay providers (regular bundles)
     else if (
         selectedProvider &&
@@ -913,6 +1033,17 @@ const BundlePage = () => {
                             parsedApiBinding.provider_currency ||
                             '',
                         api_binding: parsedApiBinding
+                    } as any);
+                }
+                else if (provider.code === 'inax') {
+                    setSelectedInaxCategory(parsedApiBinding.category || null);
+                    setSelectedInaxOperator(parsedApiBinding.operator || null);
+                    setSelectedInaxSimType(parsedApiBinding.sim_type || null);
+                    setSelectedProviderBundle({
+                        ...parsedApiBinding,
+                        id: parsedApiBinding.product_id || bundle.api_provider_bundle_id,
+                        table_id: parsedApiBinding.table_id || parsedApiBinding.provider_table_id,
+                        title: parsedApiBinding.title || parsedApiBinding.name
                     } as any);
                 }
                 else if (
@@ -1902,6 +2033,10 @@ const BundlePage = () => {
                                             setSelectedPaystoreOperator(null);
                                             setSelectedManshorPayService(null);
                                             setManshorPayProducts([]);
+                                            setInaxResponseProducts([]);
+                                            setSelectedInaxCategory(null);
+                                            setSelectedInaxOperator(null);
+                                            setSelectedInaxSimType(null);
                                         }}
                                         optionLabel="name"
                                         filter
@@ -1922,7 +2057,8 @@ const BundlePage = () => {
                             {selectedProvider &&
                                 selectedProvider.code !== 'mzr' &&
                                 selectedProvider.code !== 'paystore' &&
-                                selectedProvider.code !== 'manshorpay' && (
+                                selectedProvider.code !== 'manshorpay' &&
+                                selectedProvider.code !== 'inax' && (
                                 <div className="grid formgrid p-fluid">
                                     <div className="field col-12">
                                         <label htmlFor="capabilities" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
@@ -2425,6 +2561,63 @@ const BundlePage = () => {
                                 </div>
                             )}
 
+                             {/* INAX - locally categorized from one provider response */}
+                             {selectedProvider?.code === 'inax' && (
+                                 <div className="grid formgrid p-fluid" style={{ margin: '0 0 1rem 0', padding: '18px', border: '1px solid #dbeafe', borderRadius: '14px', background: '#f8fbff' }}>
+                                     <div className="col-12"><strong>INAX Product Binding</strong><div className="text-sm text-gray-500 mt-1">Filter the loaded catalog locally by category, company, and SIM type.</div></div>
+                                     {inaxLoading && <div className="col-12"><ProgressBar mode="indeterminate" style={{ height: '4px' }} /></div>}
+                                     <div className="field col-12 md:col-4">
+                                         <label>Category</label>
+                                         <Dropdown value={selectedInaxCategory} options={inaxCategories.map((v) => ({ label: v, value: v }))} onChange={(e) => { setSelectedInaxCategory(e.value); setSelectedInaxOperator(null); setSelectedInaxSimType(null); setSelectedProviderBundle(null); }} filter showClear placeholder="All categories" className="w-full" />
+                                     </div>
+                                     <div className="field col-12 md:col-4">
+                                         <label>Company / Operator</label>
+                                         <Dropdown value={selectedInaxOperator} options={inaxOperators.map((v) => ({ label: v, value: v }))} onChange={(e) => { setSelectedInaxOperator(e.value); setSelectedInaxSimType(null); setSelectedProviderBundle(null); }} filter showClear placeholder="All companies" className="w-full" />
+                                     </div>
+                                     <div className="field col-12 md:col-4">
+                                         <label>SIM Type</label>
+                                         <Dropdown value={selectedInaxSimType} options={inaxSimTypes.map((v) => ({ label: v, value: v }))} onChange={(e) => { setSelectedInaxSimType(e.value); setSelectedProviderBundle(null); }} showClear placeholder="All SIM types" className="w-full" />
+                                     </div>
+                                     <div className="field col-12">
+                                         <label>Provider Product ({filteredInaxProducts.length})</label>
+                                         <Dropdown
+                                             value={filteredInaxProducts.find((p: any) => String(p.id) === String((selectedProviderBundle as any)?.id) && String(p.table_id || p.provider_table_id) === String((selectedProviderBundle as any)?.table_id || (selectedProviderBundle as any)?.provider_table_id)) || selectedProviderBundle}
+                                             options={filteredInaxProducts}
+                                             onChange={(e) => setSelectedProviderBundle(e.value)}
+                                             optionLabel="title"
+                                             filter filterBy="title,name,desc,operator,sim_type"
+                                             filterPlaceholder="Search product or package"
+                                             placeholder="Select INAX product"
+                                             dataKey="table_id"
+                                             scrollHeight="350px"
+                                             emptyMessage="No products found"
+                                             className="w-full"
+                                             itemTemplate={(p: any) => <div className="flex flex-column gap-1 p-2">
+                                                 <strong>{p.title || p.name}</strong>
+                                                 <span className="text-sm text-gray-600">{p.operator || p.meta?.operator} · {p.sim_type || p.meta?.sim_type} · {p.validity || '-'} · {p.meta?.volume ? `${p.meta.volume} ${p.meta.unit || ''}` : ''}</span>
+                                                 <span className="text-sm text-blue-700">Price: {p.price ?? '-'} {p.currency || 'IRT'} · Total: {p.tprice ?? '-'} {p.currency || 'IRT'} · Table #{p.table_id || p.provider_table_id}</span>
+                                             </div>}
+                                             valueTemplate={(p: any) => p ? <span>{inaxProductLabel(p)}</span> : <span>Select INAX product</span>}
+                                         />
+                                     </div>
+                                     {selectedProviderBundle && <div className="col-12">
+                                         <div className="p-3 border-round-lg" style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
+                                             <strong>{(selectedProviderBundle as any).title || (selectedProviderBundle as any).name}</strong>
+                                             <div className="text-sm mt-2">{(selectedProviderBundle as any).desc || ''}</div>
+                                             <div className="flex flex-wrap gap-3 text-sm mt-2">
+                                                 <span>Operator: {(selectedProviderBundle as any).operator || (selectedProviderBundle as any).meta?.operator || '-'}</span>
+                                                 <span>SIM: {(selectedProviderBundle as any).sim_type || (selectedProviderBundle as any).meta?.sim_type || '-'}</span>
+                                                 <span>Validity: {(selectedProviderBundle as any).validity || '-'}</span>
+                                                 <span>Volume: {(selectedProviderBundle as any).meta?.volume || '-'} {(selectedProviderBundle as any).meta?.unit || ''}</span>
+                                                 <span>Price: {(selectedProviderBundle as any).price ?? '-'} {(selectedProviderBundle as any).currency || 'IRT'}</span>
+                                                 <strong>Total price: {(selectedProviderBundle as any).tprice ?? '-'} {(selectedProviderBundle as any).currency || 'IRT'}</strong>
+                                             </div>
+                                             <div className="text-xs text-gray-500 mt-2">INAX prices are informational; Waslat bundle pricing is configured separately.</div>
+                                         </div>
+                                     </div>}
+                                 </div>
+                             )}
+
                             {/* PAYSTORE SECTION - Show operator list and products based on op_firm */}
                             {isPaystore && (
                                 <div className="grid formgrid p-fluid">
@@ -2577,6 +2770,7 @@ const BundlePage = () => {
                                 selectedProvider.code !== 'mzr' &&
                                 selectedProvider.code !== 'paystore' &&
                                 selectedProvider.code !== 'manshorpay' &&
+                                selectedProvider.code !== 'inax' &&
                                 selectedCapability && (
                                 <div className="grid formgrid p-fluid">
                                     <div className="field col-12">

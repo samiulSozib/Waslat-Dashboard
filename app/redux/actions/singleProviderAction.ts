@@ -77,6 +77,48 @@ export const _fetchSingleProvider = (
                           [];
         }
 
+        // INAX ONLY: its API returns data.categories[].bundles.
+        // Normalize the catalog for the existing INAX frontend dropdowns.
+        // All other provider action payloads and requests remain unchanged.
+        if (code === 'inax') {
+            const categories = response.data.data?.categories;
+            const inaxItems = Array.isArray(categories)
+                ? categories.flatMap((category: any) =>
+                    (Array.isArray(category?.bundles) ? category.bundles : []).map((item: any) => ({
+                        ...item,
+                        category: item.category || category.code || category.name || 'Other',
+                        name: item.name || item.title,
+                        table_id: item.table_id || item.provider_table_id,
+                        provider_table_id: item.provider_table_id || item.table_id,
+                        operator: item.operator || item.meta?.operator || '',
+                        sim_type: item.sim_type || item.meta?.sim_type || '',
+                        internet_type: item.internet_type || item.meta?.internet_type || '',
+                        // Preserve original supplier prices; never calculate/overwrite.
+                        price: item.price,
+                        tprice: item.tprice,
+                        currency: item.currency || 'IRT'
+                    })))
+                : [];
+
+            // Keep the existing Redux state shape; only INAX-specific data changes.
+            dispatch({
+                type: FETCH_SINGLE_PROVIDER_SUCCESS,
+                payload: {
+                    products: [],
+                    provider: response.data.data?.provider || response.data.provider,
+                    internets: [],
+                    rawInternets: inaxItems,
+                    rawBundles: response.data.data?.bundles || [],
+                    pagination: response.data.payload?.pagination || response.data.data?.pagination || null,
+                    isPaystoreProducts: false,
+                },
+            });
+
+            // INAX frontend can consume the complete original response;
+            // Redux users receive the normalized rawInternets array above.
+            return response.data;
+        }
+
         dispatch({
             type: FETCH_SINGLE_PROVIDER_SUCCESS,
             payload: {
