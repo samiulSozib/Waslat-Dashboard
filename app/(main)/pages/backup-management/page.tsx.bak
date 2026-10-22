@@ -1,0 +1,973 @@
+'use client';
+
+import React, {
+    useCallback,
+    useEffect,
+    useRef,
+    useState
+} from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+import { AppDispatch, RootState } from '@/app/redux/store';
+import {
+    fetchBackupDashboard,
+    fetchBackups,
+    fetchBackupDetails,
+    fetchBackupSettings,
+    createBackup,
+    fetchBackupRequestStatus,
+    downloadBackup,
+    clearBackupError,
+    clearBackupRequest
+} from '@/app/redux/actions/backupActions';
+import {
+    BackupRecord,
+    BackupRequest
+} from '@/types/backupTypes';
+import { Button } from 'primereact/button';
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
+import { Dialog } from 'primereact/dialog';
+import { Tag } from 'primereact/tag';
+import { Toast } from 'primereact/toast';
+import { Toolbar } from 'primereact/toolbar';
+import { ProgressBar } from 'primereact/progressbar';
+import { TabView, TabPanel } from 'primereact/tabview';
+import { Skeleton } from 'primereact/skeleton';
+import withAuth from '../../authGuard';
+import { isRTL } from '../../utilities/rtlUtil';
+
+type StatusSeverity =
+    | 'success'
+    | 'info'
+    | 'warning'
+    | 'danger';
+
+const formatBytes = (value?: number | string | null) => {
+    const bytes = Number(value);
+
+    if (!Number.isFinite(bytes) || bytes < 0) return '-';
+    if (bytes === 0) return '0 B';
+
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const index = Math.min(
+        Math.floor(Math.log(bytes) / Math.log(1024)),
+        units.length - 1
+    );
+
+    return `${(bytes / Math.pow(1024, index)).toFixed(
+        index === 0 ? 0 : 2
+    )} ${units[index]}`;
+};
+
+const formatDate = (value?: string | null) => {
+    if (!value) return '-';
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+        ? value
+        : date.toLocaleString();
+};
+
+const statusSeverity = (value?: string | null): StatusSeverity => {
+    switch (String(value || '').toLowerCase()) {
+        case 'completed':
+        case 'success':
+        case 'verified':
+            return 'success';
+        case 'failed':
+        case 'error':
+        case 'rejected':
+            return 'danger';
+        case 'pending':
+        case 'queued':
+            return 'warning';
+        case 'running':
+        case 'processing':
+        case 'in_progress':
+        case 'under_process':
+            return 'info';
+        default:
+            return 'info';
+    }
+};
+
+const statusLabel = (value?: string | null) =>
+    String(value || 'unknown')
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase());
+
+const readMetric = (
+    dashboard: Record<string, unknown> | null,
+    keys: string[]
+): number | string | null => {
+    if (!dashboard) return null;
+
+    const sources: any[] = [
+        dashboard,
+        dashboard.statistics,
+        dashboard.stats,
+        dashboard.summary,
+        dashboard.storage
+    ];
+
+    for (const source of sources) {
+        if (!source || typeof source !== 'object') continue;
+
+        for (const key of keys) {
+            const value = source[key];
+            if (
+                typeof value === 'number' ||
+                typeof value === 'string'
+            ) {
+                return value;
+            }
+        }
+    }
+
+    return null;
+};
+
+const isDownloadable = (backup: BackupRecord) => {
+    const status = String(backup.status || '').toLowerCase();
+
+    return (
+        ['completed', 'success'].includes(status) &&
+        (backup.is_verified === true || backup.is_verified === 1)
+    );
+};
+
+const BackupManagementPage = () => {
+    const { t, i18n } = useTranslation();
+    const dispatch = useDispatch<AppDispatch>();
+    const toast = useRef<Toast>(null);
+
+    const backupState = useSelector(
+        (state: RootState) => state.backupReducer
+    );
+
+    const {
+        dashboard,
+        backups,
+        selectedBackup,
+        settings,
+        activeRequest,
+        pagination,
+        dashboardLoading,
+        listLoading,
+        detailsLoading,
+        settingsLoading,
+        creating,
+        downloadingId,
+        error
+    } = backupState;
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rows, setRows] = useState(10);
+    const [confirmDialog, setConfirmDialog] = useState(false);
+    const [detailsDialog, setDetailsDialog] = useState(false);
+    const [activeTab, setActiveTab] = useState(0);
+    const [pollingRequestId, setPollingRequestId] =
+        useState<number | null>(null);
+
+    const [lastPollError, setLastPollError] = useState(false);
+    const pollingStartedAt = useRef<number | null>(null);
+    const pollingBusy = useRef(false);
+    const isRtl = ['ar', 'fa', 'ps', 'bn'].includes(i18n.language);
+
+    const label = (key: string, fallback: string) =>
+        t(key, { defaultValue: fallback });
+
+    const refreshData = useCallback(async () => {
+        const jobs = [
+            dispatch(fetchBackupDashboard()),
+            dispatch(fetchBackups(currentPage, rows))
+        ];
+
+        await Promise.allSettled(jobs);
+    }, [dispatch, currentPage, rows]);
+
+    useEffect(() => {
+        refreshData();
+    }, [refreshData]);
+
+    useEffect(() => {
+        if (activeTab === 1) {
+            dispatch(fetchBackupSettings()).catch(() => undefined);
+        }
+    }, [activeTab, dispatch]);
+
+    useEffect(() => {
+        if (!error) return;
+
+        toast.current?.show({
+            severity: 'error',
+            summary: label('ERROR', 'Error'),
+            detail: error,
+            life: 5000
+        });
+
+        dispatch(clearBackupError());
+    }, [error, dispatch, t]);
+
+    useEffect(() => {
+        if (pollingRequestId === null) return;
+
+        if (pollingStartedAt.current === null) {
+            pollingStartedAt.current = Date.now();
+        }
+
+        let cancelled = false;
+
+        const checkStatus = async () => {
+            if (cancelled || pollingBusy.current) return;
+
+            if (
+                pollingStartedAt.current &&
+                Date.now() - pollingStartedAt.current > 10 * 60 * 1000
+            ) {
+                setPollingRequestId(null);
+                pollingStartedAt.current = null;
+                toast.current?.show({
+                    severity: 'warn',
+                    summary: 'Status check paused',
+                    detail: 'The backup may still be running. Refresh the history to check its result.',
+                    life: 6000
+                });
+                return;
+            }
+
+            pollingBusy.current = true;
+
+            try {
+                const request: BackupRequest =
+                    await dispatch(
+                        fetchBackupRequestStatus(pollingRequestId)
+                    );
+
+                if (cancelled) return;
+
+                setLastPollError(false);
+
+                const status = String(
+                    request?.status || ''
+                ).toLowerCase();
+
+                if (['completed', 'success', 'failed', 'error'].includes(status)) {
+                    setPollingRequestId(null);
+                    pollingStartedAt.current = null;
+
+                    toast.current?.show({
+                        severity: ['completed', 'success'].includes(status)
+                            ? 'success'
+                            : 'error',
+                        summary: ['completed', 'success'].includes(status)
+                            ? 'Backup completed'
+                            : 'Backup failed',
+                        detail: ['completed', 'success'].includes(status)
+                            ? 'The backup request has finished.'
+                            : 'The backup request did not complete successfully.',
+                        life: 5000
+                    });
+
+                    refreshData();
+                }
+            } catch {
+                if (!cancelled) setLastPollError(true);
+            } finally {
+                pollingBusy.current = false;
+            }
+        };
+
+        checkStatus();
+        const interval = window.setInterval(checkStatus, 5000);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(interval);
+        };
+    }, [pollingRequestId, dispatch, refreshData]);
+
+    const handleCreateBackup = async () => {
+        try {
+            const request: BackupRequest = await dispatch(
+                createBackup()
+            );
+
+            setConfirmDialog(false);
+
+            toast.current?.show({
+                severity: 'success',
+                summary: 'Backup requested',
+                detail: 'Your database backup has been queued.',
+                life: 4000
+            });
+
+            if (request?.id) {
+                pollingStartedAt.current = Date.now();
+                setPollingRequestId(Number(request.id));
+                setLastPollError(false);
+            }
+
+            refreshData();
+        } catch {
+            // Redux action already handles the error message.
+        }
+    };
+
+    const handleViewDetails = async (backup: BackupRecord) => {
+        setDetailsDialog(true);
+
+        try {
+            await dispatch(fetchBackupDetails(backup.id));
+        } catch {
+            // Redux handles the error.
+        }
+    };
+
+    const handleDownload = async (backup: BackupRecord) => {
+        if (!isDownloadable(backup)) return;
+
+        try {
+            await dispatch(downloadBackup(backup));
+
+            toast.current?.show({
+                severity: 'success',
+                summary: 'Download started',
+                detail: 'The backup archive has been sent to your browser.',
+                life: 3000
+            });
+        } catch {
+            // Redux handles the error.
+        }
+    };
+
+    const badge = (value?: string | null) => (
+        <Tag
+            value={statusLabel(value)}
+            severity={statusSeverity(value)}
+        />
+    );
+
+    const verifiedBody = (backup: BackupRecord) => (
+        <Tag
+            value={
+                backup.is_verified === true || backup.is_verified === 1
+                    ? 'Verified'
+                    : 'Not verified'
+            }
+            severity={
+                backup.is_verified === true || backup.is_verified === 1
+                    ? 'success'
+                    : 'warning'
+            }
+            icon={
+                backup.is_verified === true || backup.is_verified === 1
+                    ? 'pi pi-check-circle'
+                    : 'pi pi-exclamation-circle'
+            }
+        />
+    );
+
+    const actionsBody = (backup: BackupRecord) => (
+        <div className="flex align-items-center gap-2">
+            <Button
+                icon="pi pi-eye"
+                rounded
+                outlined
+                severity="info"
+                tooltip="Backup details"
+                tooltipOptions={{ position: 'top' }}
+                onClick={() => handleViewDetails(backup)}
+            />
+            <Button
+                icon="pi pi-download"
+                rounded
+                outlined
+                severity="success"
+                tooltip={
+                    isDownloadable(backup)
+                        ? 'Download database backup'
+                        : 'Only completed, verified backups can be downloaded'
+                }
+                tooltipOptions={{ position: 'top' }}
+                disabled={
+                    !isDownloadable(backup) ||
+                    downloadingId !== null
+                }
+                loading={downloadingId === backup.id}
+                onClick={() => handleDownload(backup)}
+            />
+        </div>
+    );
+
+    const stats = [
+        {
+            title: 'Total Backups',
+            value: readMetric(dashboard, [
+                'total_backups',
+                'total',
+                'total_records'
+            ]),
+            icon: 'pi pi-database',
+            color: 'var(--primary-color)'
+        },
+        {
+            title: 'Completed',
+            value: readMetric(dashboard, [
+                'completed_backups',
+                'successful_backups',
+                'completed',
+                'success'
+            ]),
+            icon: 'pi pi-check-circle',
+            color: 'var(--green-500)'
+        },
+        {
+            title: 'Failed',
+            value: readMetric(dashboard, [
+                'failed_backups',
+                'failed'
+            ]),
+            icon: 'pi pi-times-circle',
+            color: 'var(--red-500)'
+        },
+        {
+            title: 'Verified',
+            value: readMetric(dashboard, [
+                'verified_backups',
+                'verified'
+            ]),
+            icon: 'pi pi-verified',
+            color: 'var(--teal-500)'
+        },
+        {
+            title: 'Backup Storage',
+            value: readMetric(dashboard, [
+                'total_size_bytes',
+                'storage_used_bytes',
+                'total_backup_size',
+                'total_storage_bytes'
+            ]),
+            icon: 'pi pi-server',
+            color: 'var(--orange-500)',
+            isBytes: true
+        }
+    ];
+
+    const renderSettingValue = (value: unknown) => {
+        if (value === null || value === undefined) return '-';
+
+        if (typeof value === 'boolean') {
+            return value ? 'Yes' : 'No';
+        }
+
+        if (typeof value === 'object') {
+            return JSON.stringify(value);
+        }
+
+        return String(value);
+    };
+
+    const settingsEntries = settings &&
+        typeof settings === 'object' &&
+        !Array.isArray(settings)
+        ? Object.entries(settings)
+        : [];
+
+    return (
+        <div
+            className="grid"
+            dir={isRtl ? 'rtl' : 'ltr'}
+        >
+            <Toast ref={toast} />
+
+            <div className="col-12">
+                <div className="flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <div>
+                        <h4 className="m-0 mb-2">
+                            <i className="pi pi-database mr-2" />
+                            {label(
+                                'BACKUP_MANAGEMENT',
+                                'Backup Management'
+                            )}
+                        </h4>
+                        <span className="text-color-secondary text-sm">
+                            Manage and securely download your database backups
+                        </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            label={label('REFRESH', 'Refresh')}
+                            icon="pi pi-refresh"
+                            outlined
+                            severity="secondary"
+                            loading={listLoading || dashboardLoading}
+                            onClick={() => {
+                                refreshData();
+                                if (activeTab === 1) {
+                                    dispatch(fetchBackupSettings())
+                                        .catch(() => undefined);
+                                }
+                            }}
+                        />
+                        <Button
+                            label="Create Backup"
+                            icon="pi pi-plus"
+                            severity="success"
+                            disabled={creating || pollingRequestId !== null}
+                            loading={creating}
+                            onClick={() => setConfirmDialog(true)}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {stats.map((stat) => (
+                <div
+                    className="col-12 sm:col-6 lg:col-4 xl:col"
+                    key={stat.title}
+                >
+                    <div className="card h-full mb-0">
+                        <div className="flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <div className="text-color-secondary text-sm mb-2">
+                                    {stat.title}
+                                </div>
+                                {dashboardLoading && !dashboard ? (
+                                    <Skeleton width="6rem" height="2rem" />
+                                ) : (
+                                    <div className="text-2xl font-semibold">
+                                        {stat.value === null
+                                            ? '-'
+                                            : stat.isBytes
+                                                ? formatBytes(stat.value)
+                                                : String(stat.value)}
+                                    </div>
+                                )}
+                            </div>
+                            <div
+                                className="border-round p-3"
+                                style={{
+                                    background: 'var(--surface-ground)'
+                                }}
+                            >
+                                <i
+                                    className={stat.icon}
+                                    style={{
+                                        color: stat.color,
+                                        fontSize: '1.3rem'
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ))}
+
+            {activeRequest && (
+                <div className="col-12">
+                    <div className="card mb-0">
+                        <div className="flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div>
+                                <div className="font-semibold mb-2">
+                                    Latest Backup Request
+                                </div>
+                                <div className="flex flex-wrap align-items-center gap-3">
+                                    <span className="text-sm">
+                                        Request #{activeRequest.id}
+                                    </span>
+                                    {badge(activeRequest.status)}
+                                    {activeRequest.created_at && (
+                                        <span className="text-color-secondary text-sm">
+                                            {formatDate(activeRequest.created_at)}
+                                        </span>
+                                    )}
+                                </div>
+                                {lastPollError && pollingRequestId !== null && (
+                                    <div className="text-orange-500 text-sm mt-2">
+                                        Could not check the latest status. Retrying...
+                                    </div>
+                                )}
+                            </div>
+                            <Button
+                                icon="pi pi-times"
+                                text
+                                rounded
+                                severity="secondary"
+                                tooltip="Dismiss"
+                                onClick={() => {
+                                    setPollingRequestId(null);
+                                    pollingStartedAt.current = null;
+                                    dispatch(clearBackupRequest());
+                                }}
+                            />
+                        </div>
+                        {pollingRequestId !== null && (
+                            <ProgressBar
+                                mode="indeterminate"
+                                style={{ height: '4px', marginTop: '12px' }}
+                            />
+                        )}
+                    </div>
+                </div>
+            )}
+
+            <div className="col-12">
+                <div className="card">
+                    <TabView
+                        activeIndex={activeTab}
+                        onTabChange={(event) =>
+                            setActiveTab(event.index)
+                        }
+                    >
+                        <TabPanel
+                            header="Backup History"
+                            leftIcon="pi pi-history mr-2"
+                        >
+                            {listLoading && (
+                                <ProgressBar
+                                    mode="indeterminate"
+                                    style={{
+                                        height: '4px',
+                                        marginBottom: '12px'
+                                    }}
+                                />
+                            )}
+
+                            <Toolbar
+                                className="mb-3"
+                                left={
+                                    <span className="font-semibold">
+                                        Database Backups
+                                    </span>
+                                }
+                                right={
+                                    <span className="text-color-secondary text-sm">
+                                        Total: {pagination.total}
+                                    </span>
+                                }
+                            />
+
+                            <DataTable
+                                value={backups}
+                                dataKey="id"
+                                lazy
+                                paginator
+                                first={(currentPage - 1) * rows}
+                                rows={rows}
+                                totalRecords={pagination.total}
+                                rowsPerPageOptions={[5, 10, 25, 50]}
+                                onPage={(event) => {
+                                    setCurrentPage((event.page ?? 0) + 1);
+                                    setRows(event.rows);
+                                }}
+                                loading={listLoading}
+                                stripedRows
+                                responsiveLayout="scroll"
+                                emptyMessage="No backups found"
+                                className="datatable-responsive"
+                                paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
+                                currentPageReportTemplate="Showing {first} to {last} of {totalRecords} backups"
+                            >
+                                <Column
+                                    field="id"
+                                    header="ID"
+                                    style={{ width: '5rem' }}
+                                />
+                                <Column
+                                    header="Backup"
+                                    body={(row: BackupRecord) => (
+                                        <div>
+                                            <div className="font-semibold">
+                                                {row.filename || row.backup_uid || `Backup #${row.id}`}
+                                            </div>
+                                            {row.filename && row.backup_uid && (
+                                                <small className="text-color-secondary">
+                                                    {row.backup_uid}
+                                                </small>
+                                            )}
+                                        </div>
+                                    )}
+                                    style={{ minWidth: '16rem' }}
+                                />
+                                <Column
+                                    header="Type"
+                                    body={(row: BackupRecord) =>
+                                        statusLabel(row.backup_type)
+                                    }
+                                />
+                                <Column
+                                    header="Status"
+                                    body={(row: BackupRecord) =>
+                                        badge(row.status)
+                                    }
+                                />
+                                <Column
+                                    header="Verified"
+                                    body={verifiedBody}
+                                />
+                                <Column
+                                    header="Size"
+                                    body={(row: BackupRecord) =>
+                                        formatBytes(row.file_size)
+                                    }
+                                />
+                                <Column
+                                    header="Source"
+                                    body={(row: BackupRecord) =>
+                                        statusLabel(row.trigger_type)
+                                    }
+                                />
+                                <Column
+                                    header="Created"
+                                    body={(row: BackupRecord) =>
+                                        formatDate(row.created_at)
+                                    }
+                                    style={{ minWidth: '11rem' }}
+                                />
+                                <Column
+                                    header="Actions"
+                                    body={actionsBody}
+                                    style={{ minWidth: '8rem' }}
+                                />
+                            </DataTable>
+                        </TabPanel>
+
+                        <TabPanel
+                            header="Settings"
+                            leftIcon="pi pi-cog mr-2"
+                        >
+                            {settingsLoading ? (
+                                <div className="flex flex-column gap-3">
+                                    <Skeleton height="2rem" />
+                                    <Skeleton height="2rem" />
+                                    <Skeleton height="2rem" />
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                        <div>
+                                            <h5 className="m-0 mb-2">
+                                                Backup Configuration
+                                            </h5>
+                                            <div className="text-color-secondary text-sm">
+                                                Current backend settings. Unsupported scheduling and restore controls are not available.
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            label="Refresh Settings"
+                                            icon="pi pi-refresh"
+                                            outlined
+                                            severity="secondary"
+                                            onClick={() =>
+                                                dispatch(fetchBackupSettings())
+                                                    .catch(() => undefined)
+                                            }
+                                        />
+                                    </div>
+
+                                    {settingsEntries.length === 0 ? (
+                                        <div className="text-color-secondary">
+                                            No settings returned by the API.
+                                        </div>
+                                    ) : (
+                                        <DataTable
+                                            value={settingsEntries.map(
+                                                ([key, value]) => ({
+                                                    key,
+                                                    value
+                                                })
+                                            )}
+                                            dataKey="key"
+                                            stripedRows
+                                            responsiveLayout="scroll"
+                                        >
+                                            <Column
+                                                field="key"
+                                                header="Setting"
+                                                body={(row: any) => (
+                                                    <span className="font-medium">
+                                                        {row.key
+                                                            .replace(/_/g, ' ')
+                                                            .replace(/\b\w/g, (c: string) =>
+                                                                c.toUpperCase()
+                                                            )}
+                                                    </span>
+                                                )}
+                                            />
+                                            <Column
+                                                header="Current Value"
+                                                body={(row: any) => (
+                                                    <span
+                                                        style={{
+                                                            overflowWrap: 'anywhere'
+                                                        }}
+                                                    >
+                                                        {renderSettingValue(
+                                                            row.value
+                                                        )}
+                                                    </span>
+                                                )}
+                                            />
+                                        </DataTable>
+                                    )}
+
+                                    <div className="text-color-secondary text-sm mt-3">
+                                        Settings are currently displayed in read-only mode until the accepted update payload is confirmed.
+                                    </div>
+                                </>
+                            )}
+                        </TabPanel>
+                    </TabView>
+                </div>
+            </div>
+
+            <Dialog
+                visible={confirmDialog}
+                modal
+                header="Create Database Backup"
+                style={{ width: 'min(95vw, 450px)' }}
+                onHide={() => setConfirmDialog(false)}
+                footer={
+                    <div className="flex justify-content-end gap-2">
+                        <Button
+                            label="Cancel"
+                            severity="secondary"
+                            outlined
+                            onClick={() => setConfirmDialog(false)}
+                            disabled={creating}
+                        />
+                        <Button
+                            label="Create Backup"
+                            icon="pi pi-database"
+                            severity="success"
+                            loading={creating}
+                            onClick={handleCreateBackup}
+                        />
+                    </div>
+                }
+            >
+                <div className="flex gap-3 align-items-start">
+                    <i
+                        className="pi pi-info-circle text-primary"
+                        style={{ fontSize: '1.5rem' }}
+                    />
+                    <div>
+                        <p className="mt-0">
+                            Do you want to create a new database backup?
+                        </p>
+                        <p className="text-color-secondary text-sm mb-0">
+                            The request will be sent to the dedicated backup worker.
+                            Existing telecom orders and services will not be modified.
+                        </p>
+                    </div>
+                </div>
+            </Dialog>
+
+            <Dialog
+                visible={detailsDialog}
+                modal
+                header="Backup Details"
+                style={{ width: 'min(95vw, 650px)' }}
+                onHide={() => setDetailsDialog(false)}
+                footer={
+                    <div className="flex justify-content-end gap-2">
+                        <Button
+                            label="Close"
+                            outlined
+                            severity="secondary"
+                            onClick={() => setDetailsDialog(false)}
+                        />
+                        {selectedBackup &&
+                            isDownloadable(selectedBackup) && (
+                                <Button
+                                    label="Download"
+                                    icon="pi pi-download"
+                                    severity="success"
+                                    loading={
+                                        downloadingId === selectedBackup.id
+                                    }
+                                    disabled={downloadingId !== null}
+                                    onClick={() =>
+                                        handleDownload(selectedBackup)
+                                    }
+                                />
+                            )}
+                    </div>
+                }
+            >
+                {detailsLoading ? (
+                    <div className="flex flex-column gap-3">
+                        <Skeleton height="2rem" />
+                        <Skeleton height="2rem" />
+                        <Skeleton height="2rem" />
+                    </div>
+                ) : selectedBackup ? (
+                    <div className="flex flex-column gap-3">
+                        {[
+                            ['ID', selectedBackup.id],
+                            ['Backup UID', selectedBackup.backup_uid],
+                            ['Filename', selectedBackup.filename],
+                            ['Type', selectedBackup.backup_type],
+                            ['Status', selectedBackup.status],
+                            ['Trigger', selectedBackup.trigger_type],
+                            ['Size', formatBytes(selectedBackup.file_size)],
+                            [
+                                'Verified',
+                                selectedBackup.is_verified === true ||
+                                selectedBackup.is_verified === 1
+                                    ? 'Yes'
+                                    : 'No'
+                            ],
+                            [
+                                'Compressed',
+                                selectedBackup.is_compressed === true ||
+                                selectedBackup.is_compressed === 1
+                                    ? 'Yes'
+                                    : 'No'
+                            ],
+                            [
+                                'Encrypted',
+                                selectedBackup.is_encrypted === true ||
+                                selectedBackup.is_encrypted === 1
+                                    ? 'Yes'
+                                    : 'No'
+                            ],
+                            ['Created', formatDate(selectedBackup.created_at)],
+                            ['Completed', formatDate(selectedBackup.completed_at)],
+                            ['SHA-256', selectedBackup.checksum_sha256]
+                        ].map(([title, value]) => (
+                            <div
+                                key={String(title)}
+                                className="flex flex-wrap justify-content-between gap-2 border-bottom-1 surface-border pb-2"
+                            >
+                                <span className="text-color-secondary">
+                                    {title}
+                                </span>
+                                <span
+                                    className="font-medium"
+                                    style={{
+                                        overflowWrap: 'anywhere',
+                                        maxWidth: '100%'
+                                    }}
+                                >
+                                    {String(value ?? '-')}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <span className="text-color-secondary">
+                        Backup details unavailable.
+                    </span>
+                )}
+            </Dialog>
+        </div>
+    );
+};
+
+export default withAuth(BackupManagementPage);

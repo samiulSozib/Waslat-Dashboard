@@ -1,3 +1,4 @@
+import { backupReducer } from './backupReducer';
 import {combineReducers} from 'redux'
 import { currenciesReducer } from './currenciesReducer';
 import { authReducer } from './authReducer';
@@ -98,6 +99,7 @@ const rootReducer=combineReducers({
     voucherReducer:voucherReducer,
     translationReducer: translationReducer,
     paystoreStatusReducer: paystoreStatusReducer,
+    backupReducer: backupReducer,
 
 })
 

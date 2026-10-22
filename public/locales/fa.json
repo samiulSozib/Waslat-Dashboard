@@ -2347,10 +2347,41 @@
   "SERVICE_CATEGORY_TYPE": "نوع دسته‌بندی سرویس",
   "COMPANY_ID": "شناسه شرکت",
   "SERVICE_ID": "شناسه سرویس",
-  "BUNDLE_CODE": "کد بسته"
+  "BUNDLE_CODE": "کد بسته",
 
 
-
+"MENU.BACKUP_MANAGEMENT": "مدیریت نسخه‌های پشتیبان",
+"BACKUP_MANAGEMENT": "مدیریت نسخه‌های پشتیبان",
+"BACKUP_HISTORY": "تاریخچه بکاپ‌ها",
+"BACKUP_SETTINGS": "تنظیمات",
+"BACKUP_TOTAL": "مجموع بکاپ‌ها",
+"BACKUP_COMPLETED": "تکمیل‌شده",
+"BACKUP_FAILED": "ناموفق",
+"BACKUP_VERIFIED": "تأییدشده",
+"BACKUP_NOT_VERIFIED": "تأییدنشده",
+"BACKUP_STORAGE": "فضای ذخیره بکاپ",
+"BACKUP_CREATE": "ایجاد بکاپ",
+"BACKUP_REFRESH": "تازه‌سازی",
+"BACKUP_DATABASE_BACKUPS": "نسخه‌های پشتیبان دیتابیس",
+"BACKUP_FILENAME": "نسخه پشتیبان",
+"BACKUP_TYPE": "نوع",
+"BACKUP_STATUS": "وضعیت",
+"BACKUP_SIZE": "حجم",
+"BACKUP_SOURCE": "منبع",
+"BACKUP_CREATED_AT": "تاریخ ایجاد",
+"BACKUP_ACTIONS": "عملیات",
+"BACKUP_DETAILS": "جزئیات بکاپ",
+"BACKUP_DOWNLOAD": "دانلود",
+"BACKUP_VERIFY": "بررسی صحت",
+"BACKUP_VERIFY_CONFIRM": "آیا می‌خواهید صحت و سلامت این نسخه پشتیبان را بررسی کنید؟",
+"BACKUP_VERIFY_SUCCESS": "صحت نسخه پشتیبان با موفقیت تأیید شد",
+"BACKUP_VERIFY_FAILED": "بررسی صحت نسخه پشتیبان ناموفق بود",
+"BACKUP_CONFIGURATION": "تنظیمات بکاپ",
+"BACKUP_SAVE_SETTINGS": "ذخیره تنظیمات",
+"BACKUP_RETENTION_DAYS": "مدت نگهداری (روز)",
+"BACKUP_COMPRESSION": "فشرده‌سازی دیتابیس",
+"BACKUP_NOTIFY_SUCCESS": "اعلان موفقیت",
+"BACKUP_NOTIFY_FAILURE": "اعلان خطا"
 
 
 

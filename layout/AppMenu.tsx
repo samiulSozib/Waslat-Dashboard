@@ -263,6 +263,13 @@ const AppMenu = () => {
                     to: '/pages/api-keys'
                 },
                 {
+                    label: t('MENU.BACKUP_MANAGEMENT', {
+                        defaultValue: 'Backup Management'
+                    }),
+                    icon: 'pi pi-fw pi-database',
+                    to: '/pages/backup-management'
+                },
+                {
                     label: t('TRANSLATION_WORKSPACE'),
                     icon: 'pi pi-fw pi-question-circle',
                     to: '/pages/translation-workspace?type=bundle'
