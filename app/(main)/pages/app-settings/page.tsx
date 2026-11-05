@@ -1204,8 +1204,7 @@ case 'package-inquiry':
                                 <p className="text-sm text-500 mb-2">
                                     Global Normal Mode: no inquiry anywhere. When enabled, Disabled shows only
                                     manually created bundles; Inherit uses this default provider; Provider uses
-                                    the provider selected in that service's settings.
-                                </p>
+                                    the provider selected in that service&apos;s settings.                                </p>
                                 <p className="text-sm text-500 m-0">
                                     Intended for configured Turkey Internet services only. It does not change the
                                     existing Custom Recharge API Provider or purchase fulfillment provider.
