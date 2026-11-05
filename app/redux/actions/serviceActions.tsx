@@ -16,13 +16,9 @@
 // } from "../constants/serviceConstants";
 // import { Toast } from "primereact/toast";
 // import { Service } from "@/types/interface";
-
-
 // const getAuthToken = () => {
 //     return localStorage.getItem("api_token") || ""; // Get the token or return an empty string if not found
 //   };
-
-
 // // Fetch Service List
 // export const _fetchServiceList = (search:string='') => async (dispatch: Dispatch) => {
 //   dispatch({ type: FETCH_SERVICE_LIST_REQUEST });
@@ -44,8 +40,6 @@
 //     });
 //   }
 // };
-
-
 // // Add Service
 // export const _addService = (newServiceData: Service,toast: React.RefObject<Toast>) => async (dispatch: Dispatch) => {
 //   dispatch({ type: ADD_SERVICE_REQUEST });
@@ -89,8 +83,6 @@
 //       });
 //   }
 // };
-
-
 // // Edit Service
 // export const _editService = (serviceId: number, updatedServiceData: Service,toast: React.RefObject<Toast>) => async (dispatch: Dispatch) => {
 //   dispatch({ type: EDIT_SERVICE_REQUEST });
@@ -134,8 +126,6 @@
 //       });
 //   }
 // };
-
-
 // // Delete Service
 // export const _deleteService = (serviceId: number,toast: React.RefObject<Toast>) => async (dispatch: Dispatch) => {
 //   dispatch({ type: DELETE_SERVICE_REQUEST });
@@ -169,8 +159,6 @@
 //       });
 //   }
 // };
-
-
 import { Dispatch } from "redux";
 import axios from "axios";
 import {
@@ -189,12 +177,12 @@ import {
 } from "../constants/serviceConstants";
 import { Toast } from "primereact/toast";
 import { Service } from "@/types/interface";
-
-
+type ServiceWithInquiry = Service & {
+  package_inquiry_mode?: 'disabled' | 'inherit' | 'provider';
+  package_inquiry_provider_id?: number | null;
+};
 const getAuthToken = () => localStorage.getItem("api_token") || "";
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
-
-
 // Fetch Service List
 export const _fetchServiceList = (search: string = '') => async (dispatch: Dispatch) => {
   dispatch({ type: FETCH_SERVICE_LIST_REQUEST });
@@ -203,14 +191,10 @@ export const _fetchServiceList = (search: string = '') => async (dispatch: Dispa
     const response = await axios.get(`${BASE_URL}/services?search=${search}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-
-
     dispatch({
       type: FETCH_SERVICE_LIST_SUCCESS,
       payload: response.data.data.services,
     });
-
-
     // Optional success toast
     // toast.current?.show({
     //   severity: "success",
@@ -221,14 +205,10 @@ export const _fetchServiceList = (search: string = '') => async (dispatch: Dispa
   } catch (error: any) {
     const errorMessage = error.response?.data?.message || error.message ;
     dispatch({ type: FETCH_SERVICE_LIST_FAIL, payload: errorMessage });
-
-
   }
 };
-
-
 // Add Service
-export const _addService = (newServiceData: Service, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
+export const _addService = (newServiceData: ServiceWithInquiry, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
   dispatch({ type: ADD_SERVICE_REQUEST });
   try {
     const body = {
@@ -241,19 +221,17 @@ export const _addService = (newServiceData: Service, toast: React.RefObject<Toas
       is_robot_enabled: Boolean(newServiceData.is_robot_enabled),
       is_api_enabled: Boolean(newServiceData.is_api_enabled),
       api_provider_id: newServiceData.api_provider_id ?? null,
+      package_inquiry_mode: newServiceData.package_inquiry_mode ?? 'disabled',
+      package_inquiry_provider_id: newServiceData.package_inquiry_mode === 'provider'
+        ? (newServiceData.package_inquiry_provider_id ?? null) : null,
       ...(newServiceData.api_key?.trim() ? { api_key: newServiceData.api_key.trim() } : {})
     };
-
-
-
-
     const token = getAuthToken();
     const response = await axios.post(`${BASE_URL}/services`, body, {
       headers: { Authorization: `Bearer ${token}` },
     });
-
-
-    const newData = { ...newServiceData, id: response.data.data.service.id };
+    if (response.data?.success === false) throw new Error(response.data?.message || 'Service create failed');
+    const newData = { ...newServiceData, ...response.data.data.service };
     dispatch({ type: ADD_SERVICE_SUCCESS, payload: newData });
     toast.current?.show({
       severity: "success",
@@ -261,6 +239,7 @@ export const _addService = (newServiceData: Service, toast: React.RefObject<Toas
       detail: t("SERVICE_ADDED"),
       life: 3000,
     });
+    return true;
   } catch (error: any) {
     let errorMessage = t("SERVICE_ADD_FAILED");
     if (error.response?.status === 422 && error.response.data?.errors) {
@@ -270,8 +249,6 @@ export const _addService = (newServiceData: Service, toast: React.RefObject<Toas
     } else if (error.response?.data?.message) {
       errorMessage = error.response.data.message;
     }
-
-
     dispatch({ type: ADD_SERVICE_FAIL, payload: errorMessage });
     toast.current?.show({
       severity: "error",
@@ -279,12 +256,11 @@ export const _addService = (newServiceData: Service, toast: React.RefObject<Toas
       detail: errorMessage,
       life: 3000,
     });
+    return false;
   }
 };
-
-
 // Edit Service
-export const _editService = (serviceId: number, updatedServiceData: Service, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
+export const _editService = (serviceId: number, updatedServiceData: ServiceWithInquiry, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
   dispatch({ type: EDIT_SERVICE_REQUEST });
   try {
     const body = {
@@ -297,17 +273,17 @@ export const _editService = (serviceId: number, updatedServiceData: Service, toa
       is_robot_enabled: Boolean(updatedServiceData.is_robot_enabled),
       is_api_enabled: Boolean(updatedServiceData.is_api_enabled),
       api_provider_id: updatedServiceData.api_provider_id ?? null,
+      package_inquiry_mode: updatedServiceData.package_inquiry_mode ?? 'disabled',
+      package_inquiry_provider_id: updatedServiceData.package_inquiry_mode === 'provider'
+        ? (updatedServiceData.package_inquiry_provider_id ?? null) : null,
       ...(updatedServiceData.api_key?.trim() ? { api_key: updatedServiceData.api_key.trim() } : {})
     };
-
-
     const token = getAuthToken();
     const response = await axios.put(`${BASE_URL}/services/${serviceId}`, body, {
       headers: { Authorization: `Bearer ${token}` },
     });
-
-
-    const newData = { ...updatedServiceData, id: response.data.data.service.id };
+    if (response.data?.success === false) throw new Error(response.data?.message || 'Service update failed');
+    const newData = { ...updatedServiceData, ...response.data.data.service };
     dispatch({ type: EDIT_SERVICE_SUCCESS, payload: newData });
     toast.current?.show({
       severity: "success",
@@ -315,6 +291,7 @@ export const _editService = (serviceId: number, updatedServiceData: Service, toa
       detail: t("SERVICE_UPDATED"),
       life: 3000,
     });
+    return true;
   } catch (error: any) {
     let errorMessage = t("SERVICE_UPDATE_FAILED");
     if (error.response?.status === 422 && error.response.data?.errors) {
@@ -324,8 +301,6 @@ export const _editService = (serviceId: number, updatedServiceData: Service, toa
     } else if (error.response?.data?.message) {
       errorMessage = error.response.data.message;
     }
-
-
     dispatch({ type: EDIT_SERVICE_FAIL, payload: errorMessage });
     toast.current?.show({
       severity: "error",
@@ -333,10 +308,9 @@ export const _editService = (serviceId: number, updatedServiceData: Service, toa
       detail: errorMessage,
       life: 3000,
     });
+    return false;
   }
 };
-
-
 // Delete Service
 export const _deleteService = (serviceId: number, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
   dispatch({ type: DELETE_SERVICE_REQUEST });
@@ -345,8 +319,6 @@ export const _deleteService = (serviceId: number, toast: React.RefObject<Toast>,
     await axios.delete(`${BASE_URL}/services/${serviceId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-
-
     dispatch({ type: DELETE_SERVICE_SUCCESS, payload: serviceId });
     toast.current?.show({
       severity: "success",
@@ -365,18 +337,12 @@ export const _deleteService = (serviceId: number, toast: React.RefObject<Toast>,
     });
   }
 };
-
-
-
-
 export const _deleteSelectedServices = async (
   servicesIds: number[],
   toast: React.RefObject<Toast>,
   t: (key: string) => string
 ) => {
   const token = getAuthToken();
-
-
   try {
     for (const id of servicesIds) {
       await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/services/${id}`, {
@@ -385,8 +351,6 @@ export const _deleteSelectedServices = async (
         },
       });
     }
-
-
     toast.current?.show({
       severity: 'success',
       summary: t('SUCCESS'),
@@ -402,9 +366,6 @@ export const _deleteSelectedServices = async (
     });
   }
 };
-
-
-
 // Partial update for inline table settings. Does not touch other service fields.
 export const _updateServiceSettings = (
   serviceId: number,

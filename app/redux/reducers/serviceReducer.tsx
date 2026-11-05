@@ -13,19 +13,16 @@ import {
   EDIT_SERVICE_SUCCESS,
   EDIT_SERVICE_FAIL,
 } from '../constants/serviceConstants';
-
 interface State {
   loading: boolean;
   services: Service[];
   error: string | null;
 }
-
 const initialState: State = {
   loading: false,
   services: [],
   error: null,
 };
-
 const serviceReducer = (state = initialState, action: any): State => {
   switch (action.type) {
     case FETCH_SERVICE_LIST_REQUEST:
@@ -81,5 +78,4 @@ const serviceReducer = (state = initialState, action: any): State => {
       return state;
   }
 };
-
 export default serviceReducer;

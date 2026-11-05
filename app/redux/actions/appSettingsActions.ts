@@ -1,8 +1,7 @@
-// actions/appSettingsActions.ts
+// app/redux/actions/appSettingsActions.ts
 import { Dispatch } from "redux";
 import axios from "axios";
 import { Toast } from "primereact/toast";
-
 import {
   FETCH_APP_SETTINGS_REQUEST,
   FETCH_APP_SETTINGS_SUCCESS,
@@ -15,123 +14,62 @@ import {
   RESET_APP_SETTINGS_FAIL
 } from '../constants/appSettingsConstants';
 import { AppSettings } from '@/types/interface';
-
-const getAuthToken = () => {
-  return localStorage.getItem("api_token") || "";
-};
-
-// FETCH APP SETTINGS ACTION
+const getAuthToken = () => localStorage.getItem('api_token') || '';
 export const fetchAppSettings = () => async (dispatch: Dispatch) => {
   dispatch({ type: FETCH_APP_SETTINGS_REQUEST });
-
   try {
-    const token = getAuthToken();
     const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/app-settings`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${getAuthToken()}` }
     });
-
-    dispatch({
-      type: FETCH_APP_SETTINGS_SUCCESS,
-      payload: response.data.data.settings
-    });
+    dispatch({ type: FETCH_APP_SETTINGS_SUCCESS, payload: response.data.data.settings });
   } catch (error: any) {
-    dispatch({
-      type: FETCH_APP_SETTINGS_FAIL,
-      payload: error.message
-    });
+    dispatch({ type: FETCH_APP_SETTINGS_FAIL, payload: error?.response?.data?.message || error.message });
   }
 };
-
-// UPDATE APP SETTINGS ACTION
 export const updateAppSettings = (
   settings: Partial<AppSettings>,
   toast: React.RefObject<Toast>,
   t: (key: string) => string
-) => async (dispatch: Dispatch) => {
+) => async (dispatch: Dispatch): Promise<boolean> => {
   dispatch({ type: UPDATE_APP_SETTINGS_REQUEST });
-
   try {
-    const token = getAuthToken();
     const response = await axios.put(
       `${process.env.NEXT_PUBLIC_BASE_URL}/app-settings`,
       settings,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
         },
       }
     );
-
-    dispatch({
-      type: UPDATE_APP_SETTINGS_SUCCESS,
-      payload: response.data.data.settings,
-    });
-
-    toast.current?.show({
-      severity: 'success',
-      summary: t("SUCCESS"),
-      detail: t("SETTINGS_UPDATED"),
-      life: 3000
-    });
+    if (response.data?.success === false) {
+      throw new Error(response.data?.message || 'Settings update failed');
+    }
+    dispatch({ type: UPDATE_APP_SETTINGS_SUCCESS, payload: response.data.data.settings });
+    toast.current?.show({ severity: 'success', summary: t('SUCCESS'), detail: t('SETTINGS_UPDATED'), life: 3000 });
+    return true;
   } catch (error: any) {
-    dispatch({
-      type: UPDATE_APP_SETTINGS_FAIL,
-      payload: error.message,
-    });
-
-    toast.current?.show({
-      severity: 'error',
-      summary: t("ERROR"),
-      detail: t("SETTINGS_UPDATE_FAILED"),
-      life: 3000
-    });
+    dispatch({ type: UPDATE_APP_SETTINGS_FAIL, payload: error?.response?.data?.message || error.message });
+    toast.current?.show({ severity: 'error', summary: t('ERROR'), detail: t('SETTINGS_UPDATE_FAILED'), life: 3000 });
+    return false;
   }
 };
-
-// RESET APP SETTINGS ACTION
 export const resetAppSettings = (
   toast: React.RefObject<Toast>,
   t: (key: string) => string
 ) => async (dispatch: Dispatch) => {
   dispatch({ type: RESET_APP_SETTINGS_REQUEST });
-
   try {
-    const token = getAuthToken();
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_BASE_URL}/app-settings/reset`,
       {},
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+      { headers: { Authorization: `Bearer ${getAuthToken()}` } }
     );
-
-    dispatch({
-      type: RESET_APP_SETTINGS_SUCCESS,
-      payload: response.data.data.settings,
-    });
-
-    toast.current?.show({
-      severity: 'success',
-      summary: t("SUCCESS"),
-      detail: t("SETTINGS_RESET"),
-      life: 3000
-    });
+    dispatch({ type: RESET_APP_SETTINGS_SUCCESS, payload: response.data.data.settings });
+    toast.current?.show({ severity: 'success', summary: t('SUCCESS'), detail: t('SETTINGS_RESET'), life: 3000 });
   } catch (error: any) {
-    dispatch({
-      type: RESET_APP_SETTINGS_FAIL,
-      payload: error.message,
-    });
-
-    toast.current?.show({
-      severity: 'error',
-      summary: t("ERROR"),
-      detail: t("SETTINGS_RESET_FAILED"),
-      life: 3000
-    });
+    dispatch({ type: RESET_APP_SETTINGS_FAIL, payload: error?.response?.data?.message || error.message });
+    toast.current?.show({ severity: 'error', summary: t('ERROR'), detail: t('SETTINGS_RESET_FAILED'), life: 3000 });
   }
 };

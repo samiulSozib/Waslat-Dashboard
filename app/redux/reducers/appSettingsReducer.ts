@@ -1,4 +1,3 @@
-// reducers/appSettingsReducer.ts
 import {
   FETCH_APP_SETTINGS_REQUEST,
   FETCH_APP_SETTINGS_SUCCESS,
@@ -11,19 +10,16 @@ import {
   RESET_APP_SETTINGS_FAIL
 } from '../constants/appSettingsConstants';
 import { AppSettings } from '@/types/interface';
-
 interface AppSettingsState {
   loading: boolean;
   settings: AppSettings | null;
   error: string | null;
 }
-
 const initialState: AppSettingsState = {
   loading: false,
   settings: null,
   error: null,
 };
-
 export const appSettingsReducer = (state = initialState, action: any): AppSettingsState => {
   switch (action.type) {
     case FETCH_APP_SETTINGS_REQUEST:
@@ -34,7 +30,6 @@ export const appSettingsReducer = (state = initialState, action: any): AppSettin
         loading: true,
         error: null,
       };
-
     case FETCH_APP_SETTINGS_SUCCESS:
     case UPDATE_APP_SETTINGS_SUCCESS:
     case RESET_APP_SETTINGS_SUCCESS:
@@ -44,7 +39,6 @@ export const appSettingsReducer = (state = initialState, action: any): AppSettin
         settings: action.payload,
         error: null,
       };
-
     case FETCH_APP_SETTINGS_FAIL:
     case UPDATE_APP_SETTINGS_FAIL:
     case RESET_APP_SETTINGS_FAIL:
@@ -53,7 +47,6 @@ export const appSettingsReducer = (state = initialState, action: any): AppSettin
         loading: false,
         error: action.payload,
       };
-
     default:
       return state;
   }

@@ -27,35 +27,26 @@ import {
 } from "../constants/providerConstants";
 import { Provider } from "@/types/interface";
 import { Toast } from "primereact/toast";
-
 const getAuthToken = () => {
     return localStorage.getItem("api_token") || "";
 };
-
 // Fetch Providers
 export const _fetchProviders = (page: number = 1, search: string = '', filters = {}) => async (dispatch: Dispatch) => {
     dispatch({ type: FETCH_PROVIDERS_REQUEST });
     try {
         const token = getAuthToken();
         const queryParams = new URLSearchParams();
-
         queryParams.append('page', String(page));
         queryParams.append('search', search);
-
         Object.entries(filters).forEach(([key, value]) => {
             if (value !== null && value !== undefined && value !== '') {
                 queryParams.append(key, String(value));
             }
         });
-
-
         const queryString = queryParams.toString();
-
         const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api-providers?${queryString}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
-
-
         dispatch({
             type: FETCH_PROVIDERS_SUCCESS,
             payload: {
@@ -74,7 +65,6 @@ export const _fetchProviders = (page: number = 1, search: string = '', filters =
         dispatch({ type: FETCH_PROVIDERS_FAIL, payload: error.message });
     }
 };
-
 // Add Provider
 export const _addProvider = (provider: Provider, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
     dispatch({ type: ADD_PROVIDER_REQUEST });
@@ -103,7 +93,6 @@ export const _addProvider = (provider: Provider, toast: React.RefObject<Toast>, 
         });
     }
 };
-
 // Edit Provider
 export const _editProvider = (id: number, updatedData: Provider, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
     dispatch({ type: EDIT_PROVIDER_REQUEST });
@@ -132,7 +121,6 @@ export const _editProvider = (id: number, updatedData: Provider, toast: React.Re
         });
     }
 };
-
 // Delete Provider
 export const _deleteProvider = (id: number, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
     dispatch({ type: DELETE_PROVIDER_REQUEST });
@@ -158,7 +146,6 @@ export const _deleteProvider = (id: number, toast: React.RefObject<Toast>, t: (k
         });
     }
 };
-
 // Delete Selected Providers
 export const _deleteSelectedProviders = async (
     providerIds: number[],
@@ -166,7 +153,6 @@ export const _deleteSelectedProviders = async (
     t: (key: string) => string
 ) => {
     const token = getAuthToken();
-
     try {
         for (const id of providerIds) {
             await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/api-providers/${id}`, {
@@ -175,7 +161,6 @@ export const _deleteSelectedProviders = async (
                 },
             });
         }
-
         toast.current?.show({
             severity: 'success',
             summary: t('SUCCESS'),
@@ -191,9 +176,6 @@ export const _deleteSelectedProviders = async (
         });
     }
 };
-
-
-
 // Toggle Provider
 export const _toggleProvider = (
     id: number,
@@ -209,11 +191,8 @@ export const _toggleProvider = (
             { is_active: isActive },
             { headers: { Authorization: `Bearer ${token}` } }
         );
-
         const updatedProvider = response.data.data.provider;
-
         dispatch({ type: TOGGLE_PROVIDER_SUCCESS, payload: updatedProvider });
-
         toast.current?.show({
             severity: 'success',
             summary: t('SUCCESS'),
@@ -232,8 +211,6 @@ export const _toggleProvider = (
         });
     }
 };
-
-
 // Fetch categories for a specific provider (like mzr)
 export const fetchProviderCategories = (providerCode: string) => async (dispatch: Dispatch) => {
     dispatch({ type: FETCH_PROVIDER_CATEGORIES_REQUEST });
@@ -248,14 +225,11 @@ export const fetchProviderCategories = (providerCode: string) => async (dispatch
                 },
             }
         );
-
         const categories = response.data.data.categories;
-
         dispatch({
             type: FETCH_PROVIDER_CATEGORIES_SUCCESS,
             payload: categories,
         });
-
         return categories;
     } catch (error: any) {
         dispatch({
@@ -265,7 +239,6 @@ export const fetchProviderCategories = (providerCode: string) => async (dispatch
         throw error;
     }
 };
-
 // Fetch products for a specific category
 export const fetchCategoryProducts = (providerCode: string, categoryId: number) => async (dispatch: Dispatch) => {
     dispatch({ type: FETCH_CATEGORY_PRODUCTS_REQUEST });
@@ -280,11 +253,9 @@ export const fetchCategoryProducts = (providerCode: string, categoryId: number) 
                 },
             }
         );
-
         const products = response.data.data.products;
         const categoryName = response.data.data.category_name;
         const purchaseType = response.data.data.purchase_type;
-
         dispatch({
             type: FETCH_CATEGORY_PRODUCTS_SUCCESS,
             payload: {
@@ -293,7 +264,6 @@ export const fetchCategoryProducts = (providerCode: string, categoryId: number) 
                 purchaseType,
             },
         });
-
         return { products, categoryName, purchaseType };
     } catch (error: any) {
         dispatch({
@@ -303,12 +273,10 @@ export const fetchCategoryProducts = (providerCode: string, categoryId: number) 
         throw error;
     }
 };
-
 // Clear selected category data
 export const clearSelectedCategory = () => (dispatch: Dispatch) => {
     dispatch({ type: CLEAR_SELECTED_CATEGORY });
 };
-
 // Clear all provider products data
 export const clearProviderProductsData = () => (dispatch: Dispatch) => {
     dispatch({ type: CLEAR_PROVIDER_PRODUCTS_DATA });
