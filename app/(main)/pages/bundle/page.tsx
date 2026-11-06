@@ -1349,11 +1349,37 @@ const BundlePage = () => {
         );
     };
 
+    // This flag indicates HOW the bundle was created, not which supplier it is bound to.
+    // Admin-created bundles can also have an API provider, so api_provider_id alone
+    // must not be used to classify packages created by a number-specific inquiry.
+    const isAutoInquiryBundle = (rowData: Bundle): boolean => {
+        const flag = (rowData as Bundle & { is_auto_imported?: boolean | number | string }).is_auto_imported;
+        return flag === true || flag === 1 || flag === '1' || flag === 'true';
+    };
+
+    const bundleSourceText: Record<string, { inquiry: string; regular: string }> = {
+        en: { inquiry: 'Inquiry-created', regular: 'Regular / Admin-created' },
+        ar: { inquiry: 'أُنشئت بالاستعلام', regular: 'عادية / أنشأها المشرف' },
+        bn: { inquiry: 'ইনকোয়ারি থেকে তৈরি', regular: 'সাধারণ / অ্যাডমিন তৈরি' },
+        fa: { inquiry: 'ایجادشده از استعلام', regular: 'عادی / ایجادشده توسط ادمین' },
+        ps: { inquiry: 'د استعلام له لارې جوړ شوی', regular: 'عادي / د اډمین لخوا جوړ شوی' },
+        tr: { inquiry: 'Sorgudan oluşturulan', regular: 'Normal / Yönetici tarafından oluşturulan' }
+    };
+    const sourceText = bundleSourceText[i18n.language.split('-')[0]] || bundleSourceText.en;
+
     const bundleTitleBodyTemplate = (rowData: Bundle) => {
         return (
             <>
                 <span className="p-column-title">Bundle Title</span>
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{rowData.bundle_title}</span>
+                <div className="flex flex-column gap-1 align-items-start">
+                    <span style={{ fontSize: '0.8rem', color: '#666' }}>{rowData.bundle_title}</span>
+                    {isAutoInquiryBundle(rowData) && (
+                        <span className="bundle-inquiry-label">
+                            <i className="pi pi-sync" aria-hidden="true" />
+                            {sourceText.inquiry}
+                        </span>
+                    )}
+                </div>
             </>
         );
     };
@@ -1602,6 +1628,33 @@ const BundlePage = () => {
     return (
         <div className="grid crud-demo -m-5">
             <style>{`
+                /* Visual origin indicator: does not change bundle data or behavior. */
+                .bundle-source-table .p-datatable-tbody > tr.bundle-auto-inquiry-row > td {
+                    background-color: #edf7ff !important;
+                }
+                .bundle-source-table .p-datatable-tbody > tr.bundle-auto-inquiry-row:hover > td {
+                    background-color: #e3f1ff !important;
+                }
+                .bundle-source-table .p-datatable-tbody > tr.bundle-auto-inquiry-row.p-highlight > td {
+                    background-color: #d6e9ff !important;
+                }
+                .bundle-inquiry-label {
+                    display: inline-flex;
+                    gap: 5px;
+                    align-items: center;
+                    align-self: flex-start;
+                    color: #1d4ed8;
+                    background-color: #dbeafe;
+                    border: 1px solid #bfdbfe;
+                    border-radius: 999px;
+                    padding: 2px 7px;
+                    font-size: 0.67rem;
+                    font-weight: 600;
+                    line-height: 1.35;
+                }
+                .bundle-inquiry-label .pi {
+                    font-size: 0.65rem;
+                }
                 /* ManshorPay dropdown overlay fixes, especially for RTL languages */
                 .manshorpay-dropdown-panel {
                     max-width: calc(100vw - 24px) !important;
@@ -1680,13 +1733,25 @@ const BundlePage = () => {
                     <Toast ref={toast} />
                     <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
 
+                    <div className="flex flex-wrap align-items-center gap-3 mb-3 text-sm">
+                        <span className="flex align-items-center gap-2">
+                            <span aria-hidden="true" style={{ width: 13, height: 13, border: '1px solid #bfdbfe', borderRadius: 3, background: '#edf7ff', display: 'inline-block' }} />
+                            {sourceText.inquiry}
+                        </span>
+                        <span className="flex align-items-center gap-2">
+                            <span aria-hidden="true" style={{ width: 13, height: 13, border: '1px solid #d1d5db', borderRadius: 3, background: '#ffffff', display: 'inline-block' }} />
+                            {sourceText.regular}
+                        </span>
+                    </div>
+
                     <DataTable
                         ref={dt}
                         value={bundles}
                         selection={selectedBundles}
                         onSelectionChange={(e) => setSelectedBundles(e.value as any)}
                         dataKey="id"
-                        className="datatable-responsive"
+                        className="datatable-responsive bundle-source-table"
+                        rowClassName={(rowData: Bundle) => ({ 'bundle-auto-inquiry-row': isAutoInquiryBundle(rowData) })}
                         globalFilter={globalFilter}
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
