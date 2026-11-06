@@ -71,6 +71,9 @@ const BundlePage = () => {
     const [deleteServicesDialog, setDeleteServicesDialog] = useState(false);
     const [bundle, setBundle] = useState<Bundle>(emptyBundle);
     const [selectedBundles, setSelectedBundles] = useState(null);
+    // Presentation-only filter. The admin bundle list is server-paginated;
+    // this toggles which rows are visible on the CURRENT loaded page.
+    const [bundleSourceFilter, setBundleSourceFilter] = useState<'all' | 'inquiry' | 'regular'>('all');
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
@@ -555,12 +558,17 @@ const BundlePage = () => {
     };
 
     const onCellEditComplete = (e: any) => {
-        const { newRowData, index } = e;
+        const { newRowData } = e;
+        // Use the stable bundle ID: a source filter changes visible row indices.
+        const original = (Array.isArray(bundles) ? bundles : []).find(
+            (item: Bundle) => String(item.id) === String(newRowData.id)
+        );
+        if (!original) return;
 
-        if (newRowData.admin_buying_price !== bundles[index]?.admin_buying_price ||
-            newRowData.buying_price !== bundles[index]?.buying_price ||
-            newRowData.selling_price !== bundles[index]?.selling_price) {
-            dispatch(_editBundle(newRowData.id, newRowData, toast, t))
+        if (newRowData.admin_buying_price !== original.admin_buying_price ||
+            newRowData.buying_price !== original.buying_price ||
+            newRowData.selling_price !== original.selling_price) {
+            dispatch(_editBundle(newRowData.id, newRowData, toast, t));
         }
     };
 
@@ -1357,15 +1365,19 @@ const BundlePage = () => {
         return flag === true || flag === 1 || flag === '1' || flag === 'true';
     };
 
-    const bundleSourceText: Record<string, { inquiry: string; regular: string }> = {
-        en: { inquiry: 'Inquiry-created', regular: 'Regular / Admin-created' },
-        ar: { inquiry: 'أُنشئت بالاستعلام', regular: 'عادية / أنشأها المشرف' },
-        bn: { inquiry: 'ইনকোয়ারি থেকে তৈরি', regular: 'সাধারণ / অ্যাডমিন তৈরি' },
-        fa: { inquiry: 'ایجادشده از استعلام', regular: 'عادی / ایجادشده توسط ادمین' },
-        ps: { inquiry: 'د استعلام له لارې جوړ شوی', regular: 'عادي / د اډمین لخوا جوړ شوی' },
-        tr: { inquiry: 'Sorgudan oluşturulan', regular: 'Normal / Yönetici tarafından oluşturulan' }
+    const bundleSourceText: Record<string, { inquiry: string; regular: string; pageOnly: string; empty: string }> = {
+        en: { inquiry: 'Inquiry-created', regular: 'Regular / Admin-created', pageOnly: 'Filter applies to this page only', empty: 'No matching bundles on this page' },
+        ar: { inquiry: 'أُنشئت بالاستعلام', regular: 'عادية / أنشأها المشرف', pageOnly: 'التصفية للصفحة الحالية فقط', empty: 'لا توجد باقات مطابقة في هذه الصفحة' },
+        bn: { inquiry: 'ইনকোয়ারি থেকে তৈরি', regular: 'সাধারণ / অ্যাডমিন তৈরি', pageOnly: 'ফিল্টার শুধু বর্তমান পৃষ্ঠায় প্রযোজ্য', empty: 'এই পৃষ্ঠায় কোনো প্যাকেজ মেলেনি' },
+        fa: { inquiry: 'ایجادشده از استعلام', regular: 'عادی / ایجادشده توسط ادمین', pageOnly: 'فیلتر فقط روی همین صفحه اعمال می‌شود', empty: 'در این صفحه بسته‌ای مطابق فیلتر یافت نشد' },
+        ps: { inquiry: 'د استعلام له لارې جوړ شوی', regular: 'عادي / د اډمین لخوا جوړ شوی', pageOnly: 'فلټر یوازې په همدې پاڼه پلي کېږي', empty: 'په دې پاڼه کې ورته بسته ونه موندل شوه' },
+        tr: { inquiry: 'Sorgudan oluşturulan', regular: 'Normal / Yönetici tarafından oluşturulan', pageOnly: 'Filtre yalnızca bu sayfaya uygulanır', empty: 'Bu sayfada eşleşen paket yok' }
     };
     const sourceText = bundleSourceText[i18n.language.split('-')[0]] || bundleSourceText.en;
+    const displayedBundles: Bundle[] = (Array.isArray(bundles) ? bundles : []).filter((item: Bundle) => {
+        if (bundleSourceFilter === 'all') return true;
+        return isAutoInquiryBundle(item) === (bundleSourceFilter === 'inquiry');
+    });
 
     const bundleTitleBodyTemplate = (rowData: Bundle) => {
         return (
@@ -1734,26 +1746,37 @@ const BundlePage = () => {
                     <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
 
                     <div className="flex flex-wrap align-items-center gap-3 mb-3 text-sm">
-                        <span className="flex align-items-center gap-2">
-                            <span aria-hidden="true" style={{ width: 13, height: 13, border: '1px solid #bfdbfe', borderRadius: 3, background: '#edf7ff', display: 'inline-block' }} />
+                        <label className="flex align-items-center gap-2 cursor-pointer" title={sourceText.pageOnly} style={{ padding: '6px 10px', borderRadius: 8, backgroundColor: '#edf7ff', border: '1px solid #bfdbfe' }}>
+                            <input
+                                type="checkbox"
+                                checked={bundleSourceFilter === 'inquiry'}
+                                onChange={(e) => setBundleSourceFilter(e.target.checked ? 'inquiry' : 'all')}
+                                style={{ accentColor: '#2563eb', width: 16, height: 16, cursor: 'pointer' }}
+                            />
                             {sourceText.inquiry}
-                        </span>
-                        <span className="flex align-items-center gap-2">
-                            <span aria-hidden="true" style={{ width: 13, height: 13, border: '1px solid #d1d5db', borderRadius: 3, background: '#ffffff', display: 'inline-block' }} />
+                        </label>
+                        <label className="flex align-items-center gap-2 cursor-pointer" title={sourceText.pageOnly} style={{ padding: '6px 10px', borderRadius: 8, backgroundColor: '#f8fafc', border: '1px solid #d1d5db' }}>
+                            <input
+                                type="checkbox"
+                                checked={bundleSourceFilter === 'regular'}
+                                onChange={(e) => setBundleSourceFilter(e.target.checked ? 'regular' : 'all')}
+                                style={{ accentColor: '#64748b', width: 16, height: 16, cursor: 'pointer' }}
+                            />
                             {sourceText.regular}
-                        </span>
+                        </label>
+                        <small className="text-500">{sourceText.pageOnly}</small>
                     </div>
 
                     <DataTable
                         ref={dt}
-                        value={bundles}
+                        value={displayedBundles}
                         selection={selectedBundles}
                         onSelectionChange={(e) => setSelectedBundles(e.value as any)}
                         dataKey="id"
                         className="datatable-responsive bundle-source-table"
                         rowClassName={(rowData: Bundle) => ({ 'bundle-auto-inquiry-row': isAutoInquiryBundle(rowData) })}
                         globalFilter={globalFilter}
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
+                        emptyMessage={bundleSourceFilter === 'all' ? t('DATA_TABLE.TABLE.NO_DATA') : sourceText.empty}
                         dir={isRTL() ? 'rtl' : 'ltr'}
                         style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         scrollHeight='flex'
