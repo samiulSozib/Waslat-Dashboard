@@ -38,15 +38,28 @@ import { _fetchProviders } from '@/app/redux/actions/providerActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { Chips } from 'primereact/chips';
 import { MultiSelect } from 'primereact/multiselect';
+
 type AppSettingsWithInquiry = AppSettings & {
     default_package_inquiry_provider_id?: number | null;
+    paystore_dynamic_bundle_markup_mode?: 'percentage' | 'fixed';
+    paystore_dynamic_bundle_markup_percentage?: number | null;
+    paystore_dynamic_bundle_markup_fixed_amount?: number | null;
+    auto_bind_queried_packages?: boolean;
 };
+
+
 const isActiveInquiryProvider = (provider: Provider): boolean => {
     const code = String(provider.code ?? '').trim().toLowerCase();
-    const active = String(provider.is_active ?? '').trim().toLowerCase();
-    return ['paystore', 'manshorpay'].includes(code)
-        && (active === 'true' || active === '1');
+
+    const active = String(
+        provider.is_active ?? ''
+    ).trim().toLowerCase();
+
+    return ['paystore', 'manshorpay'].includes(code) &&
+        (active === 'true' || active === '1');
 };
+
+
 const emptySettings: AppSettingsWithInquiry = {
     is_instant_confirm: false,
     maintenance_mode: false,
@@ -107,6 +120,10 @@ const emptySettings: AppSettingsWithInquiry = {
     setaragan_admin_buying_price_percentage: 0,
     custom_recharge_api_provider_id: null,
     default_package_inquiry_provider_id: null,
+    paystore_dynamic_bundle_markup_mode: 'percentage',
+    paystore_dynamic_bundle_markup_percentage: 10,
+    paystore_dynamic_bundle_markup_fixed_amount: 0,
+    auto_bind_queried_packages: true,
     // New Telegram settings
     telegram_enabled: false,
     telegram_send_payments: false,
@@ -118,6 +135,7 @@ const emptySettings: AppSettingsWithInquiry = {
     telegram_send_vouchers: false,
     telegram_voucher_chat_ids: []
 };
+
 const emptySupportContact: SupportContacts = {
     id: 0,
     title: "",
@@ -131,6 +149,7 @@ const emptySupportContact: SupportContacts = {
         website: ""
     }
 };
+
 const AppSettingsPage = () => {
     const [settings, setSettings] = useState<AppSettingsWithInquiry>(emptySettings);
     const [settingsDialog, setSettingsDialog] = useState(false);
@@ -138,12 +157,14 @@ const AppSettingsPage = () => {
     const [activeTab, setActiveTab] = useState('general');
     const [mobileNavVisible, setMobileNavVisible] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+
     // Support Contacts States
     const [supportContacts, setSupportContacts] = useState<SupportContacts[]>([]);
     const [supportContactDialog, setSupportContactDialog] = useState(false);
     const [deleteSupportContactDialog, setDeleteSupportContactDialog] = useState(false);
     const [selectedSupportContact, setSelectedSupportContact] = useState<SupportContacts>(emptySupportContact);
     const [supportContactSubmitted, setSupportContactSubmitted] = useState(false);
+
     const toast = useRef<Toast>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { loading, settings: reduxSettings } = useSelector((state: any) => state.appSettingsReducer);
@@ -152,39 +173,43 @@ const AppSettingsPage = () => {
     const { currencies } = useSelector((state: any) => state.currenciesReducer);
     const { providers } = useSelector((state: any) => state.providerReducer);
     const { telegramChatIds } = useSelector((state: any) => state.telegramReducer);
-    const inquiryProviderOptions = [
-        { label: 'Normal Mode — Disable Package Inquiry', value: 'none' },
-        ...(Array.isArray(providers) ? providers : [])
-            .filter((provider: Provider) => isActiveInquiryProvider(provider))
-            .map((provider: Provider) => ({
-                label: `${provider.name} (${provider.code})`,
-                value: Number(provider.id)
-            }))
-    ];
+    const inquiryProviderOptions = (Array.isArray(providers) ? providers : [])
+        .filter((provider: Provider) => isActiveInquiryProvider(provider))
+        .map((provider: Provider) => ({
+            label: `${provider.name} (${provider.code})`,
+            value: Number(provider.id)
+        }));
+
     useEffect(() => {
         dispatch(fetchAppSettings());
         dispatch(_fetchCurrencies());
         dispatch(_fetchSupportContacts());
         dispatch(_fetchProviders(1, '', { per_page: 100 }));
         dispatch(_fetchTelegramList());
+
         // Check if device is mobile
         const checkIsMobile = () => {
             setIsMobile(window.innerWidth <= 768);
         };
+
         checkIsMobile();
         window.addEventListener('resize', checkIsMobile);
+
         return () => {
             window.removeEventListener('resize', checkIsMobile);
         };
     }, [dispatch]);
+
     useEffect(() => {
         if (reduxSupportContacts) {
             setSupportContacts(reduxSupportContacts);
         }
     }, [reduxSupportContacts]);
+
     const selectedCurrency = currencies?.find((currency: Currency) =>
         currency.code === settings.default_currency
     );
+
     // Update exchange rate when currency changes
     useEffect(() => {
         if (selectedCurrency && settings.default_currency) {
@@ -194,24 +219,40 @@ const AppSettingsPage = () => {
             }));
         }
     }, [settings.default_currency, selectedCurrency]);
+
     useEffect(() => {
         if (reduxSettings) {
             setSettings({
                 ...reduxSettings,
                 default_package_inquiry_provider_id: reduxSettings.default_package_inquiry_provider_id == null
-                    ? null : Number(reduxSettings.default_package_inquiry_provider_id)
+                    ? null : Number(reduxSettings.default_package_inquiry_provider_id),
+                paystore_dynamic_bundle_markup_mode:
+                    reduxSettings.paystore_dynamic_bundle_markup_mode === 'fixed' ? 'fixed' : 'percentage',
+                paystore_dynamic_bundle_markup_percentage:
+                    reduxSettings.paystore_dynamic_bundle_markup_percentage == null
+                        ? 10 : Number(reduxSettings.paystore_dynamic_bundle_markup_percentage),
+                paystore_dynamic_bundle_markup_fixed_amount:
+                    reduxSettings.paystore_dynamic_bundle_markup_fixed_amount == null
+                        ? 0 : Number(reduxSettings.paystore_dynamic_bundle_markup_fixed_amount),
+                auto_bind_queried_packages:
+                    reduxSettings.auto_bind_queried_packages == null
+                        ? true : reduxSettings.auto_bind_queried_packages === true || reduxSettings.auto_bind_queried_packages === 1
             });
         }
     }, [reduxSettings]);
+
     const openSettings = () => {
         setSettingsDialog(true);
     };
+
     const hideDialog = () => {
         setSubmitted(false);
         setSettingsDialog(false);
     };
+
     const saveSettings = async () => {
         setSubmitted(true);
+
         if (!settings.app_name || !settings.support_email || !settings.support_phone) {
             toast.current?.show({
                 severity: 'error',
@@ -227,29 +268,36 @@ const AppSettingsPage = () => {
             setSubmitted(false);
         }
     };
+
     // Support Contacts Functions
     const openNewSupportContact = () => {
         setSelectedSupportContact(emptySupportContact);
         setSupportContactSubmitted(false);
         setSupportContactDialog(true);
     };
+
     const hideSupportContactDialog = () => {
         setSupportContactSubmitted(false);
         setSupportContactDialog(false);
     };
+
     const hideDeleteSupportContactDialog = () => {
         setDeleteSupportContactDialog(false);
     };
+
     const editSupportContact = (supportContact: SupportContacts) => {
         setSelectedSupportContact({ ...supportContact });
         setSupportContactDialog(true);
     };
+
     const confirmDeleteSupportContact = (supportContact: SupportContacts) => {
         setSelectedSupportContact(supportContact);
         setDeleteSupportContactDialog(true);
     };
+
     const saveSupportContact = () => {
         setSupportContactSubmitted(true);
+
         if (!selectedSupportContact.title || !selectedSupportContact.phone) {
             toast.current?.show({
                 severity: 'error',
@@ -259,6 +307,7 @@ const AppSettingsPage = () => {
             });
             return;
         }
+
         if (selectedSupportContact.id) {
             dispatch(_editSupportContact(selectedSupportContact, toast, t));
         } else {
@@ -266,23 +315,27 @@ const AppSettingsPage = () => {
         }
         setSupportContactDialog(false);
     };
+
     const deleteSupportContact = () => {
         dispatch(_deleteSupportContact(selectedSupportContact.id, toast, t));
         setDeleteSupportContactDialog(false);
         setSelectedSupportContact(emptySupportContact);
     };
+
     const supportContactDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideSupportContactDialog} />
             <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={saveSupportContact} />
         </>
     );
+
     const deleteSupportContactDialogFooter = (
         <>
             <Button label={t('NO')} icon="pi pi-times" severity="secondary" onClick={hideDeleteSupportContactDialog} />
             <Button label={t('YES')} icon="pi pi-check" severity="danger" onClick={deleteSupportContact} />
         </>
     );
+
     const statusBodyTemplate = (rowData: SupportContacts) => {
         return (
             <span className={`customer-badge status-${rowData.status}`}>
@@ -290,6 +343,7 @@ const AppSettingsPage = () => {
             </span>
         );
     };
+
     const actionBodyTemplate = (rowData: SupportContacts) => {
         return (
             <div className="flex gap-2">
@@ -310,6 +364,7 @@ const AppSettingsPage = () => {
             </div>
         );
     };
+
     const renderSupportContactsTab = () => {
         return (
             <div className="grid">
@@ -326,6 +381,7 @@ const AppSettingsPage = () => {
                                 />
                             }
                         />
+
                         <DataTable
                             value={supportContacts}
                             loading={supportContactsLoading}
@@ -348,6 +404,7 @@ const AppSettingsPage = () => {
             </div>
         );
     };
+
     const rightToolbarTemplate = () => {
         return (
             <React.Fragment>
@@ -364,12 +421,14 @@ const AppSettingsPage = () => {
             </React.Fragment>
         );
     };
+
     const settingsDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
             <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveSettings} />
         </>
     );
+
     const renderTabContent = () => {
         switch (activeTab) {
             case 'general':
@@ -390,6 +449,7 @@ const AppSettingsPage = () => {
                                     })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="app_slogan" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_SLOGAN')}
@@ -400,6 +460,7 @@ const AppSettingsPage = () => {
                                     onChange={(e) => setSettings({ ...settings, app_slogan: e.target.value })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="default_currency" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.DEFAULT_CURRENCY')}
@@ -437,6 +498,7 @@ const AppSettingsPage = () => {
                                     }}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="exchange_rate" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.EXCHANGE_RATE')}
@@ -455,6 +517,7 @@ const AppSettingsPage = () => {
                                     </small>
                                 )}
                             </div>
+
                             <div className="field">
                                 <label htmlFor="website_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.WEBSITE_URL')}
@@ -466,6 +529,7 @@ const AppSettingsPage = () => {
                                 />
                             </div>
                         </div>
+
                         <div className="col-12 md:col-6">
                             <div className="field">
                                 <label className="font-bold text-sm md:text-base">{t('APP_SETTINGS.FEATURES')}</label>
@@ -493,6 +557,7 @@ const AppSettingsPage = () => {
                                     </div>
                                 </div>
                             </div>
+
                             <div className="field">
                                 <label htmlFor="app_name_en" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_NAME_EN')}
@@ -506,6 +571,7 @@ const AppSettingsPage = () => {
                                     })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="app_name_fa" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_NAME_FA')}
@@ -519,6 +585,7 @@ const AppSettingsPage = () => {
                                     })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="app_name_ps" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_NAME_PS')}
@@ -533,6 +600,7 @@ const AppSettingsPage = () => {
                                 />
                             </div>
                         </div>
+
                         <div className="col-12 md:col-6">
                             <div className="field">
                                 <label htmlFor="app_slogan_en" className="font-bold text-sm md:text-base">
@@ -547,6 +615,7 @@ const AppSettingsPage = () => {
                                     })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="app_slogan_fa" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_SLOGAN_FA')}
@@ -560,6 +629,7 @@ const AppSettingsPage = () => {
                                     })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="app_slogan_ps" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_SLOGAN_PS')}
@@ -576,6 +646,7 @@ const AppSettingsPage = () => {
                         </div>
                     </div>
                 );
+
             case 'contact':
                 return (
                     <div className="grid p-fluid">
@@ -591,6 +662,7 @@ const AppSettingsPage = () => {
                                     required
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="support_email" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SUPPORT_EMAIL')} *
@@ -602,6 +674,7 @@ const AppSettingsPage = () => {
                                     required
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="support_whatsapp" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SUPPORT_WHATSAPP')}
@@ -612,6 +685,7 @@ const AppSettingsPage = () => {
                                     onChange={(e) => setSettings({ ...settings, support_whatsapp: e.target.value })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="alternative_phone" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.ALTERNATIVE_PHONE')}
@@ -622,6 +696,7 @@ const AppSettingsPage = () => {
                                     onChange={(e) => setSettings({ ...settings, alternative_contact_phone: e.target.value })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="alternative_whatsapp" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.ALTERNATIVE_WHATSAPP')}
@@ -633,6 +708,7 @@ const AppSettingsPage = () => {
                                 />
                             </div>
                         </div>
+
                         <div className="col-12 md:col-6">
                             <div className="field">
                                 <label htmlFor="telegram_username" className="font-bold text-sm md:text-base">
@@ -644,6 +720,7 @@ const AppSettingsPage = () => {
                                     onChange={(e) => setSettings({ ...settings, telegram_username: e.target.value })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="telegram_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.TELEGRAM_URL')}
@@ -654,6 +731,7 @@ const AppSettingsPage = () => {
                                     onChange={(e) => setSettings({ ...settings, telegram_url: e.target.value })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="facebook_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.FACEBOOK_URL')}
@@ -664,6 +742,7 @@ const AppSettingsPage = () => {
                                     onChange={(e) => setSettings({ ...settings, facebook_page_url: e.target.value })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="instagram_handle" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.INSTAGRAM_HANDLE')}
@@ -674,6 +753,7 @@ const AppSettingsPage = () => {
                                     onChange={(e) => setSettings({ ...settings, instagram_handle: e.target.value })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="instagram_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.INSTAGRAM_URL')}
@@ -685,6 +765,7 @@ const AppSettingsPage = () => {
                                 />
                             </div>
                         </div>
+
                         <div className="col-12 md:col-6">
                             <div className="field">
                                 <label htmlFor="twitter_url" className="font-bold text-sm md:text-base">
@@ -696,6 +777,7 @@ const AppSettingsPage = () => {
                                     onChange={(e) => setSettings({ ...settings, twitter_url: e.target.value })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="tiktok_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.TIKTOK_URL')}
@@ -706,6 +788,7 @@ const AppSettingsPage = () => {
                                     onChange={(e) => setSettings({ ...settings, tiktok_url: e.target.value })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="youtube_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.YOUTUBE_URL')}
@@ -719,6 +802,7 @@ const AppSettingsPage = () => {
                         </div>
                     </div>
                 );
+
             case 'branding':
                 return (
                     <div className="grid p-fluid">
@@ -742,6 +826,7 @@ const AppSettingsPage = () => {
                                 style={{ textAlign: 'center', marginBottom: '20px' }}
                             />
                         </div>
+
                         <div className="col-12 md:col-6">
                             <div className="field">
                                 <label htmlFor="primary_color" className="font-bold text-sm md:text-base">
@@ -754,6 +839,7 @@ const AppSettingsPage = () => {
                                     style={{ width: '100%' }}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="primary_font_color" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.PRIMARY_FONT_COLOR')}
@@ -766,6 +852,7 @@ const AppSettingsPage = () => {
                                 />
                             </div>
                         </div>
+
                         <div className="col-12 md:col-6">
                             <div className="field">
                                 <label htmlFor="secondary_color" className="font-bold text-sm md:text-base">
@@ -778,6 +865,7 @@ const AppSettingsPage = () => {
                                     style={{ width: '100%' }}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="secondary_font_color" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SECONDARY_FONT_COLOR')}
@@ -792,6 +880,7 @@ const AppSettingsPage = () => {
                         </div>
                     </div>
                 );
+
             case 'limits':
                 return (
                     <div className="grid p-fluid">
@@ -810,6 +899,7 @@ const AppSettingsPage = () => {
                                 />
                             </div>
                         </div>
+
                         <div className="col-12 md:col-4">
                             <div className="field">
                                 <label htmlFor="min_topup" className="font-bold text-sm md:text-base">
@@ -825,6 +915,7 @@ const AppSettingsPage = () => {
                                 />
                             </div>
                         </div>
+
                         <div className="col-12 md:col-4">
                             <div className="field">
                                 <label htmlFor="max_topup" className="font-bold text-sm md:text-base">
@@ -842,6 +933,7 @@ const AppSettingsPage = () => {
                         </div>
                     </div>
                 );
+
             case 'integration':
                 return (
                     <div className="grid p-fluid">
@@ -862,6 +954,7 @@ const AppSettingsPage = () => {
                                     })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="api_username" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.API_USERNAME')}
@@ -878,6 +971,7 @@ const AppSettingsPage = () => {
                                     })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="api_authkey" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.API_AUTHKEY')}
@@ -895,6 +989,7 @@ const AppSettingsPage = () => {
                                 />
                             </div>
                         </div>
+
                         <div className="col-12 md:col-6">
                             <div className="field">
                                 <label htmlFor="api_msisdn" className="font-bold text-sm md:text-base">
@@ -912,6 +1007,7 @@ const AppSettingsPage = () => {
                                     })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="api_request_id" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.API_REQUEST_ID')}
@@ -928,6 +1024,7 @@ const AppSettingsPage = () => {
                                     })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="telegram_webhook" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.TELEGRAM_WEBHOOK')}
@@ -944,6 +1041,7 @@ const AppSettingsPage = () => {
                                     })}
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="telegram_bot_token" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.TELEGRAM_BOT_TOKEN')}
@@ -963,6 +1061,7 @@ const AppSettingsPage = () => {
                         </div>
                     </div>
                 );
+
             case 'recharge':
                 return (
                     <div className="grid p-fluid">
@@ -986,6 +1085,7 @@ const AppSettingsPage = () => {
                                     className="w-full"
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="recharge_adjust_mode" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.RECHARGE_ADJUST_MODE')}
@@ -1005,6 +1105,7 @@ const AppSettingsPage = () => {
                                     className="w-full"
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="recharge_adjust_value" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.RECHARGE_ADJUST_VALUE')}
@@ -1027,6 +1128,7 @@ const AppSettingsPage = () => {
                                     </small>
                                 )}
                             </div>
+
                             <div className="field">
                                 <label htmlFor="selling_price_adjust_type" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SELLING_PRICE_ADJUST_TYPE')}
@@ -1047,6 +1149,7 @@ const AppSettingsPage = () => {
                                 />
                             </div>
                         </div>
+
                         <div className="col-12 md:col-6">
                             <div className="field">
                                 <label htmlFor="selling_price_adjust_mode" className="font-bold text-sm md:text-base">
@@ -1067,6 +1170,7 @@ const AppSettingsPage = () => {
                                     className="w-full"
                                 />
                             </div>
+
                             <div className="field">
                                 <label htmlFor="selling_price_adjust_value" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SELLING_PRICE_ADJUST_VALUE')}
@@ -1089,6 +1193,7 @@ const AppSettingsPage = () => {
                                     </small>
                                 )}
                             </div>
+
                             <div className="field">
                                 <label htmlFor="setaragan_admin_buying_price_percentage" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SETARAGAN_ADMIN_BUYING_PRICE_PERCENTAGE')}
@@ -1111,6 +1216,7 @@ const AppSettingsPage = () => {
                                     {t('APP_SETTINGS.SETARAGAN_ADMIN_BUYING_PRICE_NOTE')}
                                 </small>
                             </div>
+
                             <div className="field">
                                 <label htmlFor="custom_recharge_api_provider_id" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.CUSTOM_RECHARGE_API_PROVIDER')}
@@ -1136,6 +1242,7 @@ const AppSettingsPage = () => {
                                 </small>
                             </div>
                         </div>
+
                         <div className="col-12">
                             <div className="field">
                                 <label className="font-bold text-sm md:text-base">
@@ -1162,49 +1269,131 @@ const AppSettingsPage = () => {
                         </div>
                     </div>
                 );
+
+
 // ... inside the component
+
 case 'package-inquiry':
                 return (
                     <div className="grid p-fluid">
                         <div className="col-12 md:col-8">
                             <div className="field">
                                 <label htmlFor="default_package_inquiry_provider_id" className="font-bold text-sm md:text-base">
-                                    Package Inquiry — Global Mode & Default Provider
+                                    Default Package Inquiry Provider
                                 </label>
                                 <Dropdown
                                     inputId="default_package_inquiry_provider_id"
-                                    value={settings.default_package_inquiry_provider_id == null
-                                        ? 'none' : Number(settings.default_package_inquiry_provider_id)}
+                                    value={settings.default_package_inquiry_provider_id ?? null}
                                     options={inquiryProviderOptions}
                                     onChange={e => setSettings(prev => ({
                                         ...prev,
-                                        default_package_inquiry_provider_id: e.value === 'none' || e.value == null
-                                            ? null : Number(e.value)
+                                        default_package_inquiry_provider_id: e.value == null ? null : Number(e.value)
                                     }))}
-                                    placeholder="Select default inquiry behavior"
+                                    placeholder="Not configured — select a provider"
                                     filter
+                                    showClear
                                     className="w-full"
                                 />
                                 <small className="text-500">
-                                    Normal Mode saves NULL and disables all dynamic package inquiries globally,
-                                    even if a service was previously set to Provider or Inherit. Only regular
-                                    manually created bundles will appear. Select a provider to enable inquiry
-                                    globally; individual service modes then determine actual routing.
+                                    Only services whose Package Inquiry Mode is Inherit use this default.
+                                    Direct PayStore may be used on Waslat; downstream installations can use their
+                                    central Waslat/ManshorPay integration.
                                 </small>
-                                {inquiryProviderOptions.length === 1 && (
+                                {inquiryProviderOptions.length === 0 && (
                                     <small className="block text-orange-500 mt-2">
-                                        No active inquiry providers are loaded. Normal Mode is available.
+                                        No active supported inquiry provider loaded. Check the Providers page.
                                     </small>
                                 )}
                             </div>
                         </div>
                         <div className="col-12">
                             <div className="p-3 border-1 surface-border border-round">
+                                <h5 className="mb-2">Dynamic Package Pricing</h5>
+                                <p className="text-sm text-500 mb-3">
+                                    Configured separately per installation. Fixed amount is added in the
+                                    upstream package currency; it is not automatically converted from your
+                                    default account currency.
+                                </p>
+                                <div className="grid">
+                                    <div className="col-12 md:col-6">
+                                        <label htmlFor="dynamic_markup_mode" className="block font-bold mb-2">Markup Mode</label>
+                                        <Dropdown
+                                            inputId="dynamic_markup_mode"
+                                            value={settings.paystore_dynamic_bundle_markup_mode ?? 'percentage'}
+                                            options={[
+                                                { label: 'Percentage (%)', value: 'percentage' },
+                                                { label: 'Fixed Amount (package currency)', value: 'fixed' },
+                                            ]}
+                                            onChange={e => setSettings(prev => ({
+                                                ...prev,
+                                                paystore_dynamic_bundle_markup_mode: e.value
+                                            }))}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div className="col-12 md:col-6">
+                                        {(settings.paystore_dynamic_bundle_markup_mode ?? 'percentage') === 'percentage' ? (
+                                            <>
+                                                <label htmlFor="dynamic_markup_percent" className="block font-bold mb-2">Markup Percentage (%)</label>
+                                                <InputNumber
+                                                    inputId="dynamic_markup_percent"
+                                                    value={Number(settings.paystore_dynamic_bundle_markup_percentage ?? 10)}
+                                                    onValueChange={e => setSettings(prev => ({
+                                                        ...prev, paystore_dynamic_bundle_markup_percentage: e.value ?? 0
+                                                    }))}
+                                                    min={0} max={100} minFractionDigits={0} maxFractionDigits={2}
+                                                    suffix=" %" className="w-full"
+                                                />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <label htmlFor="dynamic_markup_fixed" className="block font-bold mb-2">Fixed Markup Amount</label>
+                                                <InputNumber
+                                                    inputId="dynamic_markup_fixed"
+                                                    value={Number(settings.paystore_dynamic_bundle_markup_fixed_amount ?? 0)}
+                                                    onValueChange={e => setSettings(prev => ({
+                                                        ...prev, paystore_dynamic_bundle_markup_fixed_amount: e.value ?? 0
+                                                    }))}
+                                                    min={0} max={99999999} minFractionDigits={0} maxFractionDigits={5}
+                                                    className="w-full"
+                                                />
+                                            </>
+                                        )}
+                                    </div>
+                                    <div className="col-12">
+                                        <div className="flex align-items-center gap-3">
+                                            <InputSwitch
+                                                inputId="auto_bind_queried_packages"
+                                                checked={settings.auto_bind_queried_packages ?? true}
+                                                onChange={e => setSettings(prev => ({
+                                                    ...prev, auto_bind_queried_packages: e.value
+                                                }))}
+                                            />
+                                            <label htmlFor="auto_bind_queried_packages" className="font-bold">
+                                                Automatically Bind Queried Packages
+                                            </label>
+                                        </div>
+                                        <small className="block text-500 mt-2">
+                                            OFF: new eligible packages are stored unbound. ON: new or previously
+                                            unbound imported packages can receive provider mappings at the next
+                                            inquiry. Switching OFF never removes existing bindings. It does not
+                                            enable purchasing; financial operations require a separate review.
+                                        </small>
+                                    </div>
+                                </div>
+                                <small className="block text-500 mt-2">
+                                    Markup changes apply to newly imported or price-managed packages on
+                                    the next fresh inquiry (subject to the inquiry cache), not to manual bundles.
+                                </small>
+                            </div>
+                        </div>
+                        <div className="col-12">
+                            <div className="p-3 border-1 surface-border border-round">
                                 <strong>Routing behavior</strong>
                                 <p className="text-sm text-500 mb-2">
-                                    Global Normal Mode: no inquiry anywhere. When enabled, Disabled shows only
-                                    manually created bundles; Inherit uses this default provider; Provider uses
-                                    the provider selected in that service&apos;s settings.                                </p>
+                                    Disabled: normal bundles, no inquiry. Inherit: use this default provider.
+                                    Provider: use the provider selected in that service s settings.
+                                </p>
                                 <p className="text-sm text-500 m-0">
                                     Intended for configured Turkey Internet services only. It does not change the
                                     existing Custom Recharge API Provider or purchase fulfillment provider.
@@ -1213,6 +1402,7 @@ case 'package-inquiry':
                         </div>
                     </div>
                 );
+
             case 'telegram':
     // Helper function to safely get chat IDs as array
     const getChatIds = (value: string[] | null | undefined): string[] => {
@@ -1220,6 +1410,7 @@ case 'package-inquiry':
         if (Array.isArray(value)) return value;
         return [];
     };
+
     // Helper function to convert chat ID strings to objects for dropdown
     const getChatObjects = (chatIds: string[] | null | undefined): TelegramChat[] => {
         const ids = getChatIds(chatIds);
@@ -1227,6 +1418,7 @@ case 'package-inquiry':
             .map((id: string) => telegramChatIds.find((chat: TelegramChat) => String(chat.chat_id) === id))
             .filter((chat): chat is TelegramChat => chat !== undefined);
     };
+
     return (
         <div className="grid p-fluid">
             <div className="col-12">
@@ -1244,6 +1436,7 @@ case 'package-inquiry':
                         </div>
                     </div>
                 </div>
+
                 <div className="grid">
                     {/* Payments Section */}
                     <div className="col-12 md:col-6">
@@ -1307,6 +1500,7 @@ case 'package-inquiry':
                             </div>
                         </div>
                     </div>
+
                     {/* Balances Section */}
                     <div className="col-12 md:col-6">
                         <div className="field p-3 border-1 surface-border border-round">
@@ -1368,6 +1562,7 @@ case 'package-inquiry':
                             </div>
                         </div>
                     </div>
+
                     {/* Transactions Section */}
                     <div className="col-12 md:col-6">
                         <div className="field p-3 border-1 surface-border border-round">
@@ -1429,6 +1624,7 @@ case 'package-inquiry':
                             </div>
                         </div>
                     </div>
+
                     {/* Vouchers Section */}
                     <div className="col-12 md:col-6">
                         <div className="field p-3 border-1 surface-border border-round">
@@ -1491,6 +1687,7 @@ case 'package-inquiry':
                         </div>
                     </div>
                 </div>
+
                 {/* Available Telegram Chat IDs Info - Same as CompanyPage */}
                 {telegramChatIds && telegramChatIds.length > 0 && (
                     <div className="field mt-3">
@@ -1511,12 +1708,15 @@ case 'package-inquiry':
             </div>
         </div>
     );
+
     case 'support-contacts':
                 return renderSupportContactsTab();
+
             default:
                 return null;
         }
     };
+
     const navigationButtons = (
         <div className="flex flex-column gap-2">
             <Button
@@ -1594,6 +1794,7 @@ case 'package-inquiry':
             />
         </div>
     );
+
     return (
         <div className="grid crud-demo -m-5">
             <div className="col-12">
@@ -1601,6 +1802,7 @@ case 'package-inquiry':
                     {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
                     <Toast ref={toast} />
                     <Toolbar className="mb-4" right={rightToolbarTemplate}></Toolbar>
+
                     <div className="card">
                         <div className="grid">
                             {!isMobile ? (
@@ -1611,6 +1813,7 @@ case 'package-inquiry':
                                             {navigationButtons}
                                         </div>
                                     </div>
+
                                     <div className="col-12 md:col-9">
                                         <div className="p-3 border-round surface-card">
                                             {renderTabContent()}
@@ -1634,6 +1837,7 @@ case 'package-inquiry':
                             )}
                         </div>
                     </div>
+
                     <Sidebar
                         visible={mobileNavVisible}
                         onHide={() => setMobileNavVisible(false)}
@@ -1645,6 +1849,7 @@ case 'package-inquiry':
                             {navigationButtons}
                         </div>
                     </Sidebar>
+
                     <Dialog
                         visible={settingsDialog}
                         style={{ width: isMobile ? '95vw' : '900px', maxHeight: '80vh' }}
@@ -1689,6 +1894,7 @@ case 'package-inquiry':
                             </TabView>
                         </div>
                     </Dialog>
+
                     {/* Support Contact Dialog */}
                     <Dialog
                         visible={supportContactDialog}
@@ -1713,6 +1919,7 @@ case 'package-inquiry':
                                 })}
                             />
                         </div>
+
                         <div className="field">
                             <label htmlFor="description" className="font-bold">
                                 {t('SUPPORT_CONTACT.DESCRIPTION')}
@@ -1723,6 +1930,7 @@ case 'package-inquiry':
                                 onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, description: e.target.value })}
                             />
                         </div>
+
                         <div className="field">
                             <label htmlFor="phone" className="font-bold">
                                 {t('SUPPORT_CONTACT.PHONE')} *
@@ -1737,6 +1945,7 @@ case 'package-inquiry':
                                 })}
                             />
                         </div>
+
                         <div className="field">
                             <label htmlFor="telegram" className="font-bold">
                                 {t('SUPPORT_CONTACT.TELEGRAM_LINK')}
@@ -1750,6 +1959,7 @@ case 'package-inquiry':
                                 })}
                             />
                         </div>
+
                         <div className="field">
                             <label htmlFor="website" className="font-bold">
                                 {t('SUPPORT_CONTACT.WEBSITE_LINK')}
@@ -1763,6 +1973,7 @@ case 'package-inquiry':
                                 })}
                             />
                         </div>
+
                         <div className="grid">
                             <div className="col-12 md:col-6">
                                 <div className="field flex align-items-center">
@@ -1776,6 +1987,7 @@ case 'package-inquiry':
                                     </label>
                                 </div>
                             </div>
+
                             <div className="col-12 md:col-6">
                                 <div className="field flex align-items-center">
                                     <InputSwitch
@@ -1788,6 +2000,7 @@ case 'package-inquiry':
                                     </label>
                                 </div>
                             </div>
+
                             <div className="col-12 md:col-6">
                                 <div className="field">
                                     <label htmlFor="status" className="font-bold">
@@ -1808,6 +2021,7 @@ case 'package-inquiry':
                             </div>
                         </div>
                     </Dialog>
+
                     {/* Delete Support Contact Dialog */}
                     <Dialog
                         visible={deleteSupportContactDialog}
@@ -1829,4 +2043,5 @@ case 'package-inquiry':
         </div>
     );
 };
+
 export default withAuth(AppSettingsPage);
