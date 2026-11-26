@@ -196,11 +196,21 @@ export const generateOrderExcelFile = async ({
         });
 
         // Transform data for Excel
-        const exportData = exportOrders.map((order: any) => ({
+        const exportData = exportOrders.map((order: any) => {
+            const orderType =
+                order.order_type === 'custom_recharge'
+                    ? t('ORDER.TYPE.CUSTOM_RECHARGE', { defaultValue: 'شارژ سفارشی' })
+                    : order.order_type === 'mobile_topup'
+                      ? t('ORDER.TYPE.MOBILE_TOPUP', { defaultValue: 'شارژ موبایل' })
+                      : t('ORDER.TYPE.BUNDLE', { defaultValue: 'بسته' });
+
+            return {
             [t('ORDER.TABLE.COLUMN.ID')]: order.id,
+            [t('ORDER.TABLE.COLUMN.ORDER_TYPE', { defaultValue: 'نوع سفارش' })]: orderType,
             [t('ORDER.TABLE.COLUMN.RESELLERNAME')]: order.reseller?.reseller_name || '',
             [t('ORDER.TABLE.COLUMN.RECHARGEABLEACCOUNT')]: order.rechargeble_account || '',
             [t('ORDER.TABLE.COLUMN.BUNDLEID')]: order.bundle?.id || '',
+            [t('ORDER.REQUESTED_AFN', { defaultValue: 'مبلغ درخواستی' })]: order.bundle?.amount ?? '',
             [t('ORDER.TABLE.COLUMN.PAYABLEAMOUNT')]: order.bundle?.buying_price || '',
             [t('ORDER.TABLE.COLUMN.BUNDLETITLE')]: order.bundle?.bundle_title || '',
             [t('ORDER.TABLE.COLUMN.REJECTREASON')]: order.reject_reason || '',
@@ -208,18 +218,19 @@ export const generateOrderExcelFile = async ({
             [t('ORDER.TABLE.COLUMN.CATEGORYNAME')]: order.bundle?.service?.service_category?.category_name || '',
             [t('ORDER.TABLE.COLUMN.ORDEREDDATE')]: new Date(order.created_at).toLocaleString(),
             [t('ORDER.TABLE.COLUMN.STATUS')]:
-                order.status === '0'
+                order.status === '0' || order.status === 0
                     ? t('ORDER.STATUS.PENDING')
-                    : order.status === '1'
+                    : order.status === '1' || order.status === 1
                     ? t('ORDER.STATUS.CONFIRMED')
-                    : order.status === '2'
+                    : order.status === '2' || order.status === 2
                     ? t('ORDER.STATUS.REJECTED')
-                    : order.status === '3'
+                    : order.status === '3' || order.status === 3
                     ? t('ORDER.STATUS.UNDER_PROCESS')
                     : '',
             [t('TRANSACTION_ID')]: order.transaction_id || '',
             [t('PERFORMED_BY')]: order.performed_by_name || '',
-        }));
+        };
+        });
 
         // Create worksheet
         const ws = XLSX.utils.json_to_sheet(exportData);

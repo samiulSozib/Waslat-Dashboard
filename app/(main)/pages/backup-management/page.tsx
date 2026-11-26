@@ -25,6 +25,7 @@ import {
     fetchBackupDetails,
     fetchBackupSettings,
     updateBackupSettings,
+    saveGoogleDriveSettings,
     createBackup,
     fetchBackupRequestStatus,
     downloadBackup,
@@ -41,6 +42,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import withAuth from '../../authGuard';
 
@@ -144,6 +146,12 @@ const BackupManagementPage = () => {
     const [compression, setCompression] = useState(true);
     const [notifySuccess, setNotifySuccess] = useState(false);
     const [notifyFailure, setNotifyFailure] = useState(true);
+    const [scheduleEnabled, setScheduleEnabled] = useState(false);
+    const [backupFrequency, setBackupFrequency] = useState('daily');
+    const [backupTime, setBackupTime] = useState('02:00');
+    const [driveEnabled, setDriveEnabled] = useState(false);
+    const [driveFolderId, setDriveFolderId] = useState('');
+    const [driveCredentialsFile, setDriveCredentialsFile] = useState<File | null>(null);
     const [savingBackupSettings, setSavingBackupSettings] = useState(false);
     const [pollingRequestId, setPollingRequestId] = useState<number | null>(null);
     const [lastPollError, setLastPollError] = useState(false);
@@ -161,6 +169,14 @@ const BackupManagementPage = () => {
         setCompression(isSettingEnabled(settings.enable_compression));
         setNotifySuccess(isSettingEnabled(settings.notify_on_success));
         setNotifyFailure(isSettingEnabled(settings.notify_on_failure));
+        setScheduleEnabled(isSettingEnabled(settings.is_enabled));
+        setBackupFrequency(String(settings.backup_frequency || 'daily'));
+        const rawTime = String(settings.backup_time || '02:00:00');
+        setBackupTime(rawTime.slice(0, 5));
+        const drive = (settings as any)?.google_drive || {};
+        setDriveEnabled(isSettingEnabled(drive.enabled));
+        setDriveFolderId(String(drive.folder_id || ''));
+        setDriveCredentialsFile(null);
     }, [settings]);
 
     const refreshData = useCallback(async () => {
@@ -258,6 +274,25 @@ const BackupManagementPage = () => {
             });
             return;
         }
+        if (driveEnabled && !driveFolderId.trim()) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: tr('BACKUP_DRIVE_FOLDER_REQUIRED', 'شناسه فولدر لازم است'),
+                detail: tr('BACKUP_DRIVE_FOLDER_HINT', 'برای فعال‌سازی Drive، Folder ID را وارد کنید.'),
+                life: 4500
+            });
+            return;
+        }
+        const driveAlreadyConfigured = !!(settings as any)?.google_drive?.configured;
+        if (driveEnabled && !driveAlreadyConfigured && !driveCredentialsFile) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: tr('BACKUP_DRIVE_JSON_REQUIRED', 'فایل JSON لازم است'),
+                detail: tr('BACKUP_DRIVE_UPLOAD_FIRST', 'برای فعال‌سازی Drive، فایل Service Account را آپلود کنید.'),
+                life: 4500
+            });
+            return;
+        }
         setSavingBackupSettings(true);
         try {
             await dispatch(
@@ -265,8 +300,18 @@ const BackupManagementPage = () => {
                     retention_days: retentionDays,
                     enable_compression: compression,
                     notify_on_success: notifySuccess,
-                    notify_on_failure: notifyFailure
+                    notify_on_failure: notifyFailure,
+                    is_enabled: scheduleEnabled,
+                    backup_frequency: backupFrequency,
+                    backup_time: backupTime.length === 5 ? `${backupTime}:00` : backupTime
                 })
+            );
+            await dispatch(
+                saveGoogleDriveSettings({
+                    is_enabled: driveEnabled,
+                    folder_id: driveFolderId.trim(),
+                    credentials_file: driveCredentialsFile
+                }) as any
             );
             toast.current?.show({
                 severity: 'success',
@@ -275,6 +320,7 @@ const BackupManagementPage = () => {
                 life: 4000
             });
             await dispatch(fetchBackupSettings());
+            setDriveCredentialsFile(null);
             setSettingsOpen(false);
         } catch {
             /* redux */
@@ -680,6 +726,7 @@ const BackupManagementPage = () => {
                                 <th className="px-3 py-2 font-medium">{tr('BACKUP_TYPE', 'نوع')}</th>
                                 <th className="px-3 py-2 font-medium">{tr('BACKUP_STATUS', 'وضعیت')}</th>
                                 <th className="px-3 py-2 font-medium">{tr('BACKUP_VERIFIED', 'تأیید')}</th>
+                                <th className="px-3 py-2 font-medium">{tr('BACKUP_DESTINATIONS', 'مقصدها')}</th>
                                 <th className="px-3 py-2 font-medium">{tr('BACKUP_SIZE', 'حجم')}</th>
                                 <th className="px-3 py-2 font-medium">{tr('BACKUP_SOURCE', 'منبع')}</th>
                                 <th className="px-3 py-2 font-medium">{tr('BACKUP_CREATED_AT', 'ایجاد')}</th>
@@ -689,6 +736,9 @@ const BackupManagementPage = () => {
                         <tbody>
                             {(backups || []).map((row) => {
                                 const verified = row.is_verified === true || row.is_verified === 1;
+                                const destinations = Array.isArray((row as any).destinations) ? (row as any).destinations : [];
+                                const driveStatus = destinations.find((d: any) => d.type === 'google_drive')?.status;
+                                const localStatus = destinations.find((d: any) => d.type === 'local')?.status;
                                 return (
                                     <tr key={row.id} className="border-b border-border/70 hover:bg-muted/30">
                                         <td className="px-3 py-2 tabular-nums text-muted-foreground">{row.id}</td>
@@ -706,6 +756,30 @@ const BackupManagementPage = () => {
                                             <Badge variant={verified ? 'success' : 'warning'}>
                                                 {verified ? tr('BACKUP_VERIFIED', 'تأیید‌شده') : tr('BACKUP_NOT_VERIFIED', 'تأیید نشده')}
                                             </Badge>
+                                            {(row as any).download_ready ? (
+                                                <div className="mt-1 text-[10px] text-emerald-700">{tr('BACKUP_DOWNLOAD_READY', 'آماده دانلود')}</div>
+                                            ) : null}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <div className="flex flex-wrap gap-1">
+                                                <Badge variant={localStatus === 'success' || (row as any).download_ready ? 'success' : 'secondary'}>
+                                                    {tr('BACKUP_DEST_LOCAL', 'محلی')}
+                                                    {localStatus ? `: ${localStatus}` : ''}
+                                                </Badge>
+                                                <Badge
+                                                    variant={
+                                                        driveStatus === 'success'
+                                                            ? 'success'
+                                                            : driveStatus === 'failed'
+                                                              ? 'danger'
+                                                              : driveStatus
+                                                                ? 'warning'
+                                                                : 'muted'
+                                                    }
+                                                >
+                                                    Drive{driveStatus ? `: ${driveStatus}` : ''}
+                                                </Badge>
+                                            </div>
                                         </td>
                                         <td className="px-3 py-2 tabular-nums whitespace-nowrap">{formatBytes(row.file_size)}</td>
                                         <td className="px-3 py-2 whitespace-nowrap">{statusText(row.trigger_type)}</td>
@@ -748,7 +822,7 @@ const BackupManagementPage = () => {
                     <FormSection>
                         <FormField
                             label={tr('BACKUP_RETENTION_DAYS', 'مدت نگهداری (روز)')}
-                            hint={tr('BACKUP_RETENTION_HELP', 'بین ۱ تا ۳۶۵ روز. حذف خودکار هنوز فعال نیست.')}
+                            hint={tr('BACKUP_RETENTION_HELP', 'بین ۱ تا ۳۶۵ روز. قدیمی‌ترها روزانه در ۰۳:۳۰ حذف می‌شوند.')}
                         >
                             <NumberInput value={retentionDays} onValueChange={(v) => setRetentionDays(v ?? 30)} min={1} max={365} />
                         </FormField>
@@ -757,6 +831,27 @@ const BackupManagementPage = () => {
                                 <Switch checked={compression} onCheckedChange={setCompression} disabled={savingBackupSettings} />
                                 <span className="text-sm">{compression ? tr('BACKUP_ENABLED_GZIP', 'فعال (GZIP)') : tr('BACKUP_DISABLED', 'غیرفعال')}</span>
                             </div>
+                        </FormField>
+                        <FormField label={tr('BACKUP_AUTOMATIC_SCHEDULING', 'زمان‌بندی خودکار')}>
+                            <div className="flex items-center gap-3 pt-1">
+                                <Switch checked={scheduleEnabled} onCheckedChange={setScheduleEnabled} disabled={savingBackupSettings} />
+                                <span className="text-sm">{scheduleEnabled ? tr('BACKUP_ENABLED', 'فعال') : tr('BACKUP_DISABLED', 'غیرفعال')}</span>
+                            </div>
+                        </FormField>
+                        <FormField label={tr('BACKUP_FREQUENCY', 'تناوب')}>
+                            <Select value={backupFrequency} onValueChange={setBackupFrequency} disabled={savingBackupSettings || !scheduleEnabled}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="daily">{tr('BACKUP_FREQ_DAILY', 'روزانه')}</SelectItem>
+                                    <SelectItem value="weekly">{tr('BACKUP_FREQ_WEEKLY', 'هفتگی')}</SelectItem>
+                                    <SelectItem value="monthly">{tr('BACKUP_FREQ_MONTHLY', 'ماهانه')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormField>
+                        <FormField label={tr('BACKUP_TIME', 'زمان')}>
+                            <Input type="time" value={backupTime} onChange={(e) => setBackupTime(e.target.value)} disabled={savingBackupSettings || !scheduleEnabled} />
                         </FormField>
                         <FormField label={tr('BACKUP_NOTIFY_SUCCESS', 'اعلان موفقیت')}>
                             <div className="flex items-center gap-3 pt-1">
@@ -770,27 +865,79 @@ const BackupManagementPage = () => {
                                 <span className="text-sm">{notifyFailure ? tr('BACKUP_ENABLED', 'فعال') : tr('BACKUP_DISABLED', 'غیرفعال')}</span>
                             </div>
                         </FormField>
-                        <div className="col-span-full rounded-lg border border-border bg-muted/30 p-3 text-sm">
-                            <div className="mb-2 font-semibold">{tr('BACKUP_OTHER_CONFIGURATION', 'سایر پیکربندی')}</div>
-                            <div className="grid gap-2 sm:grid-cols-2">
-                                <div>
-                                    <span className="text-muted-foreground">{tr('BACKUP_FREQUENCY', 'تناوب')}: </span>
-                                    <span className="font-medium">{String(settings.backup_frequency ?? '—')}</span>
+                        <div className="col-span-full space-y-3 rounded-lg border border-border bg-muted/30 p-3 text-sm">
+                            <div className="font-semibold">{tr('BACKUP_DESTINATIONS', 'مقصدها')}</div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-muted-foreground">{tr('BACKUP_DEST_LOCAL', 'محلی (دانلود ادمین)')}</span>
+                                <Badge variant={isSettingEnabled(settings.local_delivery_enabled) ? 'success' : 'warning'}>
+                                    {isSettingEnabled(settings.local_delivery_enabled)
+                                        ? tr('BACKUP_ENABLED', 'فعال')
+                                        : tr('BACKUP_DISABLED', 'غیرفعال')}
+                                </Badge>
+                            </div>
+
+                            <div className="border-t border-border/70 pt-3">
+                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                                    <div className="font-medium">Google Drive</div>
+                                    <Badge
+                                        variant={
+                                            (settings as any)?.google_drive?.enabled && (settings as any)?.google_drive?.configured
+                                                ? 'success'
+                                                : 'warning'
+                                        }
+                                    >
+                                        {(settings as any)?.google_drive?.enabled && (settings as any)?.google_drive?.configured
+                                            ? tr('BACKUP_ENABLED', 'فعال')
+                                            : tr('BACKUP_DRIVE_SETUP_NEEDED', 'نیاز به تنظیم')}
+                                    </Badge>
                                 </div>
-                                <div>
-                                    <span className="text-muted-foreground">{tr('BACKUP_TIME', 'زمان')}: </span>
-                                    <span className="font-medium">{String(settings.backup_time ?? '—')}</span>
-                                </div>
-                                <div>
-                                    <span className="text-muted-foreground">{tr('BACKUP_DATABASE_BACKUP', 'پشتیبان DB')}: </span>
-                                    <span className="font-medium">
-                                        {isSettingEnabled(settings.include_database) ? tr('BACKUP_ENABLED', 'فعال') : tr('BACKUP_DISABLED', 'غیرفعال')}
-                                    </span>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="text-muted-foreground">{tr('BACKUP_AUTOMATIC_SCHEDULING', 'زمان‌بندی خودکار')}</span>
-                                    <Badge variant="warning">{tr('BACKUP_NOT_IMPLEMENTED', 'هنوز پیاده‌سازی نشده')}</Badge>
-                                </div>
+                                <FormField label={tr('BACKUP_DRIVE_ENABLE', 'ارسال به Google Drive')}>
+                                    <div className="flex items-center gap-3 pt-1">
+                                        <Switch checked={driveEnabled} onCheckedChange={setDriveEnabled} disabled={savingBackupSettings} />
+                                        <span className="text-sm">{driveEnabled ? tr('BACKUP_ENABLED', 'فعال') : tr('BACKUP_DISABLED', 'غیرفعال')}</span>
+                                    </div>
+                                </FormField>
+                                <FormField
+                                    label={tr('BACKUP_DRIVE_FOLDER_ID', 'شناسه فولدر Drive')}
+                                    hint={tr('BACKUP_DRIVE_FOLDER_HELP', 'Folder ID را از URL فولدر در Google Drive کپی کنید.')}
+                                    fullWidth
+                                >
+                                    <Input
+                                        value={driveFolderId}
+                                        onChange={(e) => setDriveFolderId(e.target.value)}
+                                        placeholder="1AbC..."
+                                        disabled={savingBackupSettings}
+                                        dir="ltr"
+                                        className="font-mono text-xs"
+                                    />
+                                </FormField>
+                                <FormField
+                                    label={tr('BACKUP_DRIVE_SA_JSON', 'فایل Service Account (JSON)')}
+                                    hint={tr(
+                                        'BACKUP_DRIVE_SA_HELP',
+                                        'فایل JSON سرویس‌اکانت را آپلود کنید. کلید خصوصی در دیتابیس ذخیره نمی‌شود. فولدر را با ایمیل سرویس‌اکانت Share کنید.'
+                                    )}
+                                    fullWidth
+                                >
+                                    <Input
+                                        type="file"
+                                        accept="application/json,.json"
+                                        disabled={savingBackupSettings}
+                                        onChange={(e) => setDriveCredentialsFile(e.target.files?.[0] || null)}
+                                    />
+                                </FormField>
+                                {(settings as any)?.google_drive?.client_email ? (
+                                    <p className="text-xs text-muted-foreground" dir="ltr">
+                                        SA: {(settings as any).google_drive.client_email}
+                                        {(settings as any)?.google_drive?.credentials_uploaded
+                                            ? ` · ${tr('BACKUP_DRIVE_CREDENTIALS_OK', 'آپلود شده')}`
+                                            : ''}
+                                    </p>
+                                ) : (
+                                    <p className="text-xs text-amber-700">
+                                        {tr('BACKUP_DRIVE_UPLOAD_FIRST', 'هنوز فایل JSON آپلود نشده است.')}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </FormSection>

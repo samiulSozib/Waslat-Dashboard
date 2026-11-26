@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 
 type OrderFilters = {
     filter_status: number | null;
+    filter_order_type: string | null;
     filter_service_category_type: string | null;
     filter_company_id: number | null;
     filter_service_id: number | null;
@@ -54,11 +55,41 @@ type StatusAction = {
 
 const emptyFilters: OrderFilters = {
     filter_status: null,
+    filter_order_type: null,
     filter_service_category_type: null,
     filter_company_id: null,
     filter_service_id: null,
     filter_startdate: null,
     filter_enddate: null
+};
+
+const orderTypeLabel = (t: any, orderType?: string | null, row?: any) => {
+    const type = orderType || (row?.is_custom_recharge || row?.bundle?.is_custom_recharge ? 'custom_recharge' : 'bundle');
+    if (type === 'custom_recharge') return t('ORDER.TYPE.CUSTOM_RECHARGE', { defaultValue: 'شارژ سفارشی' });
+    if (type === 'mobile_topup') return t('ORDER.TYPE.MOBILE_TOPUP', { defaultValue: 'شارژ موبایل' });
+    if (type === 'custom_topup') return t('ORDER.TYPE.CUSTOM_TOPUP', { defaultValue: 'شارژ سفارشی / موبایل' });
+    return t('ORDER.TYPE.BUNDLE', { defaultValue: 'بسته' });
+};
+
+const isCustomTopupRow = (row: any) => {
+    const type = row?.order_type;
+    if (type === 'custom_recharge' || type === 'mobile_topup') return true;
+    return !!(row?.is_custom_recharge || row?.bundle?.is_custom_recharge);
+};
+
+const orderPayableAmount = (row: any) => {
+    const buying = row?.bundle?.buying_price ?? row?.payable_amount ?? row?.amount;
+    if (buying === null || buying === undefined || buying === '') return '—';
+    const currency = row?.bundle?.currency?.code || row?.bundle?.currency_code || '';
+    const formatted = Number(buying).toLocaleString(undefined, { maximumFractionDigits: 4 });
+    return currency ? `${formatted} ${currency}` : formatted;
+};
+
+const orderRequestedAmount = (row: any) => {
+    if (!isCustomTopupRow(row)) return null;
+    const amount = row?.bundle?.amount;
+    if (amount === null || amount === undefined || amount === '') return null;
+    return `${Number(amount).toLocaleString(undefined, { maximumFractionDigits: 2 })} AFN`;
 };
 
 const statusLabel = (t: any, status?: number | string | null) => {
@@ -145,9 +176,10 @@ const OrderPage = () => {
     const [selectedStatus, setSelectedStatus] = useState<number | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
 
-    // URL -> filters (status from dashboard cards)
+    // URL -> filters (status / order_type from dashboard cards)
     useEffect(() => {
         const statusParam = searchParams.get('status');
+        const orderTypeParam = searchParams.get('order_type');
         let filter_status: number | null = null;
         if (statusParam === 'pending') filter_status = 0;
         if (statusParam === 'confirmed') filter_status = 1;
@@ -156,11 +188,14 @@ const OrderPage = () => {
 
         setActiveFilters((prev) => ({
             ...prev,
-            filter_status: filter_status !== null ? filter_status : prev.filter_status
+            filter_status: filter_status !== null ? filter_status : prev.filter_status,
+            filter_order_type: orderTypeParam || prev.filter_order_type
         }));
-        if (filter_status !== null) {
-            setDraftFilters((prev) => ({ ...prev, filter_status }));
-        }
+        setDraftFilters((prev) => ({
+            ...prev,
+            ...(filter_status !== null ? { filter_status } : {}),
+            ...(orderTypeParam ? { filter_order_type: orderTypeParam } : {})
+        }));
     }, [searchParams]);
 
     useEffect(() => {
@@ -178,6 +213,12 @@ const OrderPage = () => {
         if (activeFilters.filter_status !== null && activeFilters.filter_status !== undefined) {
             list.push({ key: 'filter_status', label: `وضعیت: ${statusLabel(t, activeFilters.filter_status)}` });
         }
+        if (activeFilters.filter_order_type) {
+            list.push({
+                key: 'filter_order_type',
+                label: `${t('ORDER.TABLE.COLUMN.ORDER_TYPE', { defaultValue: 'نوع سفارش' })}: ${orderTypeLabel(t, activeFilters.filter_order_type)}`
+            });
+        }
         if (activeFilters.filter_service_category_type) {
             list.push({
                 key: 'filter_service_category_type',
@@ -191,14 +232,20 @@ const OrderPage = () => {
         return list;
     }, [activeFilters, t]);
 
+    const syncOrderUrl = (filters: OrderFilters) => {
+        const params = new URLSearchParams();
+        if (filters.filter_status === 0) params.set('status', 'pending');
+        else if (filters.filter_status === 1) params.set('status', 'confirmed');
+        else if (filters.filter_status === 2) params.set('status', 'rejected');
+        else if (filters.filter_status === 3) params.set('status', 'under_process');
+        if (filters.filter_order_type) params.set('order_type', filters.filter_order_type);
+        const qs = params.toString();
+        router.replace(qs ? `/pages/order?${qs}` : '/pages/order');
+    };
+
     const applyFilters = () => {
         setActiveFilters(draftFilters);
-        // keep URL status in sync when status filter changes
-        if (draftFilters.filter_status === 0) router.replace('/pages/order?status=pending');
-        else if (draftFilters.filter_status === 1) router.replace('/pages/order?status=confirmed');
-        else if (draftFilters.filter_status === 2) router.replace('/pages/order?status=rejected');
-        else if (draftFilters.filter_status === 3) router.replace('/pages/order?status=under_process');
-        else router.replace('/pages/order');
+        syncOrderUrl(draftFilters);
         setFilterOpen(false);
     };
 
@@ -213,7 +260,7 @@ const OrderPage = () => {
         const next = { ...activeFilters, [key]: null } as OrderFilters;
         setActiveFilters(next);
         setDraftFilters(next);
-        if (key === 'filter_status') router.replace('/pages/order');
+        syncOrderUrl(next);
     };
 
     const handleRefresh = async () => {
@@ -326,6 +373,7 @@ const OrderPage = () => {
                                 <th className="w-[72px] px-3 py-2.5 text-xs font-semibold">عملیات</th>
                                 <th className="w-[56px] px-2 py-2.5 text-xs font-semibold">{t('COPY', { defaultValue: 'کپی' })}</th>
                                 <th className="px-3 py-2.5 text-xs font-semibold">{t('ORDER.TABLE.COLUMN.STATUS')}</th>
+                                <th className="px-3 py-2.5 text-xs font-semibold">{t('ORDER.TABLE.COLUMN.ORDER_TYPE', { defaultValue: 'نوع سفارش' })}</th>
                                 <th className="px-3 py-2.5 text-xs font-semibold">{t('ORDER.TABLE.COLUMN.RESELLERNAME')}</th>
                                 <th className="px-3 py-2.5 text-xs font-semibold">{t('ORDER.TABLE.COLUMN.RECHARGEABLEACCOUNT')}</th>
                                 <th className="px-3 py-2.5 text-xs font-semibold">{t('ORDER.TABLE.COLUMN.PAYABLEAMOUNT')}</th>
@@ -340,7 +388,7 @@ const OrderPage = () => {
                         <tbody>
                             {(orders || []).length === 0 ? (
                                 <tr>
-                                    <td colSpan={12} className="px-3 py-16 text-center text-muted-foreground">
+                                    <td colSpan={13} className="px-3 py-16 text-center text-muted-foreground">
                                         {t('DATA_TABLE.TABLE.NO_DATA', { defaultValue: 'داده‌ای یافت نشد' })}
                                     </td>
                                 </tr>
@@ -422,6 +470,11 @@ const OrderPage = () => {
                                             <td className="px-3 py-2">
                                                 <Badge variant={statusVariant(row.status)}>{statusLabel(t, row.status)}</Badge>
                                             </td>
+                                            <td className="px-3 py-2">
+                                                <Badge variant={isCustomTopupRow(row) ? 'warning' : 'secondary'}>
+                                                    {orderTypeLabel(t, row.order_type, row)}
+                                                </Badge>
+                                            </td>
                                             <td className="px-3 py-2 text-start text-muted-foreground">{row.reseller?.reseller_name || row.reseller_name || '—'}</td>
                                             <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center gap-1">
@@ -438,7 +491,14 @@ const OrderPage = () => {
                                                     <span className="font-medium tabular-nums">{row.rechargeble_account || '—'}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-3 py-2 tabular-nums">{row.payable_amount ?? row.amount ?? '—'}</td>
+                                            <td className="px-3 py-2">
+                                                <div className="tabular-nums">{orderPayableAmount(row)}</div>
+                                                {orderRequestedAmount(row) ? (
+                                                    <div className="text-[11px] text-muted-foreground">
+                                                        {t('ORDER.REQUESTED_AFN', { defaultValue: 'مبلغ درخواستی' })}: {orderRequestedAmount(row)}
+                                                    </div>
+                                                ) : null}
+                                            </td>
                                             <td className="px-3 py-2 text-xs">
                                                 {hasTxn ? (
                                                     <span className="text-emerald-600">{t('TRANSACTION_HAS_BEEN_CREATED', { defaultValue: 'تراکنش ایجاد شده' })}</span>
@@ -496,6 +556,23 @@ const OrderPage = () => {
                                     <SelectItem value="1">{t('ORDER.STATUS.CONFIRMED')}</SelectItem>
                                     <SelectItem value="2">{t('ORDER.STATUS.REJECTED')}</SelectItem>
                                     <SelectItem value="3">{t('ORDER.STATUS.UNDER_PROCESS')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+
+                        <FilterField label={t('ORDER.FILTER.ORDER_TYPE', { defaultValue: 'نوع سفارش' })}>
+                            <Select
+                                value={draftFilters.filter_order_type || undefined}
+                                onValueChange={(v) => setDraftFilters((p) => ({ ...p, filter_order_type: v }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('ORDER.FILTER.SELECT_ORDER_TYPE', { defaultValue: 'انتخاب نوع سفارش' })} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="custom_topup">{t('ORDER.TYPE.CUSTOM_TOPUP', { defaultValue: 'شارژ سفارشی / موبایل' })}</SelectItem>
+                                    <SelectItem value="custom_recharge">{t('ORDER.TYPE.CUSTOM_RECHARGE', { defaultValue: 'شارژ سفارشی' })}</SelectItem>
+                                    <SelectItem value="mobile_topup">{t('ORDER.TYPE.MOBILE_TOPUP', { defaultValue: 'شارژ موبایل' })}</SelectItem>
+                                    <SelectItem value="bundle">{t('ORDER.TYPE.BUNDLE', { defaultValue: 'بسته' })}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </FilterField>
@@ -704,7 +781,8 @@ function OrderSlip({
                 ? t('DAILY')
                 : '—';
     const created = (order as any).created_at ? new Date((order as any).created_at) : null;
-    const amount = (order as any).payable_amount ?? (order as any).bundle?.buying_price ?? '—';
+    const amount = orderPayableAmount(order);
+    const requested = orderRequestedAmount(order);
     const rejectReason = (order as any).reject_reason || (order as any).rejected_reason;
     const dateStr = created ? created.toLocaleDateString('fa-IR') : '—';
     const timeStr = created
@@ -729,6 +807,10 @@ function OrderSlip({
             <div className="flex min-h-0 flex-1 flex-col justify-between px-2.5 py-2">
                 <div className="space-y-0">
                     <SlipRow label={t('ORDER_ID', { defaultValue: 'شماره' })} value={`#${order.id}`} />
+                    <SlipRow
+                        label={t('ORDER.TABLE.COLUMN.ORDER_TYPE', { defaultValue: 'نوع سفارش' })}
+                        value={orderTypeLabel(t, (order as any).order_type, order)}
+                    />
                     <SlipRow label={t('ORDER.TABLE.COLUMN.BUNDLETITLE')} value={(order as any).bundle?.bundle_title || '—'} />
                     <SlipRow label={t('ORDER.TABLE.COLUMN.RECHARGEABLEACCOUNT')} value={order.rechargeble_account || '—'} strong />
                     <SlipRow label={t('VALIDITY', { defaultValue: 'اعتبار' })} value={validity} />
@@ -737,6 +819,7 @@ function OrderSlip({
                         value={(order as any).bundle?.service?.company?.company_name || (order as any).company_name || '—'}
                     />
                     <SlipRow label={t('ORDER.TABLE.COLUMN.ORDEREDDATE')} value={`${dateStr} · ${timeStr}`} />
+                    {requested ? <SlipRow label={t('ORDER.REQUESTED_AFN', { defaultValue: 'مبلغ درخواستی' })} value={requested} /> : null}
 
                     <div className="mt-2 flex items-center justify-between border-y border-dashed border-neutral-400 py-2">
                         <span className="text-[11px] font-bold">{t('ORDER.TABLE.COLUMN.PAYABLEAMOUNT')}</span>

@@ -276,6 +276,47 @@ export const updateBackupSettings = (
     }
 };
 
+/** Save Google Drive destination from Backup settings (multipart). */
+export const saveGoogleDriveSettings = (payload: {
+    is_enabled: boolean;
+    folder_id: string;
+    credentials_file?: File | null;
+}) => async (dispatch: Dispatch) => {
+    dispatch({ type: UPDATE_BACKUP_SETTINGS_REQUEST });
+
+    try {
+        const form = new FormData();
+        form.append('is_enabled', payload.is_enabled ? '1' : '0');
+        form.append('folder_id', payload.folder_id || '');
+        if (payload.credentials_file) {
+            form.append('credentials_file', payload.credentials_file);
+        }
+
+        const response = await axios.post(backupUrl('/google-drive'), form, {
+            headers: {
+                ...authHeaders(),
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+
+        const body = extractData(response);
+        const settings = body?.settings ?? body;
+
+        dispatch({
+            type: UPDATE_BACKUP_SETTINGS_SUCCESS,
+            payload: settings
+        });
+
+        return body?.google_drive ?? settings?.google_drive ?? null;
+    } catch (error: any) {
+        dispatch({
+            type: UPDATE_BACKUP_SETTINGS_FAIL,
+            payload: getError(error)
+        });
+        throw error;
+    }
+};
+
 export const createBackup = () => async (dispatch: Dispatch) => {
     dispatch({ type: CREATE_BACKUP_REQUEST });
 
@@ -416,9 +457,22 @@ export const downloadBackup = (
 
         return true;
     } catch (error: any) {
+        let message = getError(error);
+        try {
+            const data = error?.response?.data;
+            if (data instanceof Blob) {
+                const text = await data.text();
+                const parsed = JSON.parse(text);
+                if (typeof parsed?.message === 'string' && parsed.message) {
+                    message = parsed.message;
+                }
+            }
+        } catch {
+            /* keep getError message */
+        }
         dispatch({
             type: DOWNLOAD_BACKUP_FAIL,
-            payload: getError(error)
+            payload: message
         });
         throw error;
     }

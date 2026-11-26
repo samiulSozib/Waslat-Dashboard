@@ -9,9 +9,11 @@ import {
     CheckCircle2,
     Clock3,
     Filter,
+    HandCoins,
     Package,
     Plus,
     RefreshCw,
+    Smartphone,
     ShoppingBag,
     Users,
     Wallet,
@@ -233,6 +235,22 @@ const Dashboard = () => {
                     tone="rose"
                     onClick={() => router.push('/pages/order?status=rejected')}
                 />
+                <StatCard
+                    label={t('DASHBOARD.UNDER_PROCESS_ORDERS', { defaultValue: 'در حال پردازش' })}
+                    value={data?.under_process_orders ?? 0}
+                    hint={`${t('DASHBOARD.TODAY')}: ${data?.today_under_process_orders ?? 0}`}
+                    icon={Clock3}
+                    tone="sky"
+                    onClick={() => router.push('/pages/order?status=under_process')}
+                />
+                <StatCard
+                    label={t('DASHBOARD.CUSTOM_TOPUP_ORDERS', { defaultValue: 'شارژ سفارشی / موبایل' })}
+                    value={data?.custom_topup_orders ?? 0}
+                    hint={`${t('DASHBOARD.TODAY')}: ${data?.today_custom_topup_orders ?? 0}`}
+                    icon={Smartphone}
+                    tone="amber"
+                    onClick={() => router.push('/pages/order?order_type=custom_topup')}
+                />
                 <StatCard label={t('DASHBOARD.TOTALRESELLER')} value={data?.total_resellers ?? '—'} icon={Users} tone="slate" onClick={() => router.push('/pages/reseller')} />
                 <StatCard label={t('DASHBOARD.TOTALCOMPANY')} value={data?.total_companies ?? '—'} icon={Building2} tone="sky" onClick={() => router.push('/pages/companies')} />
                 <StatCard label={t('DASHBOARD.TOTALSERVICE')} value={data?.total_services ?? '—'} icon={Package} onClick={() => router.push('/pages/services')} />
@@ -277,11 +295,66 @@ const Dashboard = () => {
                 </Card>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Card className="border-rose-200/80 bg-rose-50/40">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-sm text-rose-800">
+                            <HandCoins className="h-4 w-4" />
+                            {t('DASHBOARD.UNPAID')}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground">{t('DASHBOARD.UNPAID.HINT')}</p>
+                        <div className="pt-1 text-xl font-semibold tabular-nums text-rose-800">{money(data?.total_unpaid_amount)}</div>
+                    </CardHeader>
+                </Card>
+                <Card className="border-amber-200/80 bg-amber-50/40">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-sm text-amber-900">
+                            <HandCoins className="h-4 w-4" />
+                            {t('DASHBOARD.OVERPAID', { defaultValue: 'بدهی شما به نمایندگان' })}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground">
+                            {t('DASHBOARD.OVERPAID.HINT', {
+                                defaultValue: 'پرداخت ثبت‌شده بیشتر از موجودی ارسال‌شده — مبلغی که به نمایندگان بدهکارید'
+                            })}
+                        </p>
+                        <div className="pt-1 text-xl font-semibold tabular-nums text-amber-900">{money(data?.total_overpaid_amount)}</div>
+                    </CardHeader>
+                </Card>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
                 <CurrencyList title={t('DASHBOARD.BALANCES')} hint={t('DASHBOARD.BALANCES.HINT')} items={data?.balances_by_currency} valueKey="total_balance" />
                 <CurrencyList title={t('DASHBOARD.PAYMENT')} hint={t('DASHBOARD.PAYMENT.HINT')} items={data?.payments_by_currency} valueKey="total_payment" tone="sky" />
                 <CurrencyList title={t('DASHBOARD.UNPAID')} hint={t('DASHBOARD.UNPAID.HINT')} items={data?.unpaid_amounts_by_currency} valueKey="total_unpaid" tone="rose" />
+                <CurrencyList
+                    title={t('DASHBOARD.OVERPAID', { defaultValue: 'بدهی شما به نمایندگان' })}
+                    hint={t('DASHBOARD.OVERPAID.HINT', {
+                        defaultValue: 'پرداخت ثبت‌شده بیشتر از موجودی ارسال‌شده — مبلغی که به نمایندگان بدهکارید'
+                    })}
+                    items={data?.overpaid_amounts_by_currency}
+                    valueKey="total_overpaid"
+                    tone="amber"
+                />
             </div>
+
+            {(data?.top_creditor_resellers || []).length > 0 || (data?.top_debt_resellers || []).length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    <PeopleDebtList
+                        title={t('DASHBOARD.TOP_CREDITORS', { defaultValue: 'نمایندگانی که به آن‌ها بدهکارید' })}
+                        items={data?.top_creditor_resellers}
+                        amountKey="overpaid_amount"
+                        tone="amber"
+                        onOpen={(id) => router.push(`/pages/reseller/${id}`)}
+                    />
+                    <PeopleDebtList
+                        title={t('DASHBOARD.TOP_DEBTORS', { defaultValue: 'نمایندگان بدهکار به شما' })}
+                        items={data?.top_debt_resellers}
+                        amountKey="unpaid_amount"
+                        tone="rose"
+                        onOpen={(id) => router.push(`/pages/reseller/${id}`)}
+                    />
+                </div>
+            ) : null}
 
             <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
                 <SheetContent side="left" className="w-full sm:max-w-md">
@@ -331,6 +404,52 @@ const Dashboard = () => {
     );
 };
 
+function PeopleDebtList({
+    title,
+    items,
+    amountKey,
+    tone = 'rose',
+    onOpen
+}: {
+    title: string;
+    items?: any[];
+    amountKey: string;
+    tone?: 'rose' | 'amber';
+    onOpen: (id: number | string) => void;
+}) {
+    const toneClass = tone === 'amber' ? 'from-amber-50' : 'from-rose-50';
+    return (
+        <Card>
+            <CardHeader className={`border-b border-border/60 bg-gradient-to-l ${toneClass} to-transparent`}>
+                <CardTitle className="text-base">{title}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 p-4">
+                {(items || []).length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">داده‌ای نیست</div>
+                ) : (
+                    (items || []).slice(0, 8).map((row: any) => (
+                        <button
+                            key={`${row.id || row.reseller_name}-${row.currency_code}`}
+                            type="button"
+                            className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/70 bg-background px-3 py-2 text-start transition hover:bg-muted/40"
+                            onClick={() => row.id && onOpen(row.id)}
+                        >
+                            <div className="min-w-0">
+                                <div className="truncate text-sm font-medium">{row.reseller_name || '—'}</div>
+                                <div className="text-[11px] text-muted-foreground">{row.phone || row.currency_code}</div>
+                            </div>
+                            <div className="shrink-0 text-sm font-semibold tabular-nums">
+                                {Number(row[amountKey] || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}{' '}
+                                <span className="text-xs font-normal text-muted-foreground">{row.currency_code}</span>
+                            </div>
+                        </button>
+                    ))
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
 function CurrencyList({
     title,
     hint,
@@ -342,10 +461,10 @@ function CurrencyList({
     hint: string;
     items?: any[];
     valueKey: string;
-    tone?: 'primary' | 'sky' | 'rose';
+    tone?: 'primary' | 'sky' | 'rose' | 'amber';
 }) {
     const toneClass =
-        tone === 'sky' ? 'from-sky-50' : tone === 'rose' ? 'from-rose-50' : 'from-emerald-50';
+        tone === 'sky' ? 'from-sky-50' : tone === 'rose' ? 'from-rose-50' : tone === 'amber' ? 'from-amber-50' : 'from-emerald-50';
 
     return (
         <Card>
