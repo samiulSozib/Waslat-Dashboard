@@ -5,8 +5,12 @@ const authHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem('api_token') || ''}`
 });
 
-const firebaseUrl = (path = '') =>
-    `${(process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/+$/, '')}/firebase${path}`;
+/** Avoid trailing slash — redirects often surface in the browser as a false CORS error. */
+const firebaseUrl = (path = '') => {
+    const base = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/+$/, '');
+    const suffix = path && path !== '/' ? path.replace(/\/+$/, '') : '';
+    return `${base}/firebase${suffix}`;
+};
 
 export type FirebasePublicStatus = {
     configured?: boolean;
@@ -20,7 +24,7 @@ export type FirebasePublicStatus = {
 };
 
 export const fetchFirebaseSettings = () => async (_dispatch?: Dispatch): Promise<FirebasePublicStatus | null> => {
-    const response = await axios.get(firebaseUrl('/'), {
+    const response = await axios.get(firebaseUrl(), {
         headers: authHeaders()
     });
     return response.data?.data?.firebase ?? response.data?.firebase ?? null;
@@ -38,7 +42,7 @@ export const saveFirebaseSettings = (payload: {
         form.append('credentials_file', payload.credentials_file);
     }
 
-    const response = await axios.post(firebaseUrl('/'), form, {
+    const response = await axios.post(firebaseUrl(), form, {
         headers: {
             ...authHeaders(),
             'Content-Type': 'multipart/form-data'
