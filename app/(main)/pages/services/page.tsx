@@ -13,16 +13,22 @@ import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { InputText } from 'primereact/inputtext';
-import { InputNumber } from 'primereact/inputnumber';
-import { ProgressBar } from 'primereact/progressbar';
-import { InputSwitch } from 'primereact/inputswitch';
-import { Password } from 'primereact/password';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { RowActions } from '@/components/admin/row-actions';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { SearchSelect } from '@/components/admin/search-select';
+import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button as UiButton } from '@/components/ui/button';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
@@ -88,7 +94,8 @@ const Services = () => {
             })),
         [providers]
     );
-    const [localSearchTerm, setLocalSearchTerm] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const localSearchTerm = useDebouncedValue(searchInput, 350);
     const [savingRows, setSavingRows] = useState<Record<number, boolean>>({});
     // Save only the changed setting. No unrelated secrets or fields are sent.
     const persistInlineSetting = async (
@@ -129,14 +136,13 @@ const Services = () => {
         const changed = !invalid && value !== current;
         return (
             <div className="flex align-items-center gap-2" style={{ minWidth: 125 }}>
-                <InputNumber
-                    value={value}
+                <NumberInput
+                    value={value ?? 0}
                     min={0}
-                    maxFractionDigits={0}
-                    useGrouping={false}
+                    allowNull={false}
                     disabled={saving}
-                    inputStyle={{ width: '60px', textAlign: 'center' }}
-                    onValueChange={e => setPriorityDrafts(prev => ({ ...prev, [rowData.id]: e.value ?? null }))}
+                    className="w-[3.75rem] text-center"
+                    onValueChange={(v) => setPriorityDrafts((prev) => ({ ...prev, [rowData.id]: v ?? 0 }))}
                 />
                 <Button
                     type="button"
@@ -160,14 +166,18 @@ const Services = () => {
         );
     };
     const robotBodyTemplate = (rowData: Service) => (
-        <InputSwitch checked={Boolean(rowData.is_robot_enabled)}
+        <Switch
+            checked={Boolean(rowData.is_robot_enabled)}
             disabled={Boolean(savingRows[rowData.id])}
-            onChange={e => persistInlineSetting(rowData.id, 'is_robot_enabled', Boolean(e.value))} />
+            onCheckedChange={(v) => void persistInlineSetting(rowData.id, 'is_robot_enabled', v)}
+        />
     );
     const apiBodyTemplate = (rowData: Service) => (
-        <InputSwitch checked={Boolean(rowData.is_api_enabled)}
+        <Switch
+            checked={Boolean(rowData.is_api_enabled)}
             disabled={Boolean(savingRows[rowData.id])}
-            onChange={e => persistInlineSetting(rowData.id, 'is_api_enabled', Boolean(e.value))} />
+            onCheckedChange={(v) => void persistInlineSetting(rowData.id, 'is_api_enabled', v)}
+        />
     );
     const providerBodyTemplate = (rowData: Service) => {
         const provider = (providers || []).find((p: Provider) => p.id === Number(rowData.api_provider_id));
@@ -338,41 +348,6 @@ const Services = () => {
         setSelectedServices(null);
         setDeleteServicesDialog(false);
     };
-    const rightToolbarTemplate = () => {
-        const hasSelectedServices = selectedServices && (selectedServices as any).length > 0;
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('SERVICE.TABLE.CREATESERVICE')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                    {/* <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedServices || !(selectedServices as any).length}
-                    /> */}
-                </div>
-            </React.Fragment>
-        );
-    };
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <div className="flex items-center">
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-    //                 <i className="pi pi-search" />
-    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
-    //             </span>
-    //         </div>
-    //     );
-    // };
     // Searches the currently loaded Redux services without another API call.
     const filteredServices = useMemo(() => {
         const query = localSearchTerm.trim().toLocaleLowerCase();
@@ -396,26 +371,6 @@ const Services = () => {
             Number(a.display_order ?? 0) - Number(b.display_order ?? 0) || a.id - b.id
         );
     }, [services, providers, localSearchTerm]);
-    const leftToolbarTemplate = () => (
-        <div className="flex align-items-center gap-2">
-            <span className="p-input-icon-left">
-                <i className="pi pi-search" />
-                <InputText
-                    type="search"
-                    value={localSearchTerm}
-                    onChange={e => setLocalSearchTerm(e.target.value)}
-                    placeholder="Search loaded services..."
-                />
-            </span>
-            {localSearchTerm && (
-                <Button
-                    type="button" icon="pi pi-times" text severity="secondary"
-                    aria-label="Clear search" tooltip="Clear search"
-                    onClick={() => setLocalSearchTerm('')}
-                />
-            )}
-        </div>
-    );
     const countryNameBodyTemplate = (rowData: Service) => {
         return (
             <>
@@ -474,14 +429,24 @@ const Services = () => {
             </>
         );
     };
-    const actionBodyTemplate = (rowData: Service) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editService(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteService(rowData)} />
-            </>
-        );
-    };
+    const actionBodyTemplate = (rowData: Service) => (
+        <RowActions
+            items={[
+                {
+                    label: t('TABLE.GENERAL.EDIT'),
+                    icon: <Pencil className="h-4 w-4" />,
+                    onClick: () => editService(rowData)
+                },
+                {
+                    label: t('APP.GENERAL.DELETE'),
+                    icon: <Trash2 className="h-4 w-4" />,
+                    onClick: () => confirmDeleteService(rowData),
+                    danger: true,
+                    separatorBefore: true
+                }
+            ]}
+        />
+    );
     // const header = (
     //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
     //         <h5 className="m-0">Manage Products</h5>
@@ -491,12 +456,6 @@ const Services = () => {
     //         </span>
     //     </div>
     // );
-    const companyDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveService} />
-        </>
-    );
     const deleteCompanyDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteServiceDialog} />
@@ -521,12 +480,26 @@ const Services = () => {
         }
     }, [service.company_id, companies]);
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
+        <>
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.SERVICE')}
+                description="مدیریت خدمات، اولویت نمایش و تنظیمات بسته"
+                loading={loading}
+                actions={
+                    <UiButton type="button" size="sm" onClick={openNew}>
+                        <Plus className="h-4 w-4" />
+                        {t('SERVICE.TABLE.CREATESERVICE')}
+                    </UiButton>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('SERVICE.TABLE.SEARCHSERVICE')}
+                    />
+                }
+            >
                     <DataTable
                         ref={dt}
                         value={filteredServices}
@@ -536,22 +509,17 @@ const Services = () => {
                         paginator
                         rows={10}
                         rowsPerPageOptions={[5, 10, 25]}
+                        size="small"
                         className="datatable-responsive"
                         paginatorTemplate={
                             isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
                         }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
+                        currentPageReportTemplate={t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
                         style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        // header={header}
                         responsiveLayout="scroll"
                     >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="Company Name"
@@ -584,248 +552,274 @@ const Services = () => {
                         <Column header="Inquiry Provider" body={inquiryProviderBodyTemplate} style={{ minWidth: '180px' }} />
                         <Column header="API Key" body={(rowData: Service) => rowData.has_api_key ? 'Configured' : '—'} style={{ minWidth: '85px' }} />
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TOTAL_CUSTOM_FIELD')} body={customFieldsBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
+                        <Column
+                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            header={t('TABLE.GENERAL.ACTION')}
+                            body={actionBodyTemplate}
+                            headerStyle={{ minWidth: '5rem' }}
+                            bodyStyle={{ width: '5rem' }}
+                        ></Column>
                     </DataTable>
-                    <Dialog visible={serviceDialog} style={{ width: '700px', padding: '5px' }} header={t('SERVICE.DETAILS')} modal className="p-fluid" footer={companyDialogFooter} onHide={hideDialog}>
-                        <div className="card" style={{ padding: '40px' }}>
-                            <div className="field">
-                                <label htmlFor="name" style={{ fontWeight: 'bold' }}>
-                                    {t('SERVICE.FORM.INPUT.SERVICENAME')}
-                                </label>
-                                <InputText
-                                    id="service"
-                                    value={service.service_name}
-                                    onChange={(e) =>
-                                        setService((perv) => ({
-                                            ...perv,
-                                            service_name: e.target.value
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('SERVICE.FORM.PLACEHOLDER.SERVICENAME')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !service.service_name
-                                    })}
-                                />
-                                {submitted && !service.service_name && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-                            <div className="formgrid grid">
-                                <div className="field col">
-                                    <label htmlFor="country_id" style={{ fontWeight: 'bold' }}>
-                                        {t('SERVICE.FORM.INPUT.COMPANY')}
-                                    </label>
-                                    <Dropdown
-                                        id="company"
-                                        value={service.company}
-                                        options={companies}
-                                        onChange={(e) =>
-                                            setService((perv) => ({
-                                                ...perv,
-                                                company: e.value
-                                            }))
-                                        }
-                                        optionLabel="company_name"
-                                        // optionValue='id'
-                                        placeholder={t('SERVICE.FORM.PLACEHOLDER.COMPANY')}
-                                        className="w-full"
-                                    />
-                                    {submitted && !service.company && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="formgrid grid">
-                                <div className="field col">
-                                    <label htmlFor="country_id" style={{ fontWeight: 'bold' }}>
-                                        {t('SERVICE.FORM.INPUT.SERVICECATEGORY')}
-                                    </label>
-                                    <Dropdown
-                                        id="service_category"
-                                        value={service.service_category}
-                                        options={serviceCategories}
-                                        onChange={(e) =>
-                                            setService((perv) => ({
-                                                ...perv,
-                                                service_category: e.value
-                                            }))
-                                        }
-                                        optionLabel="category_name"
-                                        // optionValue='id'
-                                        placeholder={t('SERVICE.FORM.PLACEHOLDER.ServiceCategory')}
-                                        className="w-full"
-                                    />
-                                    {submitted && !service.service_category && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
-                            <div className='formgrid grid'>
-                                <div className="field col">
-                                    <label htmlFor="telegram_chat_id" style={{ fontWeight: 'bold' }}>
-                                        {t('COMPANY.FORM.INPUT.TELEGRAMID')}
-                                    </label>
-                                    <Dropdown
-                                        id="telegram_chat_id"
-                                        value={service.telegram_chat_id}
-                                        options={telegramChatIds}
-                                        onChange={(e) =>
-                                            setService((prevService) => ({
-                                                ...prevService,
-                                                telegram_chat_id: e.value
-                                            }))
-                                        }
-                                        optionLabel="group_name"
-                                        placeholder={t('COMPANY.FORM.PLACEHOLDER.TELEGRAM_GROUP')}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="card" style={{ padding: '20px', marginTop: '12px' }}>
-                        <h5>Automation & API Settings</h5>
-                        <div className="field">
-                            <label htmlFor="service_display_order" className="block font-bold mb-2">Display Order Priority</label>
-                            <InputNumber inputId="service_display_order" value={service.display_order ?? 0}
-                                min={0} useGrouping={false} showButtons className="w-full"
-                                onValueChange={e => setService(prev => ({ ...prev, display_order: e.value ?? 0 }))} />
-                            <small>Lower numbers appear first. Equal priorities use ID order.</small>
-                        </div>
-                        <div className="formgrid grid">
-                            <div className="field col-12 md:col-6">
-                                <label htmlFor="service_robot_enabled" className="block font-bold mb-2">Robot Enabled</label>
-                                <InputSwitch
-                                    inputId="service_robot_enabled"
-                                    checked={Boolean(service.is_robot_enabled)}
-                                    onChange={(e) => setService(prev => ({ ...prev, is_robot_enabled: Boolean(e.value) }))}
-                                />
-                            </div>
-                            <div className="field col-12 md:col-6">
-                                <label htmlFor="service_api_enabled" className="block font-bold mb-2">API Enabled</label>
-                                <InputSwitch
-                                    inputId="service_api_enabled"
-                                    checked={Boolean(service.is_api_enabled)}
-                                    onChange={(e) => setService(prev => ({ ...prev, is_api_enabled: Boolean(e.value) }))}
-                                />
-                            </div>
-                            <div className="field col-12 md:col-6">
-                                <label htmlFor="service_api_provider" className="block font-bold mb-2">API Provider (Optional)</label>
-                                <Dropdown
-                                    inputId="service_api_provider"
-                                    value={service.api_provider_id ?? null}
-                                    options={(providers || []).map((provider: Provider) => ({
-                                        label: `${provider.name} (${provider.code})`,
-                                        value: provider.id
-                                    }))}
-                                    onChange={(e) => setService(prev => ({ ...prev, api_provider_id: e.value ?? null }))}
-                                    placeholder="Select API Provider"
-                                    filter
-                                    showClear
-                                    className="w-full"
-                                />
-                            </div>
-                            <div className="field col-12 md:col-6">
-                                <label htmlFor="service_api_key" className="block font-bold mb-2">API Key (Optional)</label>
-                                <Password
-                                    inputId="service_api_key"
-                                    value={service.api_key ?? ''}
-                                    onChange={(e) => setService(prev => ({ ...prev, api_key: e.target.value }))}
-                                    feedback={false}
-                                    toggleMask
-                                    placeholder={service.id ? 'Leave blank to keep existing key' : 'Enter API Key'}
-                                    className="w-full"
-                                    inputClassName="w-full"
-                                    autoComplete="new-password"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                    {/* Inquiry provider is independent of the service purchase/API provider above. */}
-                    <div className="card" style={{ padding: '20px', marginTop: '12px' }}>
-                        <h5>Package Inquiry Settings</h5>
-                        <p className="text-sm text-500 mb-3">
-                            Number-specific Turkish package discovery. Configure this only on
-                            Turkish Internet services; leave Recharge, Minutes and other
-                            services disabled. This does not change purchase routing.
-                            App Settings → Package Inquiry must also be enabled; global Normal Mode
-                            overrides both Inherit and Provider for backward compatibility.
-                        </p>
-                        <div className="field">
-                            <label htmlFor="package_inquiry_mode" className="block font-bold mb-2">
-                                Package Inquiry Mode
-                            </label>
-                            <Dropdown
-                                inputId="package_inquiry_mode"
-                                value={service.package_inquiry_mode ?? 'disabled'}
-                                options={[
-                                    { label: 'Disabled — normal bundles only', value: 'disabled' },
-                                    { label: 'Inherit — default provider from App Settings', value: 'inherit' },
-                                    { label: 'Provider — select a specific provider', value: 'provider' }
-                                ]}
-                                onChange={(e) => setService(prev => ({
-                                    ...prev,
-                                    package_inquiry_mode: e.value as PackageInquiryMode,
-                                    package_inquiry_provider_id: e.value === 'provider'
-                                        ? prev.package_inquiry_provider_id ?? null : null
-                                }))}
-                                className="w-full"
-                            />
-                        </div>
-                        {service.package_inquiry_mode === 'provider' && (
-                            <div className="field">
-                                <label htmlFor="package_inquiry_provider_id" className="block font-bold mb-2">
-                                    Package Inquiry Provider *
-                                </label>
-                                <Dropdown
-                                    inputId="package_inquiry_provider_id"
-                                    value={service.package_inquiry_provider_id ?? null}
-                                    options={inquiryProviderOptions}
-                                    onChange={(e) => setService(prev => ({
-                                        ...prev,
-                                        package_inquiry_provider_id: e.value == null ? null : Number(e.value)
-                                    }))}
-                                    placeholder="Select an active inquiry provider"
-                                    filter
-                                    showClear
-                                    className="w-full"
-                                />
-                                {inquiryProviderOptions.length === 0 && (
-                                    <small className="text-orange-500">
-                                        No active PayStore/ManshorPay provider is loaded. Check Providers and API pagination.
-                                    </small>
-                                )}
-                            </div>
-                        )}
-                        {service.package_inquiry_mode === 'inherit' && (
-                            <small className="text-500">
-                                This service uses App Settings → Package Inquiry → Default Provider.
-                            </small>
-                        )}
-                        {(service.package_inquiry_mode ?? 'disabled') === 'disabled' && (
-                            <small className="text-500">
-                                Existing normal bundles are listed without a number-specific inquiry.
-                            </small>
-                        )}
-                    </div>
-                    <CustomFields
-                            fields={parseInputFormSchema(service.input_form_schema)}
-                            onFieldsChange={(updatedFields) =>
-                                setService({
-                                    ...service,
-                                    input_form_schema: updatedFields // Keep as array for local state
-                                })
+            </ListPage>
+            <FormSheet
+                open={serviceDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                title={t('SERVICE.DETAILS')}
+                description={service.id ? 'ویرایش خدمت' : 'ثبت خدمت جدید'}
+                size="xl"
+                side="left"
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveService}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection title="اطلاعات پایه" description="نام، شرکت و دسته‌بندی خدمت">
+                    <FormField
+                        label={t('SERVICE.FORM.INPUT.SERVICENAME')}
+                        required
+                        fullWidth
+                        error={submitted && !service.service_name ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="service"
+                            value={service.service_name}
+                            onChange={(e) =>
+                                setService((perv) => ({
+                                    ...perv,
+                                    service_name: e.target.value
+                                }))
                             }
-                            submitted={submitted}
-                        />{' '}
-                    </Dialog>
+                            required
+                            autoFocus
+                            placeholder={t('SERVICE.FORM.PLACEHOLDER.SERVICENAME')}
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !service.service_name
+                            })}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('SERVICE.FORM.INPUT.COMPANY')}
+                        required
+                        error={submitted && !service.company ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <SearchSelect
+                            value={service.company}
+                            options={companies || []}
+                            onChange={(selected) =>
+                                setService((perv) => ({
+                                    ...perv,
+                                    company: selected
+                                }))
+                            }
+                            optionLabel="company_name"
+                            placeholder={t('SERVICE.FORM.PLACEHOLDER.COMPANY')}
+                            error={submitted && !service.company}
+                            returnFullObject
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('SERVICE.FORM.INPUT.SERVICECATEGORY')}
+                        required
+                        error={submitted && !service.service_category ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <SearchSelect
+                            value={service.service_category}
+                            options={serviceCategories || []}
+                            onChange={(selected) =>
+                                setService((perv) => ({
+                                    ...perv,
+                                    service_category: selected
+                                }))
+                            }
+                            optionLabel="category_name"
+                            placeholder={t('SERVICE.FORM.PLACEHOLDER.ServiceCategory')}
+                            error={submitted && !service.service_category}
+                            returnFullObject
+                        />
+                    </FormField>
+                    <FormField label={t('COMPANY.FORM.INPUT.TELEGRAMID')}>
+                        <SearchSelect
+                            value={service.telegram_chat_id}
+                            options={telegramChatIds || []}
+                            onChange={(selected) =>
+                                setService((prevService) => ({
+                                    ...prevService,
+                                    telegram_chat_id: selected
+                                }))
+                            }
+                            optionLabel="group_name"
+                            placeholder={t('COMPANY.FORM.PLACEHOLDER.TELEGRAM_GROUP')}
+                            returnFullObject
+                            showClear
+                        />
+                    </FormField>
+                </FormSection>
+
+                <FormSection title="Automation & API Settings" description="اولویت نمایش، ربات و API">
+                    <FormField
+                        label="Display Order Priority"
+                        hint="Lower numbers appear first. Equal priorities use ID order."
+                        fullWidth
+                    >
+                        <NumberInput
+                            id="service_display_order"
+                            min={0}
+                            step={1}
+                            allowNull={false}
+                            value={service.display_order ?? 0}
+                            className="w-full"
+                            onValueChange={(v) =>
+                                setService((prev) => ({
+                                    ...prev,
+                                    display_order: Math.max(0, v ?? 0)
+                                }))
+                            }
+                        />
+                    </FormField>
+                    <FormField label="Robot Enabled">
+                        <Switch
+                            id="service_robot_enabled"
+                            checked={Boolean(service.is_robot_enabled)}
+                            onCheckedChange={(v) => setService((prev) => ({ ...prev, is_robot_enabled: v }))}
+                        />
+                    </FormField>
+                    <FormField label="API Enabled">
+                        <Switch
+                            id="service_api_enabled"
+                            checked={Boolean(service.is_api_enabled)}
+                            onCheckedChange={(v) => setService((prev) => ({ ...prev, is_api_enabled: v }))}
+                        />
+                    </FormField>
+                    <FormField label="API Provider (Optional)">
+                        <SearchSelect
+                            value={
+                                (providers || []).find((provider: Provider) => provider.id === service.api_provider_id) ||
+                                null
+                            }
+                            options={providers || []}
+                            onChange={(selected) =>
+                                setService((prev) => ({
+                                    ...prev,
+                                    api_provider_id: selected?.id ?? null
+                                }))
+                            }
+                            optionLabel="name"
+                            placeholder="Select API Provider"
+                            searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو…' })}
+                            returnFullObject
+                            showClear
+                            itemTemplate={(provider: Provider) => (
+                                <div>
+                                    <div className="text-sm font-semibold">{provider.name}</div>
+                                    <div className="text-xs text-muted-foreground">{provider.code}</div>
+                                </div>
+                            )}
+                        />
+                    </FormField>
+                    <FormField
+                        label="API Key (Optional)"
+                        hint={service.id ? 'برای حفظ کلید فعلی خالی بگذارید.' : undefined}
+                    >
+                        <PasswordInput
+                            id="service_api_key"
+                            value={service.api_key ?? ''}
+                            onChange={(e) => setService((prev) => ({ ...prev, api_key: e.target.value }))}
+                            placeholder={service.id ? 'Leave blank to keep existing key' : 'Enter API Key'}
+                            className="w-full"
+                            autoComplete="new-password"
+                        />
+                    </FormField>
+                </FormSection>
+
+                <FormSection
+                    title="Package Inquiry Settings"
+                    description="Number-specific Turkish package discovery. Configure this only on Turkish Internet services."
+                >
+                    <FormField label="Package Inquiry Mode" fullWidth>
+                        <Select
+                            value={service.package_inquiry_mode ?? 'disabled'}
+                            onValueChange={(v) =>
+                                setService((prev) => ({
+                                    ...prev,
+                                    package_inquiry_mode: v as PackageInquiryMode,
+                                    package_inquiry_provider_id: v === 'provider' ? (prev.package_inquiry_provider_id ?? null) : null
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Package inquiry mode" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="disabled">Disabled — normal bundles only</SelectItem>
+                                <SelectItem value="inherit">Inherit — default provider from App Settings</SelectItem>
+                                <SelectItem value="provider">Provider — select a specific provider</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    {service.package_inquiry_mode === 'provider' ? (
+                        <FormField label="Package Inquiry Provider" required fullWidth>
+                            <Select
+                                value={
+                                    service.package_inquiry_provider_id != null
+                                        ? String(service.package_inquiry_provider_id)
+                                        : undefined
+                                }
+                                onValueChange={(v) =>
+                                    setService((prev) => ({
+                                        ...prev,
+                                        package_inquiry_provider_id: v ? Number(v) : null
+                                    }))
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select an active inquiry provider" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {inquiryProviderOptions.map((opt) => (
+                                        <SelectItem key={opt.value} value={String(opt.value)}>
+                                            {opt.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {inquiryProviderOptions.length === 0 ? (
+                                <p className="mt-1 text-xs text-orange-500">
+                                    No active PayStore/ManshorPay provider is loaded. Check Providers and API pagination.
+                                </p>
+                            ) : null}
+                        </FormField>
+                    ) : null}
+                    {service.package_inquiry_mode === 'inherit' ? (
+                        <p className="sm:col-span-2 text-xs text-muted-foreground">
+                            This service uses App Settings → Package Inquiry → Default Provider.
+                        </p>
+                    ) : null}
+                    {(service.package_inquiry_mode ?? 'disabled') === 'disabled' ? (
+                        <p className="sm:col-span-2 text-xs text-muted-foreground">
+                            Existing normal bundles are listed without a number-specific inquiry.
+                        </p>
+                    ) : null}
+                </FormSection>
+
+                <div className="sm:col-span-2">
+                    <CustomFields
+                        fields={parseInputFormSchema(service.input_form_schema)}
+                        onFieldsChange={(updatedFields) =>
+                            setService({
+                                ...service,
+                                input_form_schema: updatedFields
+                            })
+                        }
+                        submitted={submitted}
+                    />
+                </div>
+            </FormSheet>
                     <Dialog visible={deleteServiceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteServiceDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
@@ -842,9 +836,7 @@ const Services = () => {
                             {service && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
-                </div>
-            </div>
-        </div>
+        </>
     );
 };
 export default withAuth(Services);

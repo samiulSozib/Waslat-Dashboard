@@ -126,6 +126,9 @@ export const _addReseller = (
                 : "0";
         formData.append("currency_preference_id", currencyPreferenceId);
         formData.append('balance', resellerData.balance.toString());
+        if (resellerData.parent_id) {
+            formData.append('parent_id', String(resellerData.parent_id));
+        }
         //.append('reseller_group_id', String(resellerData.reseller_group_id));
         if (resellerData.reseller_group_id && resellerData.reseller_group_id !== 0) {
             formData.append('reseller_group_id', String(resellerData.reseller_group_id));
@@ -243,6 +246,9 @@ export const _editReseller = (
                 ? resellerData.code.id.toString()
                 : "0";
         formData.append("currency_preference_id", currencyPreferenceId); formData.append('balance', resellerData.balance.toString());
+        if ('parent_id' in resellerData) {
+            formData.append('parent_id', resellerData.parent_id ? String(resellerData.parent_id) : '');
+        }
         //formData.append('reseller_group_id', String(resellerData.reseller_group_id));
         if (resellerData.reseller_group_id && resellerData.reseller_group_id !== 0) {
             formData.append('reseller_group_id', String(resellerData.reseller_group_id));
@@ -314,6 +320,7 @@ export const _editReseller = (
             detail: t("RESELLER_UPDATED"),
             life: 3000,
         });
+        return true;
     } catch (error: any) {
         dispatch({
             type: EDIT_RESELLER_FAIL,
@@ -336,6 +343,7 @@ export const _editReseller = (
             detail: errorMessage,
             life: 3000,
         });
+        return false;
     }
 };
 
@@ -415,6 +423,7 @@ export const _changeResellerStatus = (
             detail: t("RESELLER_STATUS_CHANGED"),
             life: 3000,
         });
+        return true;
     } catch (error: any) {
         dispatch({
             type: CHANGE_RESELLER_STATUS_FAIL,
@@ -427,6 +436,7 @@ export const _changeResellerStatus = (
             detail: t("RESELLER_STATUS_CHANGE_FAILED"),
             life: 3000,
         });
+        return false;
     }
 };
 

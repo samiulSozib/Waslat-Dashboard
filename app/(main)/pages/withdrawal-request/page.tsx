@@ -1,28 +1,32 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 import { Button } from 'primereact/button';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { InputNumber } from 'primereact/inputnumber';
 import { AppDispatch } from '@/app/redux/store';
 import { Currency, Reseller, WithdrawRequest } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
-import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
-import { Tag } from 'primereact/tag';
-import { Calendar } from 'primereact/calendar';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { SearchSelect } from '@/components/admin/search-select';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { FilterField, FILTER_SHEET_BODY_CLASS } from '@/components/admin/filter-field';
+import { RowActions } from '@/components/admin/row-actions';
+import { Button as UiButton } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { NumberInput } from '@/components/ui/number-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { CheckCircle, Plus, XCircle } from 'lucide-react';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import { _fetchResellers } from '@/app/redux/actions/resellerActions';
 import { clearWithdrawFilters, createWithdrawRequest, fetchWithdrawRequests, setWithdrawFilters, updateWithdrawStatus } from '@/app/redux/actions/withdrawalRequestActions';
@@ -68,14 +72,17 @@ const WithdrawRequestsPage = () => {
   const [withdrawRequest, setWithdrawRequest] = useState<WithdrawRequestCreate>(emptyWithdrawRequest);
   const [selectedWithdrawRequests, setSelectedWithdrawRequests] = useState<WithdrawRequest[]>([]);
   const [submitted, setSubmitted] = useState(false);
-  const [globalFilter, setGlobalFilter] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const searchTag = useDebouncedValue(searchInput, 350);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [draftStatusFilter, setDraftStatusFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [adminNote, setAdminNote] = useState('');
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+  const [draftDateRange, setDraftDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [selectedResellerCurrency, setSelectedResellerCurrency] = useState<Currency | null>(null);
   
   const toast = useRef<Toast>(null);
-  const dt = useRef<DataTable<any>>(null);
   const dispatch = useDispatch<AppDispatch>();
   
   // Get state from redux
@@ -263,188 +270,80 @@ const WithdrawRequestsPage = () => {
     setStatusUpdateDialog(true);
   };
 
-  const rightToolbarTemplate = () => {
-    return (
-      <React.Fragment>
-        <div className="flex justify-end items-center space-x-2">
-          <Button
-            style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-            label={t('CREATE_WITHDRAW_REQUEST')}
-            icon="pi pi-plus"
-            severity="success"
-            className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-            onClick={openNew}
-          />
-        </div>
-      </React.Fragment>
+  const filteredWithdrawRequests = useMemo(() => {
+    const search = searchTag.trim().toLocaleLowerCase();
+    const list = withdrawRequests || [];
+    if (!search) return list;
+    return list.filter((row: WithdrawRequest) =>
+      [
+        row.reseller?.reseller_name,
+        row.reseller?.email,
+        row.currency?.code,
+        row.bank_details?.bank_name,
+        row.bank_details?.account_number,
+        row.status,
+        row.amount
+      ]
+        .filter((v) => v !== null && v !== undefined)
+        .join(' ')
+        .toLocaleLowerCase()
+        .includes(search)
     );
+  }, [withdrawRequests, searchTag]);
+
+  const chips = useMemo(() => {
+    const list: { key: string; label: string }[] = [];
+    if (statusFilter) list.push({ key: 'status', label: `${t('STATUS')}: ${statusFilter}` });
+    if (dateRange[0] && dateRange[1]) {
+      list.push({
+        key: 'dates',
+        label: `${t('DATE')}: ${dateRange[0].toISOString().split('T')[0]} — ${dateRange[1].toISOString().split('T')[0]}`
+      });
+    }
+    return list;
+  }, [statusFilter, dateRange, t]);
+
+  const applyFilters = () => {
+    setStatusFilter(draftStatusFilter);
+    setDateRange(draftDateRange);
+    setFilterOpen(false);
   };
 
-  const leftToolbarTemplate = () => {
-    return (
-      <div className="flex flex-wrap align-items-center gap-2">
-        <span className="p-input-icon-left">
-          <i className="pi pi-search" />
-          <InputText
-            type="search"
-            onInput={(e) => setGlobalFilter(e.currentTarget.value)}
-            placeholder={t('SEARCH')}
-            className="w-full"
-          />
-        </span>
-        
-        {/* Status Filter */}
-        <Dropdown
-          value={statusFilter}
-          options={[
-            { label: t('ALL_STATUS'), value: '' },
-            { label: t('PENDING'), value: 'pending' },
-            { label: t('APPROVED'), value: 'approved' },
-            { label: t('REJECTED'), value: 'rejected' }
-          ]}
-          onChange={(e) => setStatusFilter(e.value)}
-          placeholder={t('FILTER_BY_STATUS')}
-          className="w-full md:w-14rem"
-        />
-        
-        
-        
-        
-      </div>
-    );
+  const clearFilters = () => {
+    setDraftStatusFilter('');
+    setDraftDateRange([null, null]);
+    setStatusFilter('');
+    setDateRange([null, null]);
+    dispatch(clearWithdrawFilters());
+    setFilterOpen(false);
   };
 
-  const resellerBodyTemplate = (rowData: WithdrawRequest) => {
-    return (
-      <>
-        <span className="p-column-title">{t('RESELLER')}</span>
-        <div className="flex align-items-center gap-2">
-          <div>
-            <div className="font-bold">{rowData.reseller?.reseller_name}</div>
-            <small className="text-500">{rowData.reseller?.email}</small>
-          </div>
-        </div>
-      </>
-    );
+  const removeChip = (key: string) => {
+    if (key === 'status') setStatusFilter('');
+    if (key === 'dates') setDateRange([null, null]);
   };
 
-  const amountBodyTemplate = (rowData: WithdrawRequest) => {
-    const currencySymbol = rowData.currency?.symbol || '';
-    return (
-      <>
-        <span className="p-column-title">{t('AMOUNT')}</span>
-        <div className="flex align-items-center gap-2">
-          {rowData.currency?.code && (
-            <span className={`fi fi-${rowData.currency.code.toLowerCase().substring(0, 2) || 'us'} fis`}></span>
-          )}
-          <span className="font-bold">
-            {Number(rowData.amount).toLocaleString()} {currencySymbol}
-          </span>
-        </div>
-      </>
-    );
+  const totalPages = Math.max(1, Math.ceil((pagination?.total || 0) / (pagination?.items_per_page || 10)));
+
+  const onPageChange = (page: number) => {
+    dispatch(fetchWithdrawRequests(page, filters));
   };
 
-  const bankDetailsBodyTemplate = (rowData: WithdrawRequest) => {
-    return (
-      <>
-        <span className="p-column-title">{t('BANK_DETAILS')}</span>
-        <div>
-          <div><strong>{t('BANK')}:</strong> {rowData.bank_details?.bank_name || '-'}</div>
-          <div><strong>{t('ACCOUNT_HOLDER')}:</strong> {rowData.bank_details?.account_holder_name || '-'}</div>
-          <div><strong>{t('ACCOUNT_NUMBER')}:</strong> {rowData.bank_details?.account_number || '-'}</div>
-        </div>
-      </>
-    );
+  const withdrawStatusVariant = (status?: string): 'success' | 'warning' | 'danger' | 'muted' => {
+    const s = status?.toString().toLowerCase();
+    if (s === 'approved') return 'success';
+    if (s === 'pending') return 'warning';
+    if (s === 'rejected') return 'danger';
+    return 'muted';
   };
 
-  const statusBodyTemplate = (rowData: WithdrawRequest) => {
-    const statusConfig: Record<string, { severity: string, icon: string, label: string }> = {
-      'pending': { severity: 'warning', icon: 'pi pi-clock', label: t('PENDING') },
-      'approved': { severity: 'success', icon: 'pi pi-check', label: t('APPROVED') },
-      'rejected': { severity: 'danger', icon: 'pi pi-times', label: t('REJECTED') }
-    };
-
-    const statusStr = rowData.status?.toString() || 'pending';
-    const config = statusConfig[statusStr] || statusConfig['pending'];
-
-    return (
-      <>
-        <span className="p-column-title">{t('STATUS')}</span>
-        <Tag
-          value={config.label}
-          severity={config.severity as any}
-          icon={config.icon}
-        />
-      </>
-    );
+  const getWithdrawRowActions = (row: WithdrawRequest) => {
+    if ((row.status?.toString() || 'pending') !== 'pending') return [];
+    return [
+      { label: t('APPROVE'), icon: <CheckCircle className="h-4 w-4" />, onClick: () => confirmStatusUpdate(row, 1) },
+      { label: t('REJECT'), icon: <XCircle className="h-4 w-4" />, onClick: () => confirmStatusUpdate(row, 2), danger: true }
+    ];
   };
-
-  const dateBodyTemplate = (rowData: WithdrawRequest) => {
-    return (
-      <>
-        <span className="p-column-title">{t('DATE')}</span>
-        <div>
-          <div><small>{new Date(rowData.created_at).toLocaleDateString()}</small></div>
-          <div><small>{new Date(rowData.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></div>
-        </div>
-      </>
-    );
-  };
-
-  const actionBodyTemplate = (rowData: WithdrawRequest) => {
-    const currentStatus = rowData.status?.toString() || 'pending';
-    
-    return (
-      <div className="flex gap-1">
-        {currentStatus === 'pending' && (
-          <>
-            <Button
-              icon="pi pi-check"
-              rounded
-              severity="success"
-              className="p-button-sm"
-              onClick={() => confirmStatusUpdate(rowData, 1)}
-              tooltip={t('APPROVE')}
-              tooltipOptions={{ position: 'top' }}
-            />
-            <Button
-              icon="pi pi-times"
-              rounded
-              severity="danger"
-              className="p-button-sm"
-              onClick={() => confirmStatusUpdate(rowData, 2)}
-              tooltip={t('REJECT')}
-              tooltipOptions={{ position: 'top' }}
-            />
-          </>
-        )}
-        
-        
-      </div>
-    );
-  };
-
-  const currencyBodyTemplate = (rowData: WithdrawRequest) => {
-    return (
-      <>
-        <span className="p-column-title">{t('CURRENCY')}</span>
-        <div className="flex align-items-center gap-2">
-          {rowData.currency?.code && (
-            <span className={`fi fi-${rowData.currency.code.toLowerCase().substring(0, 2) || 'us'} fis`}></span>
-          )}
-          <span>{rowData.currency?.code} ({rowData.currency?.symbol})</span>
-        </div>
-      </>
-    );
-  };
-
-  const withdrawRequestDialogFooter = (
-    <>
-      <Button label={t('CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-      <Button label={t('SAVE')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveWithdrawRequest} />
-    </>
-  );
 
   const statusUpdateDialogFooter = (
     <>
@@ -474,400 +373,423 @@ const WithdrawRequestsPage = () => {
   );
 
   return (
-    <div className="grid -m-5">
-      <div className="col-12">
-        <div className="card p-2">
-          {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-          <Toast ref={toast} />
-
-          <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
-          <DataTable
-            ref={dt}
-            value={withdrawRequests}
-            selection={selectedWithdrawRequests}
-            onSelectionChange={(e) => setSelectedWithdrawRequests(e.value as any)}
-            dataKey="id"
-            paginator
-            rows={10}
-            rowsPerPageOptions={[5, 10, 25]}
-            className="datatable-responsive"
-            paginatorTemplate={
-              isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-            }
-            currentPageReportTemplate={
-              isRTL()
-                ? `Showing {first} to {last} of {totalRecords} entries`
-                : `Showing {first} to {last} of {totalRecords} entries`
-            }
-            emptyMessage={t('NO_DATA_AVAILABLE')}
-            dir={isRTL() ? 'rtl' : 'ltr'}
-            style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-            globalFilter={globalFilter}
-            responsiveLayout="scroll"
-          >
-            <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
-            
-            <Column
-              style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-              header={t('RESELLER')}
-              body={resellerBodyTemplate}
-              sortable
-            ></Column>
-            <Column
-              style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-              header={t('MENU.CURRENCY')}
-              body={currencyBodyTemplate}
-              sortable
-            ></Column>
-            <Column
-              style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-              header={t('AMOUNT')}
-              body={amountBodyTemplate}
-              sortable
-            ></Column>
-            <Column
-              style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-              header={t('NET_AMOUNT')}
-              body={(rowData: WithdrawRequest) => {
-                const currencySymbol = rowData.currency?.symbol || '';
+    <div className="space-y-4">
+      <Toast ref={toast} />
+      <ListPage
+        title={t('MENU.WITHDRAWAL_REQUEST', { defaultValue: 'درخواست برداشت' })}
+        description={t('WITHDRAW_REQUEST.PAGE.DESCRIPTION', { defaultValue: 'بررسی و ثبت درخواست‌های برداشت نمایندگان' })}
+        loading={loading}
+        actions={
+          <UiButton size="sm" onClick={openNew}>
+            <Plus className="h-4 w-4" />
+            {t('CREATE_WITHDRAW_REQUEST', { defaultValue: 'درخواست جدید' })}
+          </UiButton>
+        }
+        toolbar={
+          <FilterBar
+            search={searchInput}
+            onSearchChange={setSearchInput}
+            searchPlaceholder={t('SEARCH', { defaultValue: 'جستجو...' })}
+            chips={chips}
+            onRemoveChip={removeChip}
+            onClearAll={chips.length ? clearFilters : undefined}
+            onOpenFilters={() => {
+              setDraftStatusFilter(statusFilter);
+              setDraftDateRange(dateRange);
+              setFilterOpen(true);
+            }}
+          />
+        }
+        footer={
+          <div className="flex flex-col gap-2 border-t border-emerald-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs text-muted-foreground">
+              {t('DATA_TABLE.TABLE.PAGINATOR.SHOWING', { defaultValue: 'صفحه' })}{' '}
+              {pagination?.page || 1} / {totalPages} · {pagination?.total || filteredWithdrawRequests.length}
+            </div>
+            <div className="flex items-center gap-2">
+              <UiButton variant="outline" size="sm" disabled={(pagination?.page || 1) <= 1} onClick={() => onPageChange((pagination?.page || 1) - 1)}>
+                قبلی
+              </UiButton>
+              <UiButton variant="outline" size="sm" disabled={(pagination?.page || 1) >= totalPages} onClick={() => onPageChange((pagination?.page || 1) + 1)}>
+                بعدی
+              </UiButton>
+            </div>
+          </div>
+        }
+      >
+        <table className="w-full min-w-[1280px] border-collapse text-xs">
+          <thead>
+            <tr className="border-b border-emerald-100 bg-emerald-50/70 text-start">
+              <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">{t('COMMON.ACTIONS', { defaultValue: 'عملیات' })}</th>
+              <th className="px-2 py-2 font-semibold text-emerald-950">{t('RESELLER')}</th>
+              <th className="px-2 py-2 font-semibold text-emerald-950">{t('MENU.CURRENCY')}</th>
+              <th className="px-2 py-2 font-semibold text-emerald-950">{t('AMOUNT')}</th>
+              <th className="px-2 py-2 font-semibold text-emerald-950">{t('NET_AMOUNT')}</th>
+              <th className="px-2 py-2 font-semibold text-emerald-950">{t('COMMISSION')}</th>
+              <th className="px-2 py-2 font-semibold text-emerald-950 min-w-[14rem]">{t('BANK_DETAILS')}</th>
+              <th className="px-2 py-2 font-semibold text-emerald-950">{t('STATUS')}</th>
+              <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">{t('DATE')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredWithdrawRequests.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="px-2 py-12 text-center text-muted-foreground">
+                  {t('NO_DATA_AVAILABLE', { defaultValue: 'داده‌ای یافت نشد' })}
+                </td>
+              </tr>
+            ) : (
+              filteredWithdrawRequests.map((row: WithdrawRequest) => {
+                const sym = row.currency?.symbol || '';
+                const status = row.status?.toString() || 'pending';
                 return (
-                  <div className="flex align-items-center gap-2">
-                    <span className={`fi fi-${rowData.currency?.code?.toLowerCase()?.substring(0, 2) || 'us'} fis`}></span>
-                    <span className="font-bold">
-                      {Number(rowData.net_amount || rowData.amount).toLocaleString()} {currencySymbol}
-                    </span>
-                  </div>
+                  <tr key={row.id} className="border-b border-emerald-50 transition hover:bg-emerald-50/50">
+                    <td className="px-2 py-1.5 align-middle">
+                      <RowActions items={getWithdrawRowActions(row)} />
+                    </td>
+                    <td className="px-2 py-1.5 text-start">
+                      <div className="font-medium">{row.reseller?.reseller_name}</div>
+                      <div className="text-[10px] text-muted-foreground">{row.reseller?.email}</div>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <span className={`fi fi-${row.currency?.code?.toLowerCase()?.substring(0, 2) || 'us'} fis me-1`} />
+                      {row.currency?.code} ({sym})
+                    </td>
+                    <td className="px-2 py-1.5 tabular-nums font-medium">
+                      {Number(row.amount).toLocaleString('fa-IR')} {sym}
+                    </td>
+                    <td className="px-2 py-1.5 tabular-nums">
+                      {Number(row.net_amount || row.amount).toLocaleString('fa-IR')} {sym}
+                    </td>
+                    <td className="px-2 py-1.5 tabular-nums">
+                      {Number(row.commission_amount || 0).toLocaleString('fa-IR')} {sym}
+                    </td>
+                    <td className="px-2 py-1.5 text-start text-[10px] leading-relaxed text-muted-foreground">
+                      <div>{t('BANK')}: {row.bank_details?.bank_name || '—'}</div>
+                      <div>{t('ACCOUNT_HOLDER')}: {row.bank_details?.account_holder_name || '—'}</div>
+                      <div>{t('ACCOUNT_NUMBER')}: {row.bank_details?.account_number || '—'}</div>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <Badge variant={withdrawStatusVariant(status)} className="text-[10px]">
+                        {status === 'approved' ? t('APPROVED') : status === 'rejected' ? t('REJECTED') : t('PENDING')}
+                      </Badge>
+                    </td>
+                    <td className="px-2 py-1.5 whitespace-nowrap tabular-nums text-muted-foreground">
+                      {row.created_at ? new Date(row.created_at).toLocaleString('fa-IR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
+                    </td>
+                  </tr>
                 );
-              }}
-              sortable
-            ></Column>
-            <Column
-              style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-              header={t('COMMISSION')}
-              body={(rowData: WithdrawRequest) => {
-                const currencySymbol = rowData.currency?.symbol || '';
-                return (
-                  <div className="flex align-items-center gap-2">
-                    <span className={`fi fi-${rowData.currency?.code?.toLowerCase()?.substring(0, 2) || 'us'} fis`}></span>
-                    <span className="font-bold">
-                      {Number(rowData.commission_amount || 0).toLocaleString()} {currencySymbol}
-                    </span>
-                  </div>
-                );
-              }}
-              sortable
-            ></Column>
-            <Column
-              style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-              header={t('BANK_DETAILS')}
-              body={bankDetailsBodyTemplate}
-            ></Column>
-            <Column
-              style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-              header={t('STATUS')}
-              body={statusBodyTemplate}
-              sortable
-            ></Column>
-            <Column
-              style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-              header={t('DATE')}
-              body={dateBodyTemplate}
-              sortable
-            ></Column>
-           
-            <Column
-              style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-              body={actionBodyTemplate}
-              headerStyle={{ minWidth: '12rem' }}
-              header={t('COMMON.ACTIONS')}
-            ></Column>
-          </DataTable>
+              })
+            )}
+          </tbody>
+        </table>
+      </ListPage>
 
-          {/* Create Withdraw Request Dialog */}
-          <Dialog
-            visible={withdrawRequestDialog}
-            style={{ width: '700px', padding: '5px' }}
-            header={t('CREATE_WITHDRAW_REQUEST')}
-            modal
-            className="p-fluid"
-            footer={withdrawRequestDialogFooter}
-            onHide={hideDialog}
+      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+        <SheetContent side="left" className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>{t('FILTER', { defaultValue: 'فیلتر' })}</SheetTitle>
+            <SheetDescription>{t('WITHDRAW_REQUEST.FILTER.HINT', { defaultValue: 'فیلترها روی نتایج سرور اعمال می‌شوند.' })}</SheetDescription>
+          </SheetHeader>
+          <div className={FILTER_SHEET_BODY_CLASS}>
+            <FilterField label={t('STATUS')}>
+              <Select value={draftStatusFilter || 'all'} onValueChange={(v) => setDraftStatusFilter(v === 'all' ? '' : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('FILTER_BY_STATUS', { defaultValue: 'وضعیت' })} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('ALL_STATUS')}</SelectItem>
+                  <SelectItem value="pending">{t('PENDING')}</SelectItem>
+                  <SelectItem value="approved">{t('APPROVED')}</SelectItem>
+                  <SelectItem value="rejected">{t('REJECTED')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </FilterField>
+            <FilterField label={t('START_DATE', { defaultValue: 'از تاریخ' })}>
+              <Input
+                type="date"
+                value={draftDateRange[0] ? draftDateRange[0].toISOString().split('T')[0] : ''}
+                onChange={(e) =>
+                  setDraftDateRange([e.target.value ? new Date(e.target.value) : null, draftDateRange[1]])
+                }
+              />
+            </FilterField>
+            <FilterField label={t('END_DATE', { defaultValue: 'تا تاریخ' })}>
+              <Input
+                type="date"
+                value={draftDateRange[1] ? draftDateRange[1].toISOString().split('T')[0] : ''}
+                onChange={(e) =>
+                  setDraftDateRange([draftDateRange[0], e.target.value ? new Date(e.target.value) : null])
+                }
+              />
+            </FilterField>
+            <div className="flex gap-2 pt-2">
+              <UiButton className="flex-1" onClick={applyFilters}>
+                {t('APPLY', { defaultValue: 'اعمال' })}
+              </UiButton>
+              <UiButton className="flex-1" variant="secondary" onClick={clearFilters}>
+                {t('RESET', { defaultValue: 'بازنشانی' })}
+              </UiButton>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+          <FormSheet
+            open={withdrawRequestDialog}
+            onOpenChange={(open) => {
+              if (!open) hideDialog();
+            }}
+            title={t('CREATE_WITHDRAW_REQUEST')}
+            description="درخواست برداشت جدید برای نماینده"
+            size="xl"
+            side="left"
+            footer={
+              <FormActions
+                onCancel={hideDialog}
+                onSubmit={saveWithdrawRequest}
+                cancelLabel={t('CANCEL')}
+                submitLabel={t('SAVE')}
+              />
+            }
           >
-            <div className="card" style={{ padding: '20px' }}>
-              {/* Reseller Field */}
-              <div className="field mb-4">
-                <label htmlFor="reseller_id" style={{ fontWeight: 'bold' }}>
-                  {t('RESELLER')} *
-                </label>
-                <Dropdown
-                  id="reseller_id"
-                  value={withdrawRequest.reseller_id}
-                  options={resellers}
-                  onChange={(e) => handleResellerChange(Number(e.value))}
+            <FormSection title="نماینده" description="انتخاب نماینده و ارز">
+              <FormField
+                label={t('RESELLER')}
+                required
+                error={submitted && !withdrawRequest.reseller_id ? t('THIS_FIELD_IS_REQUIRED') : null}
+              >
+                <SearchSelect
+                  value={resellers.find((r: Reseller) => r.id === withdrawRequest.reseller_id) || null}
+                  options={resellers || []}
+                  onChange={(selected) => handleResellerChange(Number(selected?.id))}
                   optionLabel="reseller_name"
-                  optionValue="id"
                   placeholder={t('SELECT_RESELLER')}
-                  className={classNames({
-                    'p-invalid': submitted && !withdrawRequest.reseller_id
-                  })}
-                  filter
-                  filterBy="reseller_name,email,phone"
-                  showClear
+                  error={submitted && !withdrawRequest.reseller_id}
+                  returnFullObject
                 />
-                {submitted && !withdrawRequest.reseller_id && (
-                  <small className="p-invalid" style={{ color: 'red' }}>
-                    {t('THIS_FIELD_IS_REQUIRED')}
-                  </small>
-                )}
-              </div>
-
-              {/* Currency Field (Auto-selected and disabled) */}
-              <div className="field mb-4">
-                <label htmlFor="currency_id" style={{ fontWeight: 'bold' }}>
-                  {t('CURRENCY')} *
-                </label>
-                <InputText
+              </FormField>
+              <FormField
+                label={t('CURRENCY')}
+                required
+                error={submitted && !withdrawRequest.currency_id ? t('PLEASE_SELECT_A_RESELLER_FIRST') : null}
+              >
+                <Input
                   id="currency_id"
-                  value={selectedResellerCurrency ? 
-                    `${selectedResellerCurrency.code} (${selectedResellerCurrency.symbol}) - ${selectedResellerCurrency.name}` : 
-                    t('SELECT_RESELLER_FIRST')
+                  value={
+                    selectedResellerCurrency
+                      ? `${selectedResellerCurrency.code} (${selectedResellerCurrency.symbol}) - ${selectedResellerCurrency.name}`
+                      : t('SELECT_RESELLER_FIRST')
                   }
                   disabled
                   className="w-full p-disabled"
                   placeholder={t('CURRENCY_WILL_BE_AUTO_SELECTED')}
                 />
-                {submitted && !withdrawRequest.currency_id && (
-                  <small className="p-invalid" style={{ color: 'red' }}>
-                    {t('PLEASE_SELECT_A_RESELLER_FIRST')}
-                  </small>
-                )}
-              </div>
-
-              {/* Amount Fields */}
-              <div className="formgrid grid mb-4">
-                <div className="field col">
-                  <label htmlFor="amount" style={{ fontWeight: 'bold' }}>
-                    {t('AMOUNT')} *
-                  </label>
-                  <InputNumber
-                    id="amount"
-                    value={withdrawRequest.amount}
-                    onValueChange={(e) => setWithdrawRequest(prev => ({
+              </FormField>
+            </FormSection>
+            <FormSection title="مبالغ" description="مبلغ، خالص و کارمزد">
+              <FormField
+                label={t('AMOUNT')}
+                required
+                error={
+                  submitted && (!withdrawRequest.amount || withdrawRequest.amount <= 0)
+                    ? t('AMOUNT_MUST_BE_GREATER_THAN_ZERO')
+                    : null
+                }
+              >
+                <NumberInput
+                  id="amount"
+                  value={withdrawRequest.amount}
+                  onValueChange={(v) =>
+                    setWithdrawRequest((prev) => ({
                       ...prev,
-                      amount: Number(e.value) || 0
-                    }))}
-                    mode="decimal"
-                    min={0}
-                    className={classNames('w-full', {
-                      'p-invalid': submitted && (!withdrawRequest.amount || withdrawRequest.amount <= 0)
-                    })}
-                    placeholder={t('ENTER_AMOUNT')}
-                  />
-                  {submitted && (!withdrawRequest.amount || withdrawRequest.amount <= 0) && (
-                    <small className="p-invalid" style={{ color: 'red' }}>
-                      {t('AMOUNT_MUST_BE_GREATER_THAN_ZERO')}
-                    </small>
-                  )}
-                </div>
-                <div className="field col">
-                  <label htmlFor="net_amount" style={{ fontWeight: 'bold' }}>
-                    {t('NET_AMOUNT')}
-                  </label>
-                  <InputNumber
-                    id="net_amount"
-                    value={withdrawRequest.net_amount || withdrawRequest.amount}
-                    onValueChange={(e) => setWithdrawRequest(prev => ({
+                      amount: v ?? 0
+                    }))
+                  }
+                  min={0}
+                  step={0.01}
+                  allowNull={false}
+                  className={classNames('w-full', {
+                    'border-rose-300': submitted && (!withdrawRequest.amount || withdrawRequest.amount <= 0)
+                  })}
+                  placeholder={t('ENTER_AMOUNT')}
+                />
+              </FormField>
+              <FormField label={t('NET_AMOUNT')}>
+                <NumberInput
+                  id="net_amount"
+                  value={withdrawRequest.net_amount ?? withdrawRequest.amount}
+                  onValueChange={(v) =>
+                    setWithdrawRequest((prev) => ({
                       ...prev,
-                      net_amount: Number(e.value) || withdrawRequest.amount
-                    }))}
-                    mode="decimal"
-                    min={0}
-                    className="w-full"
-                    placeholder={t('ENTER_NET_AMOUNT')}
-                  />
-                </div>
-              </div>
-
-              {/* Commission Amount */}
-              <div className="field mb-4">
-                <label htmlFor="commission_amount" style={{ fontWeight: 'bold' }}>
-                  {t('COMMISSION_AMOUNT')}
-                </label>
-                <InputNumber
+                      net_amount: v ?? withdrawRequest.amount
+                    }))
+                  }
+                  min={0}
+                  step={0.01}
+                  allowNull={false}
+                  className="w-full"
+                  placeholder={t('ENTER_NET_AMOUNT')}
+                />
+              </FormField>
+              <FormField label={t('COMMISSION_AMOUNT')}>
+                <NumberInput
                   id="commission_amount"
                   value={withdrawRequest.commission_amount}
-                  onValueChange={(e) => setWithdrawRequest(prev => ({
-                    ...prev,
-                    commission_amount: Number(e.value) || 0
-                  }))}
-                  mode="decimal"
+                  onValueChange={(v) =>
+                    setWithdrawRequest((prev) => ({
+                      ...prev,
+                      commission_amount: v ?? 0
+                    }))
+                  }
                   min={0}
+                  step={0.01}
+                  allowNull={false}
                   className="w-full"
                   placeholder={t('ENTER_COMMISSION_AMOUNT')}
                 />
-              </div>
-
-              {/* Bank Details */}
-              <div className="formgrid grid mb-4">
-                <div className="field col">
-                  <label htmlFor="bank_name" style={{ fontWeight: 'bold' }}>
-                    {t('BANK_NAME')} *
-                  </label>
-                  <InputText
-                    id="bank_name"
-                    value={withdrawRequest.bank_details?.bank_name || ''}
-                    onChange={(e) => setWithdrawRequest(prev => ({
+              </FormField>
+            </FormSection>
+            <FormSection title="اطلاعات بانکی" description="حساب مقصد برداشت">
+              <FormField
+                label={t('BANK_NAME')}
+                required
+                error={submitted && !withdrawRequest.bank_details?.bank_name ? t('THIS_FIELD_IS_REQUIRED') : null}
+              >
+                <Input
+                  id="bank_name"
+                  value={withdrawRequest.bank_details?.bank_name || ''}
+                  onChange={(e) =>
+                    setWithdrawRequest((prev) => ({
                       ...prev,
                       bank_details: {
                         ...prev.bank_details,
                         bank_name: e.target.value
                       }
-                    }))}
-                    className={classNames('w-full', {
-                      'p-invalid': submitted && !withdrawRequest.bank_details?.bank_name
-                    })}
-                    placeholder={t('ENTER_BANK_NAME')}
-                  />
-                  {submitted && !withdrawRequest.bank_details?.bank_name && (
-                    <small className="p-invalid" style={{ color: 'red' }}>
-                      {t('THIS_FIELD_IS_REQUIRED')}
-                    </small>
-                  )}
-                </div>
-                <div className="field col">
-                  <label htmlFor="account_holder_name" style={{ fontWeight: 'bold' }}>
-                    {t('ACCOUNT_HOLDER_NAME')} *
-                  </label>
-                  <InputText
-                    id="account_holder_name"
-                    value={withdrawRequest.bank_details?.account_holder_name || ''}
-                    onChange={(e) => setWithdrawRequest(prev => ({
+                    }))
+                  }
+                  className={classNames('w-full', {
+                    'p-invalid': submitted && !withdrawRequest.bank_details?.bank_name
+                  })}
+                  placeholder={t('ENTER_BANK_NAME')}
+                />
+              </FormField>
+              <FormField
+                label={t('ACCOUNT_HOLDER_NAME')}
+                required
+                error={submitted && !withdrawRequest.bank_details?.account_holder_name ? t('THIS_FIELD_IS_REQUIRED') : null}
+              >
+                <Input
+                  id="account_holder_name"
+                  value={withdrawRequest.bank_details?.account_holder_name || ''}
+                  onChange={(e) =>
+                    setWithdrawRequest((prev) => ({
                       ...prev,
                       bank_details: {
                         ...prev.bank_details,
                         account_holder_name: e.target.value
                       }
-                    }))}
-                    className={classNames('w-full', {
-                      'p-invalid': submitted && !withdrawRequest.bank_details?.account_holder_name
-                    })}
-                    placeholder={t('ENTER_ACCOUNT_HOLDER_NAME')}
-                  />
-                  {submitted && !withdrawRequest.bank_details?.account_holder_name && (
-                    <small className="p-invalid" style={{ color: 'red' }}>
-                      {t('THIS_FIELD_IS_REQUIRED')}
-                    </small>
-                  )}
-                </div>
-              </div>
-
-              {/* Account Number and IBAN */}
-              <div className="formgrid grid mb-4">
-                <div className="field col">
-                  <label htmlFor="account_number" style={{ fontWeight: 'bold' }}>
-                    {t('ACCOUNT_NUMBER')} *
-                  </label>
-                  <InputText
-                    id="account_number"
-                    value={withdrawRequest.bank_details?.account_number || ''}
-                    onChange={(e) => setWithdrawRequest(prev => ({
+                    }))
+                  }
+                  className={classNames('w-full', {
+                    'p-invalid': submitted && !withdrawRequest.bank_details?.account_holder_name
+                  })}
+                  placeholder={t('ENTER_ACCOUNT_HOLDER_NAME')}
+                />
+              </FormField>
+              <FormField
+                label={t('ACCOUNT_NUMBER')}
+                required
+                error={submitted && !withdrawRequest.bank_details?.account_number ? t('THIS_FIELD_IS_REQUIRED') : null}
+              >
+                <Input
+                  id="account_number"
+                  value={withdrawRequest.bank_details?.account_number || ''}
+                  onChange={(e) =>
+                    setWithdrawRequest((prev) => ({
                       ...prev,
                       bank_details: {
                         ...prev.bank_details,
                         account_number: e.target.value
                       }
-                    }))}
-                    className={classNames('w-full', {
-                      'p-invalid': submitted && !withdrawRequest.bank_details?.account_number
-                    })}
-                    placeholder={t('ENTER_ACCOUNT_NUMBER')}
-                  />
-                  {submitted && !withdrawRequest.bank_details?.account_number && (
-                    <small className="p-invalid" style={{ color: 'red' }}>
-                      {t('THIS_FIELD_IS_REQUIRED')}
-                    </small>
-                  )}
-                </div>
-                <div className="field col">
-                  <label htmlFor="iban" style={{ fontWeight: 'bold' }}>
-                    {t('IBAN')}
-                  </label>
-                  <InputText
-                    id="iban"
-                    value={withdrawRequest.bank_details?.iban || ''}
-                    onChange={(e) => setWithdrawRequest(prev => ({
+                    }))
+                  }
+                  className={classNames('w-full', {
+                    'p-invalid': submitted && !withdrawRequest.bank_details?.account_number
+                  })}
+                  placeholder={t('ENTER_ACCOUNT_NUMBER')}
+                />
+              </FormField>
+              <FormField label={t('IBAN')}>
+                <Input
+                  id="iban"
+                  value={withdrawRequest.bank_details?.iban || ''}
+                  onChange={(e) =>
+                    setWithdrawRequest((prev) => ({
                       ...prev,
                       bank_details: {
                         ...prev.bank_details,
                         iban: e.target.value
                       }
-                    }))}
-                    className="w-full"
-                    placeholder={t('ENTER_IBAN')}
-                  />
-                </div>
-              </div>
-
-              {/* Branch and Swift Code */}
-              <div className="formgrid grid mb-4">
-                <div className="field col">
-                  <label htmlFor="branch" style={{ fontWeight: 'bold' }}>
-                    {t('BRANCH')}
-                  </label>
-                  <InputText
-                    id="branch"
-                    value={withdrawRequest.bank_details?.branch || ''}
-                    onChange={(e) => setWithdrawRequest(prev => ({
+                    }))
+                  }
+                  className="w-full"
+                  placeholder={t('ENTER_IBAN')}
+                />
+              </FormField>
+              <FormField label={t('BRANCH')}>
+                <Input
+                  id="branch"
+                  value={withdrawRequest.bank_details?.branch || ''}
+                  onChange={(e) =>
+                    setWithdrawRequest((prev) => ({
                       ...prev,
                       bank_details: {
                         ...prev.bank_details,
                         branch: e.target.value
                       }
-                    }))}
-                    className="w-full"
-                    placeholder={t('ENTER_BRANCH')}
-                  />
-                </div>
-                <div className="field col">
-                  <label htmlFor="swift_code" style={{ fontWeight: 'bold' }}>
-                    {t('SWIFT_CODE')}
-                  </label>
-                  <InputText
-                    id="swift_code"
-                    value={withdrawRequest.bank_details?.swift_code || ''}
-                    onChange={(e) => setWithdrawRequest(prev => ({
+                    }))
+                  }
+                  className="w-full"
+                  placeholder={t('ENTER_BRANCH')}
+                />
+              </FormField>
+              <FormField label={t('SWIFT_CODE')}>
+                <Input
+                  id="swift_code"
+                  value={withdrawRequest.bank_details?.swift_code || ''}
+                  onChange={(e) =>
+                    setWithdrawRequest((prev) => ({
                       ...prev,
                       bank_details: {
                         ...prev.bank_details,
                         swift_code: e.target.value
                       }
-                    }))}
-                    className="w-full"
-                    placeholder={t('ENTER_SWIFT_CODE')}
-                  />
-                </div>
-              </div>
-
-              {/* Admin Note */}
-              <div className="field mb-4">
-                <label htmlFor="admin_note" style={{ fontWeight: 'bold' }}>
-                  {t('ADMIN_NOTE')}
-                </label>
-                <textarea
+                    }))
+                  }
+                  className="w-full"
+                  placeholder={t('ENTER_SWIFT_CODE')}
+                />
+              </FormField>
+            </FormSection>
+            <FormSection title={t('ADMIN_NOTE')}>
+              <FormField label={t('ADMIN_NOTE')} fullWidth>
+                <Textarea
                   id="admin_note"
                   value={withdrawRequest.admin_note || ''}
-                  onChange={(e:any) => setWithdrawRequest(prev => ({
-                    ...prev,
-                    admin_note: e.target.value
-                  }))}
+                  onChange={(e) =>
+                    setWithdrawRequest((prev) => ({
+                      ...prev,
+                      admin_note: e.target.value
+                    }))
+                  }
                   rows={3}
                   className="w-full"
                   placeholder={t('ENTER_ADMIN_NOTE_OPTIONAL')}
                 />
-              </div>
-            </div>
-          </Dialog>
+              </FormField>
+            </FormSection>
+          </FormSheet>
 
           {/* Status Update Dialog */}
           <Dialog
@@ -961,7 +883,13 @@ const WithdrawRequestsPage = () => {
                 <div className="flex align-items-center justify-content-between p-3 surface-50 border-round">
                   <div>
                     <div className="text-sm font-semibold text-500 mb-1">{t('CURRENT_STATUS')}</div>
-                    {statusBodyTemplate(selectedRequest)}
+                    <Badge variant={withdrawStatusVariant(selectedRequest.status?.toString())} className="text-[10px]">
+                      {selectedRequest.status?.toString() === 'approved'
+                        ? t('APPROVED')
+                        : selectedRequest.status?.toString() === 'rejected'
+                          ? t('REJECTED')
+                          : t('PENDING')}
+                    </Badge>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-semibold text-500 mb-1">{t('REQUESTED_BY')}</div>
@@ -991,8 +919,6 @@ const WithdrawRequestsPage = () => {
               </div>
             )}
           </Dialog>
-        </div>
-      </div>
     </div>
   );
 };

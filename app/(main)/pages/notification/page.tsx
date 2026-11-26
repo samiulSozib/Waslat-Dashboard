@@ -3,27 +3,29 @@
 import { _createNotification, _deleteNotification, _fetchNotifications, _updateNotification } from '@/app/redux/actions/notificationActions';
 import { _fetchResellers } from '@/app/redux/actions/resellerActions';
 import { AppDispatch } from '@/app/redux/store';
-import i18n from '@/i18n';
+import CustomDropdownWithSearch from '@/app/(main)/components/customDropDownWithSearch';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { ListPage } from '@/components/admin/list-page';
+import { RowActions } from '@/components/admin/row-actions';
+import { Badge } from '@/components/ui/badge';
+import { Button as UiButton } from '@/components/ui/button';
+import { FileDrop } from '@/components/ui/file-drop';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { cn } from '@/lib/utils';
 import { Notification } from '@/types/interface';
-import { Badge } from 'primereact/badge';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from 'primereact/button';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { FileUpload } from 'primereact/fileupload';
-import { InputText } from 'primereact/inputtext';
-import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
-import { customCellStyle } from '../../utilities/customRow';
 import { isRTL } from '../../utilities/rtlUtil';
-import CustomDropdownWithSearch from '@/app/(main)/components/customDropDownWithSearch';
 
 const NotificationPage = () => {
     let emptyNotification: Notification = {
@@ -42,11 +44,11 @@ const NotificationPage = () => {
     const [deleteNotificationDialog, setDeleteNotificationDialog] = useState(false);
     const [deleteNotificationsDialog, setDeleteNotificationsDialog] = useState(false);
     const [notification, setNotification] = useState<Notification>(emptyNotification);
-    const [selectedNotifications, setSelectedNotifications] = useState(null);
+    const [selectedNotifications, setSelectedNotifications] = useState<Notification[]>([]);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const searchTerm = useDebouncedValue(searchInput, 350);
     const toast = useRef<Toast>(null);
-    const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { notifications, loading, unreadCount } = useSelector((state: any) => state.notificationReducer);
     const { resellers } = useSelector((state: any) => state.resellerReducer);
@@ -163,7 +165,7 @@ const NotificationPage = () => {
     };
 
     const confirmDeleteSelected = () => {
-        if (!selectedNotifications || (selectedNotifications as any).length === 0) {
+        if (selectedNotifications.length === 0) {
             toast.current?.show({
                 severity: 'warn',
                 summary: t('WARNING'),
@@ -176,7 +178,7 @@ const NotificationPage = () => {
     };
 
     const deleteSelectedNotifications = async () => {
-        if (!selectedNotifications || (selectedNotifications as any).length === 0) {
+        if (selectedNotifications.length === 0) {
             toast.current?.show({
                 severity: 'error',
                 summary: t('ERROR'),
@@ -186,257 +188,75 @@ const NotificationPage = () => {
             return;
         }
 
-        const selectedNotificationArray = selectedNotifications as Notification[];
-        for (const notif of selectedNotificationArray) {
+        for (const notif of selectedNotifications) {
             if (notif.id) {
                 await dispatch(_deleteNotification(notif.id, toast, t));
             }
         }
 
-        setSelectedNotifications(null);
+        setSelectedNotifications([]);
         setDeleteNotificationsDialog(false);
     };
 
-    const rightToolbarTemplate = () => {
-        const hasSelectedNotifications = selectedNotifications && (selectedNotifications as any).length > 0;
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('NOTIFICATION.CREATE_NOTIFICATION')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
+    const filteredNotifications = useMemo(() => {
+        const rows = notifications || [];
+        const q = searchTerm.trim().toLowerCase();
+        if (!q) return rows;
+        return rows.filter((row: Notification) => {
+            const reseller = resellers.find((r: any) => r.id === row.reseller_id);
+            const haystack = [row.title, row.message, row.target_type, reseller?.reseller_name, reseller?.contact_name]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+            return haystack.includes(q);
+        });
+    }, [notifications, resellers, searchTerm]);
 
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedNotifications || !(selectedNotifications as any).length}
-                    />
-                </div>
-            </React.Fragment>
-        );
+    const isSelected = (row: Notification) => selectedNotifications.some((n) => n.id === row.id);
+
+    const toggleRow = (row: Notification, checked: boolean) => {
+        setSelectedNotifications((prev) => {
+            if (checked) return [...prev.filter((n) => n.id !== row.id), row];
+            return prev.filter((n) => n.id !== row.id);
+        });
     };
 
-    const [localSearchTerm, setLocalSearchTerm] = useState('');
-
-    const leftToolbarTemplate = () => {
-
-        const handleSearch = () => {
-            setGlobalFilter(localSearchTerm);
-        };
-
-        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        };
-
-        return (
-            <React.Fragment>
-                <div className="flex align-items-center gap-2">
-                    <span className="p-input-icon-left">
-                        <i className="pi pi-search" />
-                        <InputText
-                            type="search"
-                            value={localSearchTerm}
-                            onChange={(e) => setLocalSearchTerm(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        />
-                    </span>
-                    <Button
-                        label={t('SEARCH')}
-                        onClick={handleSearch}
-                        className="p-button-sm"
-                    />
-                    {localSearchTerm && (
-                        <Button
-                            icon="pi pi-times"
-                            onClick={() => {
-                                setLocalSearchTerm('');
-                                setGlobalFilter('');
-                            }}
-                            className="p-button-sm p-button-secondary p-button-text"
-
-                        />
-                    )}
-                </div>
-            </React.Fragment>
-        );
-    };
-
-    const notificationTitleBodyTemplate = (rowData: Notification) => {
-        return (
-            <>
-                <span className="p-column-title">Title</span>
-                <div className="flex align-items-center gap-2">
-                    {!rowData.is_read && <div className="w-2 h-2 rounded-full bg-blue-500"></div>}
-                    <span className={!rowData.is_read ? 'font-semibold' : ''}>{rowData.title}</span>
-                </div>
-            </>
-        );
-    };
-
-    const notificationMessageBodyTemplate = (rowData: Notification) => {
-        return (
-            <>
-                <span className="p-column-title">Message</span>
-                <span className="line-clamp-2">{rowData.message}</span>
-            </>
-        );
-    };
-
-    const targetTypeBodyTemplate = (rowData: Notification) => {
-        return (
-            <>
-                <span className="p-column-title">Target Type</span>
-                <Badge value={rowData.target_type} severity="info" />
-            </>
-        );
-    };
-
-    const statusBodyTemplate = (rowData: Notification) => {
-        const isActive = rowData.status == 1 || rowData.status == true;
-        return (
-            <>
-                <span className="p-column-title">Status</span>
-                <Badge
-                    value={isActive ? t('TRUE') : t('FALSE')}
-                    severity={isActive ? 'success' : 'danger'}
-                />
-            </>
-        );
-    };
-
-    // Add reseller display column
-    const resellerBodyTemplate = (rowData: Notification) => {
-        // Try to find the reseller from the resellers list
-        const reseller = resellers.find((r: any) => r.id === rowData.reseller_id);
-        return (
-            <>
-                <span className="p-column-title">Reseller</span>
-                {rowData.target_type === 'reseller' && rowData.reseller_id ? (
-                    <div className="flex flex-column">
-                        <span style={{ fontWeight: '500' }}>
-                            {reseller?.reseller_name || `ID: ${rowData.reseller_id}`}
-                        </span>
-                        {reseller && (
-                            <small className="text-gray-500 text-xs">
-                                {reseller.contact_name}
-                                {reseller.phone && ` | ${reseller.phone}`}
-                            </small>
-                        )}
-                    </div>
-                ) : (
-                    <span className="text-gray-400">—</span>
-                )}
-            </>
-        );
-    };
-
-    const dateBodyTemplate = (rowData: Notification) => {
-        const formatDate = (dateString: string) => {
-            const date = new Date(dateString);
-            const optionsDate: Intl.DateTimeFormatOptions = {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            };
-            const optionsTime: Intl.DateTimeFormatOptions = {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            };
-            const formattedDate = date.toLocaleDateString('en-US', optionsDate);
-            const formattedTime = date.toLocaleTimeString('en-US', optionsTime);
-
-            return { formattedDate, formattedTime };
-        };
-        const { formattedDate, formattedTime } = formatDate(String(rowData.created_at))
-        return (
-            <>
-                <span className="p-column-title">Created At</span>
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedDate}</span>
-                <br />
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedTime}</span>
-            </>
-        );
-    };
-
-    const mediaBodyTemplate = (rowData: Notification) => {
-        if (!rowData.media) {
-            return (
-                <>
-                    <span className="p-column-title">Media</span>
-                    <span className="text-color-secondary">No media</span>
-                </>
-            );
+    const toggleAllVisible = (checked: boolean) => {
+        if (!checked) {
+            const visibleIds = new Set(filteredNotifications.map((n: Notification) => n.id));
+            setSelectedNotifications((prev) => prev.filter((n) => !visibleIds.has(n.id)));
+            return;
         }
+        const merged = [...selectedNotifications];
+        filteredNotifications.forEach((row: Notification) => {
+            if (!merged.some((n) => n.id === row.id)) merged.push(row);
+        });
+        setSelectedNotifications(merged);
+    };
 
-        const isImage = typeof rowData.media === 'string' &&
-            (rowData.media.match(/\.(jpeg|jpg|gif|png)$/) ||
-                rowData.media.startsWith('data:image'));
-
-        if (isImage) {
-            return (
-                <>
-                    <span className="p-column-title">Media</span>
-                    <img
-                        src={`${rowData.media}`}
-                        alt="Notification media"
-                        className="shadow-2"
-                        style={{
-                            width: '50px',
-                            height: '50px',
-                            objectFit: 'cover',
-                            borderRadius: '4px'
-                        }}
-                    />
-                </>
-            );
+    const formatNotificationDate = (value?: string) => {
+        if (!value) return { date: '—', time: '' };
+        try {
+            const date = new Date(value);
+            return {
+                date: date.toLocaleDateString('fa-IR', { dateStyle: 'short' }),
+                time: date.toLocaleTimeString('fa-IR', { timeStyle: 'short' })
+            };
+        } catch {
+            return { date: value, time: '' };
         }
-
-        return (
-            <>
-                <span className="p-column-title">Media</span>
-                <i className="pi pi-file" style={{ fontSize: '1.5rem' }}></i>
-            </>
-        );
     };
 
-    const actionBodyTemplate = (rowData: Notification) => {
-        return (
-            <>
-                <Button
-                    icon="pi pi-pencil"
-                    rounded
-                    severity="success"
-                    className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                    onClick={() => editNotification(rowData)}
-                />
-                <Button
-                    icon="pi pi-trash"
-                    rounded
-                    severity="warning"
-                    onClick={() => confirmDeleteNotification(rowData)}
-                />
-            </>
-        );
-    };
-
-    const notificationDialogFooter = (
-        <>
-            <Button label={t('CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('SAVE')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveNotification} />
-        </>
-    );
+    const getRowActions = (row: Notification) => [
+        { label: t('TABLE.GENERAL.EDIT'), icon: <Pencil className="h-4 w-4" />, onClick: () => editNotification(row) },
+        {
+            label: t('TABLE.GENERAL.DELETE'),
+            icon: <Trash2 className="h-4 w-4" />,
+            danger: true,
+            separatorBefore: true,
+            onClick: () => confirmDeleteNotification(row)
+        }
+    ];
 
     const deleteNotificationDialogFooter = (
         <>
@@ -458,365 +278,351 @@ const NotificationPage = () => {
         { label: t('RESELLER_GROUP'), value: 'reseller_group' }
     ];
     const statusOptions = [
-        { label: t('TRUE'), value: 1 },
-        { label: t('FALSE'), value: 0 }
+        { label: t('TRUE'), value: '1' },
+        { label: t('FALSE'), value: '0' }
     ];
 
+    const mediaPreviewUrl =
+        typeof notification.media === 'string' && notification.media
+            ? notification.media
+            : null;
+
+    const allVisibleSelected =
+        filteredNotifications.length > 0 && filteredNotifications.every((row: Notification) => isSelected(row));
+
     return (
-        <div className="grid -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={notifications}
-                        selection={selectedNotifications}
-                        onSelectionChange={(e) => setSelectedNotifications(e.value as any)}
-                        dataKey="id"
-                        paginator
-                        rows={10}
-                        rowsPerPageOptions={[5, 10, 25]}
-                        className="datatable-responsive"
-                        paginatorTemplate={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `Showing {first} to {last} of {totalRecords} entries`
-                                : `Showing {first} to {last} of {totalRecords} entries`
-                        }
-                        emptyMessage={t('NO_DATA_AVAILABLE')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        globalFilter={globalFilter}
-                        responsiveLayout="scroll"
-                    >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="title"
-                            header={t('TITLE')}
-                            body={notificationTitleBodyTemplate}
-                            sortable
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('NOTIFICATION.MESSAGE')}
-                            body={notificationMessageBodyTemplate}
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('NOTIFICATION.TARGET_TYPE')}
-                            body={targetTypeBodyTemplate}
-                            sortable
-                        ></Column>
-                        {/* Add Reseller column */}
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('RESELLER')}
-                            body={resellerBodyTemplate}
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('STATUS')}
-                            body={statusBodyTemplate}
-                            sortable
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('NOTIFICATION.MEDIA')}
-                            body={mediaBodyTemplate}
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('NOTIFICATION.CREATED_AT')}
-                            body={dateBodyTemplate}
-                            sortable
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            body={actionBodyTemplate}
-                            headerStyle={{ minWidth: '10rem' }}
-                            header={t('COMMON.ACTIONS')}
-                        ></Column>
-                    </DataTable>
-
-                    <Dialog
-                        visible={notificationDialog}
-                        style={{ width: '700px', padding: '5px' }}
-                        header={notification.id ? t('NOTIFICATION.EDIT_NOTIFICATION') : t('NOTIFICATION.CREATE_NOTIFICATION')}
-                        modal
-                        className="p-fluid"
-                        footer={notificationDialogFooter}
-                        onHide={hideDialog}
-                    >
-                        <div className="card" style={{ padding: '40px' }}>
-                            {/* Media Preview */}
-                            {notification.media && (
-                                <div className="mb-4 text-center">
-                                    {typeof notification.media === 'string' &&
-                                        notification.media.match(/\.(jpeg|jpg|gif|png)$/) ? (
-                                        <img
-                                            src={notification.media}
-                                            alt="Media preview"
-                                            width="200"
-                                            className="mt-0 mx-auto mb-2 block shadow-2"
-                                            style={{ borderRadius: '4px' }}
-                                        />
-                                    ) : notification.media instanceof File ? (
-                                        <img
-                                            src={URL.createObjectURL(notification.media)}
-                                            alt="Uploaded preview"
-                                            width="200"
-                                            className="mt-0 mx-auto mb-2 block shadow-2"
-                                            style={{ borderRadius: '4px' }}
-                                        />
-                                    ) : null}
-                                </div>
-                            )}
-
-                            {/* Title Field */}
-                            <div className="field mb-4">
-                                <label htmlFor="title" style={{ fontWeight: 'bold' }}>
-                                    {t('TITLE')} *
-                                </label>
-                                <InputText
-                                    id="title"
-                                    value={notification.title}
-                                    onChange={(e) =>
-                                        setNotification((prev) => ({
-                                            ...prev,
-                                            title: e.target.value
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('NOTIFICATION.ENTER_NOTIFICATION_TITLE')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !notification.title
-                                    })}
+        <div className="space-y-4">
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.NOTIFICATION', { defaultValue: 'اعلان‌ها' })}
+                description={t('NOTIFICATION.PAGE.DESCRIPTION', { defaultValue: 'ارسال و مدیریت اعلان‌های نمایندگان' })}
+                loading={loading}
+                actions={
+                    <>
+                        <UiButton variant="default" size="sm" onClick={openNew}>
+                            <Plus className="h-4 w-4" />
+                            {t('NOTIFICATION.CREATE_NOTIFICATION')}
+                        </UiButton>
+                        <UiButton variant="destructive" size="sm" onClick={confirmDeleteSelected} disabled={selectedNotifications.length === 0}>
+                            <Trash2 className="h-4 w-4" />
+                            {t('DELETE')}
+                        </UiButton>
+                    </>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو در اعلان‌ها...' })}
+                    />
+                }
+            >
+                <table className="w-full min-w-[960px] border-collapse text-xs">
+                    <thead>
+                        <tr className="border-b border-emerald-100 bg-emerald-50/70 text-start">
+                            <th className="px-2 py-2 font-semibold text-emerald-950">
+                                <input
+                                    type="checkbox"
+                                    checked={allVisibleSelected}
+                                    onChange={(e) => toggleAllVisible(e.target.checked)}
+                                    aria-label={t('SELECT_ALL', { defaultValue: 'انتخاب همه' })}
                                 />
-                                {submitted && !notification.title && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            {/* Message Field */}
-                            <div className="field mb-4">
-                                <label htmlFor="message" style={{ fontWeight: 'bold' }}>
-                                    {t('NOTIFICATION.MESSAGE')} *
-                                </label>
-                                <textarea
-                                    id="message"
-                                    value={notification.message}
-                                    onChange={(e: any) =>
-                                        setNotification((prev) => ({
-                                            ...prev,
-                                            message: e.target.value
-                                        }))
-                                    }
-                                    required
-                                    rows={4}
-                                    placeholder={t('NOTIFICATION.ENTER_NOTIFICATION_MESSAGE')}
-                                    className={classNames('w-full', {
-                                        'p-invalid': submitted && !notification.message
-                                    })}
-                                />
-                                {submitted && !notification.message && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            {/* Target Type and Status Fields */}
-                            <div className="formgrid grid mb-4">
-                                <div className="field col">
-                                    <label htmlFor="target_type" style={{ fontWeight: 'bold' }}>
-                                        {t('NOTIFICATION.TARGET_TYPE')} *
-                                    </label>
-                                    <Dropdown
-                                        id="target_type"
-                                        value={notification.target_type}
-                                        options={targetTypeOptions}
-                                        onChange={(e) => {
-                                            const newNotification = {
-                                                ...notification,
-                                                target_type: e.value
-                                            };
-                                            // Clear reseller_id if not "reseller" target type
-                                            if (e.value !== 'reseller') {
-                                                newNotification.reseller_id = undefined;
-                                                setSelectedReseller(null);
-                                            }
-                                            setNotification(newNotification);
-                                        }}
-                                        placeholder={t('NOTIFICATION.SELECT_TARGET_TYPE')}
-                                        className="w-full"
-                                    />
-                                    {submitted && !notification.target_type && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                                <div className="field col">
-                                    <label htmlFor="status" style={{ fontWeight: 'bold' }}>
-                                        {t('STATUS')}
-                                    </label>
-                                    <Dropdown
-                                        id="status"
-                                        value={notification.status || 0}
-                                        options={statusOptions}
-                                        onChange={(e) =>
-                                            setNotification((prev) => ({
-                                                ...prev,
-                                                status: e.value
-                                            }))
-                                        }
-                                        placeholder={t('NOTIFICATION.SELECT_STATUS')}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Media Upload */}
-                            <div className="field mb-4">
-                                <label htmlFor="media" style={{ fontWeight: 'bold' }}>
-                                    {t('NOTIFICATION.MEDIA')}
-                                </label>
-                                <FileUpload
-                                    mode="basic"
-                                    accept="image/*,.pdf,.doc,.docx"
-                                    onSelect={(e) =>
-                                        setNotification((prev) => ({
-                                            ...prev,
-                                            media: e.files[0]
-                                        }))
-                                    }
-                                    onClear={() =>
-                                        setNotification((prev) => ({
-                                            ...prev,
-                                            media: null
-                                        }))
-                                    }
-                                    chooseLabel={t('NOTIFICATION.UPLOAD_MEDIA')}
-                                    className="w-full"
-                                />
-                                <small className="text-color-secondary">
-                                    {t('NOTIFICATION.SUPPORTED_FORMATS')}: JPG, PNG, PDF, DOC (Max: 5MB)
-                                </small>
-                            </div>
-
-                            {/* Reseller Selection - Only show when target_type is 'reseller' */}
-                            {notification.target_type === 'reseller' && (
-                                <div className="field mb-4">
-                                    <label htmlFor="reseller" style={{ fontWeight: 'bold' }}>
-                                        {t('RESELLER')} *
-                                    </label>
-                                    <CustomDropdownWithSearch
-                                        id="reseller"
-                                        value={selectedReseller}
-                                        options={resellers}
-                                        onChange={(selectedOption) => {
-                                            setSelectedReseller(selectedOption);
-                                            setNotification((prev) => ({
-                                                ...prev,
-                                                reseller_id: selectedOption?.id ?? undefined
-                                            }));
-                                        }}
-                                        optionLabel="reseller_name"
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        placeholder={t('SELECT_RESELLER')}
-                                        className="w-full"
-                                        panelClassName="min-w-[20rem]"
-                                        searchButtonText={t('ECOMMERCE.COMMON.SEARCH')}
-                                        error={submitted && !notification.reseller_id}
-                                        errorMessage={t('THIS_FIELD_IS_REQUIRED')}
-                                        showClear={true}
-                                        emptyMessage={t('NO_RESULTS_FOUND')}
-                                        noResultsMessage={t('TRY_DIFFERENT_SEARCH_TERM')}
-                                        returnFullObject={true}
-                                        itemTemplate={(option) => {
-                                            if (!option) return null;
-                                            return (
-                                                <div className="flex flex-column p-2 gap-1">
-                                                    <div className="font-semibold">
-                                                        {option.contact_name} || {option.reseller_name}
-                                                    </div>
-                                                    <div className="text-sm text-gray-600">
-                                                        {option.phone && (
-                                                            <span className="ml-2 text-gray-500">{option.phone}</span>
-                                                        )}
-                                                    </div>
+                            </th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">{t('TABLE.GENERAL.ACTIONS', { defaultValue: 'عملیات' })}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('TITLE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('NOTIFICATION.MESSAGE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('NOTIFICATION.TARGET_TYPE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('STATUS')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('NOTIFICATION.MEDIA')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">{t('CREATED_AT')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredNotifications.length === 0 ? (
+                            <tr>
+                                <td colSpan={8} className="px-2 py-12 text-center text-muted-foreground">
+                                    {t('DATA_TABLE.TABLE.NO_DATA', { defaultValue: 'داده‌ای یافت نشد' })}
+                                </td>
+                            </tr>
+                        ) : (
+                            filteredNotifications.map((row: Notification) => {
+                                const { date, time } = formatNotificationDate(row.created_at ?? undefined);
+                                const reseller = resellers.find((r: any) => r.id === row.reseller_id);
+                                const isActive = row.status === 1;
+                                const isImage =
+                                    row.media &&
+                                    (typeof row.media === 'string'
+                                        ? row.media.match(/\.(jpeg|jpg|gif|png|webp)$/i)
+                                        : row.media instanceof File);
+                                return (
+                                    <tr key={row.id} className="border-b border-emerald-50 transition hover:bg-emerald-50/50">
+                                        <td className="px-2 py-1.5 align-middle">
+                                            <input type="checkbox" checked={isSelected(row)} onChange={(e) => toggleRow(row, e.target.checked)} />
+                                        </td>
+                                        <td className="px-2 py-1.5 align-middle">
+                                            <RowActions items={getRowActions(row)} />
+                                        </td>
+                                        <td className="px-2 py-1.5 font-medium text-start">{row.title || '—'}</td>
+                                        <td className="max-w-[16rem] truncate px-2 py-1.5 text-start text-muted-foreground" title={row.message || ''}>
+                                            {row.message || '—'}
+                                        </td>
+                                        <td className="px-2 py-1.5 text-start">
+                                            {row.target_type === 'reseller' && reseller ? (
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="font-medium">{reseller.reseller_name}</span>
+                                                    {reseller.contact_name ? (
+                                                        <span className="text-[10px] text-muted-foreground">{reseller.contact_name}</span>
+                                                    ) : null}
                                                 </div>
-                                            );
-                                        }}
-                                        valueTemplate={(option) => {
-                                            if (!option) return t('SELECT_RESELLER');
-                                            return (
-                                                <div className="flex flex-column">
-                                                    <span style={{ fontWeight: 'bold' }}>
-                                                        {option.reseller_name}
-                                                    </span>
-                                                    <small className="text-gray-500 text-xs">
-                                                        {option.contact_name} {option.phone && ` | ${option.phone}`}
-                                                    </small>
-                                                </div>
-                                            );
-                                        }}
-                                        onSearch={(searchTerm) => {
-                                            setResellerSearchTerm(searchTerm);
-                                        }}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    </Dialog>
+                                            ) : (
+                                                row.target_type || '—'
+                                            )}
+                                        </td>
+                                        <td className="px-2 py-1.5">
+                                            <Badge variant={isActive ? 'success' : 'danger'} className="text-[10px]">
+                                                {isActive ? t('TRUE') : t('FALSE')}
+                                            </Badge>
+                                        </td>
+                                        <td className="px-2 py-1.5">
+                                            {!row.media ? (
+                                                <span className="text-muted-foreground">{t('NO_MEDIA', { defaultValue: 'بدون رسانه' })}</span>
+                                            ) : isImage ? (
+                                                <img src={`${row.media}`} alt="" className="h-10 w-10 rounded object-cover shadow-sm" />
+                                            ) : (
+                                                <span className="text-muted-foreground">{t('FILE', { defaultValue: 'فایل' })}</span>
+                                            )}
+                                        </td>
+                                        <td className="px-2 py-1.5 whitespace-nowrap tabular-nums text-muted-foreground">
+                                            <span className="block">{date}</span>
+                                            {time ? <span className="text-[10px]">{time}</span> : null}
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
+                    </tbody>
+                </table>
+            </ListPage>
 
-                    <Dialog
-                        visible={deleteNotificationDialog}
-                        style={{ width: '450px' }}
-                        header={t('CONFIRM')}
-                        modal
-                        footer={deleteNotificationDialogFooter}
-                        onHide={hideDeleteNotificationDialog}
+            <FormSheet
+                open={notificationDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                title={notification.id ? t('NOTIFICATION.EDIT_NOTIFICATION') : t('NOTIFICATION.CREATE_NOTIFICATION')}
+                description={t('NOTIFICATION.FORM.HINT', { defaultValue: 'عنوان، متن و مخاطب اعلان را مشخص کنید.' })}
+                size="xl"
+                side="left"
+                footer={
+                    <FormActions onCancel={hideDialog} onSubmit={saveNotification} cancelLabel={t('CANCEL')} submitLabel={t('SAVE')} />
+                }
+            >
+                <FormSection title={t('NOTIFICATION.FORM.SECTION.MAIN', { defaultValue: 'محتوای اعلان' })}>
+                    <FormField
+                        label={t('TITLE')}
+                        required
+                        fullWidth
+                        error={submitted && !notification.title ? t('THIS_FIELD_IS_REQUIRED') : null}
                     >
-                        <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
-                            {notification && (
-                                <span>
-                                    {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{notification.title}</b>?
-                                </span>
-                            )}
-                        </div>
-                    </Dialog>
+                        <Input
+                            id="title"
+                            value={notification.title}
+                            onChange={(e) =>
+                                setNotification((prev) => ({
+                                    ...prev,
+                                    title: e.target.value
+                                }))
+                            }
+                            required
+                            autoFocus
+                            placeholder={t('NOTIFICATION.ENTER_NOTIFICATION_TITLE')}
+                            className={cn('w-full', submitted && !notification.title && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('NOTIFICATION.MESSAGE')}
+                        required
+                        fullWidth
+                        error={submitted && !notification.message ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Textarea
+                            id="message"
+                            value={notification.message}
+                            onChange={(e) =>
+                                setNotification((prev) => ({
+                                    ...prev,
+                                    message: e.target.value
+                                }))
+                            }
+                            required
+                            rows={4}
+                            placeholder={t('NOTIFICATION.ENTER_NOTIFICATION_MESSAGE')}
+                            className={cn('w-full', submitted && !notification.message && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('NOTIFICATION.TARGET_TYPE')}
+                        required
+                        error={submitted && !notification.target_type ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Select
+                            value={notification.target_type || undefined}
+                            onValueChange={(v) => {
+                                setNotification((prev) => {
+                                    const next = { ...prev, target_type: v };
+                                    if (v !== 'reseller') {
+                                        next.reseller_id = undefined;
+                                        setSelectedReseller(null);
+                                    }
+                                    return next;
+                                });
+                            }}
+                        >
+                            <SelectTrigger className={cn(submitted && !notification.target_type && 'border-rose-300')}>
+                                <SelectValue placeholder={t('NOTIFICATION.SELECT_TARGET_TYPE')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {targetTypeOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField label={t('STATUS')}>
+                        <Select
+                            value={String(notification.status ?? 0)}
+                            onValueChange={(v) =>
+                                setNotification((prev) => ({
+                                    ...prev,
+                                    status: Number(v)
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('NOTIFICATION.SELECT_STATUS')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {statusOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField label={t('NOTIFICATION.MEDIA')} fullWidth hint={`${t('NOTIFICATION.SUPPORTED_FORMATS')}: JPG, PNG, PDF, DOC (Max: 5MB)`}>
+                        <FileDrop
+                            accept="image/*,.pdf,.doc,.docx"
+                            value={notification.media instanceof File ? notification.media : null}
+                            previewUrl={mediaPreviewUrl}
+                            onChange={(file) =>
+                                setNotification((prev) => ({
+                                    ...prev,
+                                    media: file
+                                }))
+                            }
+                        />
+                    </FormField>
+                    {notification.target_type === 'reseller' ? (
+                        <FormField
+                            label={t('RESELLER')}
+                            required
+                            fullWidth
+                            error={submitted && !notification.reseller_id ? t('THIS_FIELD_IS_REQUIRED') : null}
+                        >
+                            <CustomDropdownWithSearch
+                                id="reseller"
+                                value={selectedReseller}
+                                options={resellers}
+                                onChange={(selectedOption) => {
+                                    setSelectedReseller(selectedOption);
+                                    setNotification((prev) => ({
+                                        ...prev,
+                                        reseller_id: selectedOption?.id ?? undefined
+                                    }));
+                                }}
+                                optionLabel="reseller_name"
+                                filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                                placeholder={t('SELECT_RESELLER')}
+                                className="w-full"
+                                panelClassName="min-w-[20rem]"
+                                searchButtonText={t('ECOMMERCE.COMMON.SEARCH')}
+                                error={submitted && !notification.reseller_id}
+                                errorMessage={t('THIS_FIELD_IS_REQUIRED')}
+                                showClear={true}
+                                emptyMessage={t('NO_RESULTS_FOUND')}
+                                noResultsMessage={t('TRY_DIFFERENT_SEARCH_TERM')}
+                                returnFullObject={true}
+                                itemTemplate={(option) => {
+                                    if (!option) return null;
+                                    return (
+                                        <div className="flex flex-column p-2 gap-1">
+                                            <div className="font-semibold">
+                                                {option.contact_name} || {option.reseller_name}
+                                            </div>
+                                            <div className="text-sm text-gray-600">
+                                                {option.phone && <span className="ms-2 text-gray-500">{option.phone}</span>}
+                                            </div>
+                                        </div>
+                                    );
+                                }}
+                                valueTemplate={(option) => {
+                                    if (!option) return t('SELECT_RESELLER');
+                                    return (
+                                        <div className="flex flex-column">
+                                            <span style={{ fontWeight: 'bold' }}>{option.reseller_name}</span>
+                                            <small className="text-gray-500 text-xs">
+                                                {option.contact_name} {option.phone && ` | ${option.phone}`}
+                                            </small>
+                                        </div>
+                                    );
+                                }}
+                                onSearch={(searchTerm) => {
+                                    setResellerSearchTerm(searchTerm);
+                                }}
+                            />
+                        </FormField>
+                    ) : null}
+                </FormSection>
+            </FormSheet>
 
-                    <Dialog
-                        visible={deleteNotificationsDialog}
-                        style={{ width: '450px' }}
-                        header={t('CONFIRM')}
-                        modal
-                        footer={deleteNotificationsDialogFooter}
-                        onHide={hideDeleteNotificationsDialog}
-                    >
-                        <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
-                            {selectedNotifications && (
-                                <span>
-                                    {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}
-                                    ({(selectedNotifications as any).length} {t('ITEMS')})?
-                                </span>
-                            )}
-                        </div>
-                    </Dialog>
+            <Dialog
+                visible={deleteNotificationDialog}
+                style={{ width: '450px' }}
+                header={t('CONFIRM')}
+                modal
+                footer={deleteNotificationDialogFooter}
+                onHide={hideDeleteNotificationDialog}
+            >
+                <div className="flex align-items-center justify-content-center">
+                    <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
+                    {notification && (
+                        <span>
+                            {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} <b>{notification.title}</b>?
+                        </span>
+                    )}
                 </div>
-            </div>
+            </Dialog>
+
+            <Dialog
+                visible={deleteNotificationsDialog}
+                style={{ width: '450px' }}
+                header={t('CONFIRM')}
+                modal
+                footer={deleteNotificationsDialogFooter}
+                onHide={hideDeleteNotificationsDialog}
+            >
+                <div className="flex align-items-center justify-content-center">
+                    <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
+                    {selectedNotifications.length > 0 && (
+                        <span>
+                            {t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')} ({selectedNotifications.length} {t('ITEMS')})?
+                        </span>
+                    )}
+                </div>
+            </Dialog>
         </div>
     );
 };

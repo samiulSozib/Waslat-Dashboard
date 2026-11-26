@@ -117,6 +117,10 @@ export const resellerReducer = (state = initialState, action: any): ResellerStat
                             ? { ...reseller, status: action.payload.status }
                             : reseller
                     ),
+                    singleReseller:
+                        state.singleReseller && state.singleReseller.id === action.payload.id
+                            ? { ...state.singleReseller, status: action.payload.status }
+                            : state.singleReseller,
                     error: null,
                 };
 

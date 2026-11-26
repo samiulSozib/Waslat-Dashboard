@@ -140,7 +140,7 @@ const ResellerSubResellers = ({ resellerId }: ResellerBalancesProps) => {
     }, [dispatch, sub_resellers]);
 
     const openNew = () => {
-        setReseller(emptyReseller);
+        setReseller({ ...emptyReseller, parent_id: resellerId });
         setSubmitted(false);
         setResellerDialog(true);
     };

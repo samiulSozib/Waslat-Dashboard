@@ -111,6 +111,7 @@ export const _addBalance = (balanceData: Balance, toast: React.RefObject<Toast>,
             detail: t("BALANCE_ADDED"),
             life: 3000,
         });
+        return true;
     } catch (error: any) {
         //console.log(error)
         dispatch({ type: ADD_BALANCE_FAIL, payload: error.message });
@@ -120,6 +121,7 @@ export const _addBalance = (balanceData: Balance, toast: React.RefObject<Toast>,
             detail: t("BALANCE_ADD_FAILED"),
             life: 3000,
         });
+        return false;
     }
 };
 

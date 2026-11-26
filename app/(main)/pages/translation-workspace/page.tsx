@@ -5,784 +5,625 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { Button } from 'primereact/button';
+import { Button as PrimeButton } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { InputText } from 'primereact/inputtext';
 import { Paginator } from 'primereact/paginator';
-import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
 import { Tag } from 'primereact/tag';
-import { classNames } from 'primereact/utils';
+import { AlertTriangle, CheckCircle2, Clock3, List, Save } from 'lucide-react';
 
 import { AppDispatch } from '@/app/redux/store';
-
-
 import {
-  _fetchTranslationLanguages,
-  _fetchTranslationTypes,
-  _fetchTranslationWorkspace,
-  _markTranslationDirty,
-  _clearTranslationDirty,
-  _resetTranslationDirty,
-  _bulkSaveTranslations,
+    _fetchTranslationLanguages,
+    _fetchTranslationTypes,
+    _fetchTranslationWorkspace,
+    _markTranslationDirty,
+    _resetTranslationDirty,
+    _bulkSaveTranslations
 } from '@/app/redux/actions/translationActions';
-
 import { _fetchCompanies } from '@/app/redux/actions/companyActions';
 import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
-
-import {
-  TranslationField,
-  TranslationItem,
-} from '@/types/translation';
+import { TranslationField, TranslationItem } from '@/types/translation';
 import { customCellStyle } from '@/app/(main)/utilities/customRow';
 import { isRTL } from '@/app/(main)/utilities/rtlUtil';
 import withAuth from '@/app/(main)/authGuard';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar, type FilterChip } from '@/components/admin/filter-bar';
+import { FILTER_SHEET_BODY_CLASS } from '@/components/admin/filter-field';
+import { StatCard } from '@/components/admin/stat-card';
+import { FormField } from '@/components/admin/form-sheet';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 
-/* ------------------------------------------------------------------ */
-/* Translation Workspace Page                                          */
-/* ------------------------------------------------------------------ */
 const TranslationWorkspacePage = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { t } = useTranslation();
-  const toast = useRef<Toast>(null);
+    const dispatch = useDispatch<AppDispatch>();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const { t } = useTranslation();
+    const toast = useRef<Toast>(null);
 
-  /* ---------------------- URL-driven state ---------------------- */
-  const initialType = searchParams.get('type') || 'bundle';
-  const initialLang = searchParams.get('language') || '';
+    const initialType = searchParams.get('type') || 'bundle';
+    const initialLang = searchParams.get('language') || '';
 
-  const [selectedType, setSelectedType] = useState<string>(initialType);
-  const [selectedLanguage, setSelectedLanguage] = useState<string>(initialLang);
+    const [selectedType, setSelectedType] = useState<string>(initialType);
+    const [selectedLanguage, setSelectedLanguage] = useState<string>(initialLang);
 
-  /* ---------------------- UI state ---------------------- */
-  const [searchInput, setSearchInput] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+    const [searchInput, setSearchInput] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(10);
 
-  const [translationStatus, setTranslationStatus] = useState<
-    'all' | 'missing' | 'partial' | 'translated'
-  >('all');
+    const [translationStatus, setTranslationStatus] = useState<'all' | 'missing' | 'partial' | 'translated'>('all');
+    const [sortBy] = useState('id');
+    const [sortDirection] = useState<'asc' | 'desc'>('asc');
 
-  const [sortBy, setSortBy] = useState('id');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [filterCompanyId, setFilterCompanyId] = useState<number | null>(null);
+    const [filterServiceId, setFilterServiceId] = useState<number | null>(null);
+    const [filterCategoryType, setFilterCategoryType] = useState<string | null>(null);
+    const [filterBundleType, setFilterBundleType] = useState<string | null>(null);
+    const [filterValidityType, setFilterValidityType] = useState<string | null>(null);
+    const [filterCurrencyId, setFilterCurrencyId] = useState<number | null>(null);
+    const [filterApiProviderId, setFilterApiProviderId] = useState<number | null>(null);
 
-  // Bundle-specific filters
-  const [filterCompanyId, setFilterCompanyId] = useState<number | null>(null);
-  const [filterServiceId, setFilterServiceId] = useState<number | null>(null);
-  const [filterCategoryType, setFilterCategoryType] = useState<string | null>(null);
-  const [filterBundleType, setFilterBundleType] = useState<string | null>(null);
-  const [filterValidityType, setFilterValidityType] = useState<string | null>(null);
-  const [filterCurrencyId, setFilterCurrencyId] = useState<number | null>(null);
-  const [filterApiProviderId, setFilterApiProviderId] = useState<number | null>(null);
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [confirmDialog, setConfirmDialog] = useState(false);
+    const [pendingLanguage, setPendingLanguage] = useState<string | null>(null);
+    const [pendingType, setPendingType] = useState<string | null>(null);
 
-  const [filterDialogVisible, setFilterDialogVisible] = useState(false);
-  const filterRef = useRef<HTMLDivElement>(null);
+    const { languages, types, workspace, dirtyRows, bulkSave } = useSelector((state: any) => state.translationReducer);
+    const { companies } = useSelector((state: any) => state.companyReducer);
+    const { services } = useSelector((state: any) => state.serviceReducer);
+    const { currencies } = useSelector((state: any) => state.currenciesReducer);
 
-  const [languageChangeDialog, setLanguageChangeDialog] = useState(false);
-  const [pendingLanguage, setPendingLanguage] = useState<string | null>(null);
+    useEffect(() => {
+        dispatch(_fetchTranslationLanguages());
+        dispatch(_fetchTranslationTypes());
+        dispatch(_fetchCompanies());
+        dispatch(_fetchServiceList());
+        dispatch(_fetchCurrencies());
+    }, [dispatch]);
 
-  /* ---------------------- Redux state ---------------------- */
-  const {
-    languages,
-    types,
-    workspace,
-    dirtyRows,
-    bulkSave,
-  } = useSelector((state: any) => state.translationReducer);
-
-  const { companies } = useSelector((state: any) => state.companyReducer);
-  const { services } = useSelector((state: any) => state.serviceReducer);
-  const { currencies } = useSelector((state: any) => state.currenciesReducer);
-
-  /* ---------------------- Initial data ---------------------- */
-  useEffect(() => {
-    dispatch(_fetchTranslationLanguages());
-    dispatch(_fetchTranslationTypes());
-    dispatch(_fetchCompanies());
-    dispatch(_fetchServiceList());
-    dispatch(_fetchCurrencies());
-  }, [dispatch]);
-
-  /* ---------------------- Auto-select language ---------------------- */
-  useEffect(() => {
-    if (!selectedLanguage && languages.length > 0) {
-      // Default to Turkish (tr) if available, otherwise first language
-      const tr = languages.find((l: any) => l.language_code === 'tr');
-      setSelectedLanguage(tr?.language_code || languages[0].language_code);
-    }
-  }, [languages, selectedLanguage]);
-
-  /* ---------------------- Debounced search ---------------------- */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchInput);
-      setPage(1);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  /* ---------------------- Fetch workspace ---------------------- */
-  const buildFilters = useCallback(() => {
-    const filters: Record<string, any> = {
-      search: debouncedSearch,
-      translation_status: translationStatus,
-      sort_by: sortBy,
-      sort_direction: sortDirection,
-    };
-    if (selectedType === 'bundle') {
-      if (filterCompanyId) filters.filter_company_id = filterCompanyId;
-      if (filterServiceId) filters.filter_service_id = filterServiceId;
-      if (filterCategoryType) filters.filter_service_category_type = filterCategoryType;
-      if (filterBundleType) filters.filter_bundle_type = filterBundleType;
-      if (filterValidityType) filters.filter_validity_type = filterValidityType;
-      if (filterCurrencyId) filters.filter_currency_id = filterCurrencyId;
-      if (filterApiProviderId) filters.filter_api_provider_id = filterApiProviderId;
-    }
-    return filters;
-  }, [
-    debouncedSearch,
-    translationStatus,
-    sortBy,
-    sortDirection,
-    selectedType,
-    filterCompanyId,
-    filterServiceId,
-    filterCategoryType,
-    filterBundleType,
-    filterValidityType,
-    filterCurrencyId,
-    filterApiProviderId,
-  ]);
-
-  useEffect(() => {
-    if (!selectedType || !selectedLanguage) return;
-    dispatch(
-      _fetchTranslationWorkspace(
-        selectedType,
-        selectedLanguage,
-        page,
-        perPage,
-        buildFilters()
-      )
-    );
-  }, [dispatch, selectedType, selectedLanguage, page, perPage, buildFilters]);
-
-  /* ---------------------- Sync URL ---------------------- */
-  useEffect(() => {
-    const params = new URLSearchParams();
-    params.set('type', selectedType);
-    if (selectedLanguage) params.set('language', selectedLanguage);
-    router.replace(`/pages/translation-workspace?${params.toString()}`);
-  }, [selectedType, selectedLanguage, router]);
-
-  /* ---------------------- Unsaved changes guard ---------------------- */
-  const hasDirtyRows = Object.keys(dirtyRows).length > 0;
-
-  const requestLanguageChange = (lang: string) => {
-    if (lang === selectedLanguage) return;
-    if (hasDirtyRows) {
-      setPendingLanguage(lang);
-      setLanguageChangeDialog(true);
-    } else {
-      setSelectedLanguage(lang);
-      setPage(1);
-      dispatch(_resetTranslationDirty());
-    }
-  };
-
-  const confirmLanguageChange = () => {
-    if (pendingLanguage) {
-      setSelectedLanguage(pendingLanguage);
-      setPage(1);
-      dispatch(_resetTranslationDirty());
-    }
-    setLanguageChangeDialog(false);
-    setPendingLanguage(null);
-  };
-
-  /* ---------------------- Type change ---------------------- */
-  const requestTypeChange = (type: string) => {
-    if (type === selectedType) return;
-    if (hasDirtyRows) {
-      setPendingLanguage(null);
-      setLanguageChangeDialog(true);
-      // reuse dialog: we just want to confirm discard
-      setPendingLanguage(selectedLanguage); // will be re-set after confirm
-    }
-    setSelectedType(type);
-    setPage(1);
-    dispatch(_resetTranslationDirty());
-  };
-
-  /* ---------------------- Dirty helpers ---------------------- */
-  const getRowValue = (item: TranslationItem, field: TranslationField) => {
-    const dirty = dirtyRows[item.id];
-    if (dirty && dirty[field.key] !== undefined) return dirty[field.key];
-    return item.translation[field.key] ?? '';
-  };
-
-  const isRowDirty = (id: number) => !!dirtyRows[id];
-
-  const onTranslationChange = (
-    item: TranslationItem,
-    field: TranslationField,
-    value: string
-  ) => {
-    dispatch(_markTranslationDirty(item.id, field.key, value));
-  };
-
-  /* ---------------------- Bulk save ---------------------- */
-  const handleSaveChangedRows = async () => {
-    if (!hasDirtyRows) {
-      toast.current?.show({
-        severity: 'info',
-        summary: t('INFO'),
-        detail: t('NO_CHANGES_TO_SAVE'),
-        life: 3000,
-      });
-      return;
-    }
-
-const items = (
-  Object.entries(dirtyRows) as Array<[string, Record<string, string>]>
-).map(([id, fields]) => ({
-  id: Number(id),
-  ...fields,
-}));
-
-    await dispatch(
-      _bulkSaveTranslations(selectedType, selectedLanguage, items, toast, t)
-    );
-
-    // refresh page after save
-    dispatch(
-      _fetchTranslationWorkspace(
-        selectedType,
-        selectedLanguage,
-        page,
-        perPage,
-        buildFilters()
-      )
-    );
-  };
-
-  /* ---------------------- Outside-click filter ---------------------- */
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('.p-dropdown-panel')) return;
-      if (
-        filterDialogVisible &&
-        filterRef.current &&
-        !filterRef.current.contains(target)
-      ) {
-        setFilterDialogVisible(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [filterDialogVisible]);
-
-  /* ---------------------- Statistics cards ---------------------- */
-  const stats = workspace.statistics || {
-    total: 0,
-    missing: 0,
-    translated: 0,
-    partial: 0,
-  };
-
-  const statsCards = [
-    { label: t('TOTAL'), value: stats.total, icon: 'pi pi-list', cls: 'blue' },
-    { label: t('MISSING'), value: stats.missing, icon: 'pi pi-exclamation-triangle', cls: 'red' },
-    { label: t('TRANSLATED'), value: stats.translated, icon: 'pi pi-check-circle', cls: 'green' },
-    { label: t('PARTIAL'), value: stats.partial, icon: 'pi pi-clock', cls: 'orange' },
-  ];
-
-  /* ---------------------- Status badge ---------------------- */
-  const statusBodyTemplate = (row: TranslationItem) => {
-    const status = row.translation_status;
-    const severity =
-      status === 'translated'
-        ? 'success'
-        : status === 'partial'
-        ? 'warning'
-        : 'danger';
-    return (
-      <Tag
-        value={t(status.toUpperCase())}
-        severity={severity as any}
-        icon={
-          status === 'translated'
-            ? 'pi pi-check'
-            : status === 'partial'
-            ? 'pi pi-clock'
-            : 'pi pi-times'
+    useEffect(() => {
+        if (!selectedLanguage && languages.length > 0) {
+            const fa = languages.find((l: any) => l.language_code === 'fa');
+            const tr = languages.find((l: any) => l.language_code === 'tr');
+            setSelectedLanguage(fa?.language_code || tr?.language_code || languages[0].language_code);
         }
-      />
+    }, [languages, selectedLanguage]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchInput);
+            setPage(1);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [searchInput]);
+
+    const buildFilters = useCallback(() => {
+        const filters: Record<string, any> = {
+            search: debouncedSearch,
+            translation_status: translationStatus,
+            sort_by: sortBy,
+            sort_direction: sortDirection
+        };
+        if (selectedType === 'bundle') {
+            if (filterCompanyId) filters.filter_company_id = filterCompanyId;
+            if (filterServiceId) filters.filter_service_id = filterServiceId;
+            if (filterCategoryType) filters.filter_service_category_type = filterCategoryType;
+            if (filterBundleType) filters.filter_bundle_type = filterBundleType;
+            if (filterValidityType) filters.filter_validity_type = filterValidityType;
+            if (filterCurrencyId) filters.filter_currency_id = filterCurrencyId;
+            if (filterApiProviderId) filters.filter_api_provider_id = filterApiProviderId;
+        }
+        return filters;
+    }, [
+        debouncedSearch,
+        translationStatus,
+        sortBy,
+        sortDirection,
+        selectedType,
+        filterCompanyId,
+        filterServiceId,
+        filterCategoryType,
+        filterBundleType,
+        filterValidityType,
+        filterCurrencyId,
+        filterApiProviderId
+    ]);
+
+    useEffect(() => {
+        if (!selectedType || !selectedLanguage) return;
+        dispatch(_fetchTranslationWorkspace(selectedType, selectedLanguage, page, perPage, buildFilters()));
+    }, [dispatch, selectedType, selectedLanguage, page, perPage, buildFilters]);
+
+    useEffect(() => {
+        const params = new URLSearchParams();
+        params.set('type', selectedType);
+        if (selectedLanguage) params.set('language', selectedLanguage);
+        router.replace(`/pages/translation-workspace?${params.toString()}`);
+    }, [selectedType, selectedLanguage, router]);
+
+    const hasDirtyRows = Object.keys(dirtyRows).length > 0;
+
+    const applyType = (type: string) => {
+        setSelectedType(type);
+        setPage(1);
+        dispatch(_resetTranslationDirty());
+    };
+
+    const applyLanguage = (lang: string) => {
+        setSelectedLanguage(lang);
+        setPage(1);
+        dispatch(_resetTranslationDirty());
+    };
+
+    const requestLanguageChange = (lang: string) => {
+        if (lang === selectedLanguage) return;
+        if (hasDirtyRows) {
+            setPendingType(null);
+            setPendingLanguage(lang);
+            setConfirmDialog(true);
+            return;
+        }
+        applyLanguage(lang);
+    };
+
+    const requestTypeChange = (type: string) => {
+        if (type === selectedType) return;
+        if (hasDirtyRows) {
+            setPendingLanguage(null);
+            setPendingType(type);
+            setConfirmDialog(true);
+            return;
+        }
+        applyType(type);
+    };
+
+    const confirmDiscardAndContinue = () => {
+        if (pendingType) applyType(pendingType);
+        else if (pendingLanguage) applyLanguage(pendingLanguage);
+        else {
+            setPage(1);
+            dispatch(_resetTranslationDirty());
+        }
+        setConfirmDialog(false);
+        setPendingLanguage(null);
+        setPendingType(null);
+    };
+
+    const hideConfirmDialog = () => {
+        setConfirmDialog(false);
+        setPendingLanguage(null);
+        setPendingType(null);
+    };
+
+    const getRowValue = (item: TranslationItem, field: TranslationField) => {
+        const dirty = dirtyRows[item.id];
+        if (dirty && dirty[field.key] !== undefined) return dirty[field.key];
+        return item.translation[field.key] ?? '';
+    };
+
+    const isRowDirty = (id: number) => !!dirtyRows[id];
+
+    const onTranslationChange = (item: TranslationItem, field: TranslationField, value: string) => {
+        dispatch(_markTranslationDirty(item.id, field.key, value));
+    };
+
+    const handleSaveChangedRows = async () => {
+        if (!hasDirtyRows) {
+            toast.current?.show({
+                severity: 'info',
+                summary: t('INFO'),
+                detail: t('NO_CHANGES_TO_SAVE'),
+                life: 3000
+            });
+            return;
+        }
+
+        const items = (Object.entries(dirtyRows) as Array<[string, Record<string, string>]>).map(([id, fields]) => ({
+            id: Number(id),
+            ...fields
+        }));
+
+        await dispatch(_bulkSaveTranslations(selectedType, selectedLanguage, items, toast, t));
+        dispatch(_fetchTranslationWorkspace(selectedType, selectedLanguage, page, perPage, buildFilters()));
+    };
+
+    const clearBundleFilters = () => {
+        setFilterCompanyId(null);
+        setFilterServiceId(null);
+        setFilterCategoryType(null);
+        setFilterBundleType(null);
+        setFilterValidityType(null);
+        setFilterCurrencyId(null);
+        setFilterApiProviderId(null);
+        setPage(1);
+    };
+
+    const applyBundleFilters = () => {
+        setPage(1);
+        setFilterOpen(false);
+    };
+
+    const stats = workspace.statistics || { total: 0, missing: 0, translated: 0, partial: 0 };
+
+    const filterChips: FilterChip[] = useMemo(() => {
+        if (selectedType !== 'bundle') return [];
+        const chips: FilterChip[] = [];
+        if (filterCompanyId) {
+            const company = (companies || []).find((c: any) => c.id === filterCompanyId);
+            chips.push({ key: 'company', label: company?.company_name || String(filterCompanyId) });
+        }
+        if (filterServiceId) {
+            const service = (services || []).find((s: any) => s.id === filterServiceId);
+            chips.push({
+                key: 'service',
+                label: service
+                    ? `${service.service_category?.category_name || ''} — ${service.company?.company_name || ''}`
+                    : String(filterServiceId)
+            });
+        }
+        if (filterCategoryType) chips.push({ key: 'category', label: filterCategoryType });
+        if (filterBundleType) chips.push({ key: 'bundleType', label: filterBundleType });
+        if (filterValidityType) chips.push({ key: 'validity', label: filterValidityType });
+        if (filterCurrencyId) {
+            const currency = (currencies || []).find((c: any) => c.id === filterCurrencyId);
+            chips.push({ key: 'currency', label: currency?.name || String(filterCurrencyId) });
+        }
+        return chips;
+    }, [
+        selectedType,
+        filterCompanyId,
+        filterServiceId,
+        filterCategoryType,
+        filterBundleType,
+        filterValidityType,
+        filterCurrencyId,
+        companies,
+        services,
+        currencies
+    ]);
+
+    const removeChip = (key: string) => {
+        if (key === 'company') setFilterCompanyId(null);
+        if (key === 'service') setFilterServiceId(null);
+        if (key === 'category') setFilterCategoryType(null);
+        if (key === 'bundleType') setFilterBundleType(null);
+        if (key === 'validity') setFilterValidityType(null);
+        if (key === 'currency') setFilterCurrencyId(null);
+        setPage(1);
+    };
+
+    const statusBodyTemplate = (row: TranslationItem) => {
+        const status = row.translation_status;
+        const severity = status === 'translated' ? 'success' : status === 'partial' ? 'warning' : 'danger';
+        return (
+            <Tag
+                value={t(status.toUpperCase())}
+                severity={severity as any}
+                icon={status === 'translated' ? 'pi pi-check' : status === 'partial' ? 'pi pi-clock' : 'pi pi-times'}
+            />
+        );
+    };
+
+    const renderContextColumns = () => {
+        if (!workspace.items.length) return null;
+        const contextKeys = Object.keys(workspace.items[0].context || {});
+        return contextKeys.map((key) => (
+            <Column
+                key={key}
+                field={`context.${key}`}
+                header={t(key.toUpperCase())}
+                body={(row: TranslationItem) => <span className="text-xs text-muted-foreground">{row.context[key] ?? '—'}</span>}
+                style={{ ...customCellStyle }}
+                headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}
+            />
+        ));
+    };
+
+    const renderSourceColumn = (field: TranslationField) => (
+        <Column
+            key={`source-${field.key}`}
+            header={`${field.label} (${t('ORIGINAL')})`}
+            body={(row: TranslationItem) => <span className="text-xs text-muted-foreground">{row.source[field.key] ?? '—'}</span>}
+            style={{ ...customCellStyle }}
+            headerStyle={{ whiteSpace: 'nowrap', minWidth: '150px' }}
+        />
     );
-  };
 
-  /* ---------------------- Context columns ---------------------- */
-  // For bundle, show company / service; for others, show whatever context keys exist
-  const renderContextColumns = () => {
-    if (!workspace.items.length) return null;
-    const contextKeys = Object.keys(workspace.items[0].context || {});
-    return contextKeys.map((key) => (
-      <Column
-        key={key}
-        field={`context.${key}`}
-        header={t(key.toUpperCase())}
-        body={(row: TranslationItem) => (
-          <span style={{ fontSize: '0.8rem', color: '#666' }}>
-            {row.context[key] ?? '-'}
-          </span>
-        )}
-        style={{ ...customCellStyle }}
-        headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}
-      />
-    ));
-  };
-
-  /* ---------------------- Dynamic translation columns ---------------------- */
-  const renderSourceColumn = (field: TranslationField) => (
-    <Column
-      key={`source-${field.key}`}
-      header={`${field.label} (${t('ORIGINAL')})`}
-      body={(row: TranslationItem) => (
-        <span style={{ fontSize: '0.8rem', color: '#666' }}>
-          {row.source[field.key] ?? '-'}
-        </span>
-      )}
-      style={{ ...customCellStyle }}
-      headerStyle={{ whiteSpace: 'nowrap', minWidth: '150px' }}
-    />
-  );
-
-  const renderTranslationColumn = (field: TranslationField) => (
-    <Column
-      key={`trans-${field.key}`}
-      header={`${field.label} (${workspace.language?.language_name || ''})`}
-      body={(row: TranslationItem) => (
-        <InputText
-          value={getRowValue(row, field)}
-          onChange={(e) => onTranslationChange(row, field, e.target.value)}
-          placeholder={t('ENTER_TRANSLATION')}
-          className={classNames('w-full', {
-            'border-yellow-500': isRowDirty(row.id),
-          })}
-          style={{
-            fontSize: '0.85rem',
-            direction: workspace.language?.direction || 'ltr',
-          }}
-        />
-      )}
-      style={{ ...customCellStyle }}
-      headerStyle={{ whiteSpace: 'nowrap', minWidth: '200px' }}
-    />
-  );
-
-  /* ---------------------- Toolbar ---------------------- */
-  const leftToolbarTemplate = () => (
-    <div className="flex align-items-center gap-2 flex-wrap">
-      {/* Content type */}
-      <Dropdown
-        value={selectedType}
-        options={types}
-        onChange={(e) => requestTypeChange(e.value)}
-        optionLabel="label"
-        optionValue="type"
-        placeholder={t('CONTENT_TYPE')}
-        className="min-w-[180px]"
-      />
-
-      {/* Language */}
-      <Dropdown
-        value={selectedLanguage}
-        options={languages}
-        onChange={(e) => requestLanguageChange(e.value)}
-        optionLabel="language_name"
-        optionValue="language_code"
-        placeholder={t('LANGUAGE')}
-        className="min-w-[160px]"
-        itemTemplate={(opt: any) => (
-          <div className="flex align-items-center gap-2">
-            <span>{opt.language_name}</span>
-            <span className="text-xs text-gray-500">({opt.language_code})</span>
-          </div>
-        )}
-      />
-
-      {/* Search */}
-      <span className="p-input-icon-left">
-        <i className="pi pi-search" />
-        <InputText
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder={t('SEARCH')}
-          className="min-w-[220px]"
-        />
-      </span>
-
-      {/* Filter (only for bundle for now) */}
-      {selectedType === 'bundle' && (
-        <div ref={filterRef} style={{ position: 'relative' }}>
-          <Button
-            label={t('FILTER')}
-            icon="pi pi-filter"
-            className="p-button-info"
-            onClick={() => setFilterDialogVisible(!filterDialogVisible)}
-          />
-          {filterDialogVisible && (
-            <div
-              className="p-card p-fluid"
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: isRTL() ? '-100%' : '-20%',
-                right: isRTL() ? '-20%' : '-100%',
-                width: '320px',
-                zIndex: 1000,
-                marginTop: '0.5rem',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              }}
-            >
-              <div className="p-card-body" style={{ padding: '1rem' }}>
-                <div className="grid">
-                  <div className="col-12">
-                    <label>{t('COMPANY')}</label>
-                    <Dropdown
-                      value={filterCompanyId}
-                      options={companies}
-                      onChange={(e) => setFilterCompanyId(e.value)}
-                      optionLabel="company_name"
-                      optionValue="id"
-                      showClear
-                      placeholder={t('SELECT_COMPANY')}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="col-12">
-                    <label>{t('SERVICE')}</label>
-                    <Dropdown
-                      value={services.find((s: any) => s.id === filterServiceId) || null}
-                      options={services}
-                      onChange={(e) => setFilterServiceId(e.value?.id || null)}
-                      optionLabel="company.company_name"
-                      showClear
-                      placeholder={t('SELECT_SERVICE')}
-                      className="w-full"
-                      itemTemplate={(opt: any) => (
-                        <div className="flex gap-1">
-                          <span>{opt.service_category?.category_name}</span>
-                          <span>- {opt.company?.company_name}</span>
-                        </div>
-                      )}
-                    />
-                  </div>
-                  <div className="col-12">
-                    <label>{t('CATEGORY_TYPE')}</label>
-                    <Dropdown
-                      value={filterCategoryType}
-                      options={[
-                        { label: 'Social', value: 'social' },
-                        { label: 'Non-Social', value: 'nonsocial' },
-                      ]}
-                      onChange={(e) => setFilterCategoryType(e.value)}
-                      showClear
-                      placeholder={t('SELECT_TYPE')}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="col-12">
-                    <label>{t('BUNDLE_TYPE')}</label>
-                    <Dropdown
-                      value={filterBundleType}
-                      options={[
-                        { label: 'Credit', value: 'credit' },
-                        { label: 'Package', value: 'package' },
-                      ]}
-                      onChange={(e) => setFilterBundleType(e.value)}
-                      showClear
-                      placeholder={t('SELECT_TYPE')}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="col-12">
-                    <label>{t('VALIDITY_TYPE')}</label>
-                    <Dropdown
-                      value={filterValidityType}
-                      options={[
-                        'unlimited',
-                        'daily',
-                        'nightly',
-                        'weekly',
-                        'monthly',
-                        'yearly',
-                      ].map((v) => ({ label: v, value: v }))}
-                      onChange={(e) => setFilterValidityType(e.value)}
-                      showClear
-                      placeholder={t('SELECT_TYPE')}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="col-12">
-                    <label>{t('CURRENCY')}</label>
-                    <Dropdown                      value={filterCurrencyId}
-                      options={currencies}
-                      onChange={(e) => setFilterCurrencyId(e.value)}
-                      optionLabel="name"
-                      optionValue="id"
-                      showClear
-                      placeholder={t('SELECT_CURRENCY')}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="col-12 mt-3 flex justify-content-between gap-2">
-                    <Button
-                      label={t('RESET')}
-                      icon="pi pi-times"
-                      className="p-button-secondary p-button-sm"
-                      onClick={() => {
-                        setFilterCompanyId(null);
-                        setFilterServiceId(null);
-                        setFilterCategoryType(null);
-                        setFilterBundleType(null);
-                        setFilterValidityType(null);
-                        setFilterCurrencyId(null);
-                        setFilterApiProviderId(null);
-                        setPage(1);
-                      }}
-                    />
-                    <Button
-                      label={t('APPLY')}
-                      icon="pi pi-check"
-                      className="p-button-sm"
-                      onClick={() => {
-                        setPage(1);
-                        setFilterDialogVisible(false);
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Status filter */}
-      <Dropdown
-        value={translationStatus}
-        options={[
-          { label: t('ALL'), value: 'all' },
-          { label: t('MISSING'), value: 'missing' },
-          { label: t('PARTIAL'), value: 'partial' },
-          { label: t('TRANSLATED'), value: 'translated' },
-        ]}
-        onChange={(e) => {
-          setTranslationStatus(e.value);
-          setPage(1);
-        }}
-        className="min-w-[160px]"
-      />
-    </div>
-  );
-
-  const rightToolbarTemplate = () => (
-    <div className="flex align-items-center gap-2">
-      <Button
-        label={t('SAVE_CHANGED_ROWS')}
-        icon="pi pi-save"
-        severity="success"
-        disabled={!hasDirtyRows || bulkSave.loading}
-        loading={bulkSave.loading}
-        onClick={handleSaveChangedRows}
-      />
-    </div>
-  );
-
-  /* ---------------------- Render ---------------------- */
-  return (
-    <div className="grid crud-demo -m-5">
-      <div className="col-12">
-        <div className="card p-2">
-          {(workspace.loading || bulkSave.loading) && (
-            <ProgressBar mode="indeterminate" style={{ height: '6px' }} />
-          )}
-          <Toast ref={toast} />
-
-          {/* Header */}
-          <div className="mb-3">
-            <h2 className="m-0">{t('TRANSLATION_WORKSPACE')}</h2>
-            <p className="text-gray-500 mt-1 mb-0">
-              {t('MANAGING')}: <b>{workspace.entity_label || selectedType}</b>
-              {workspace.language && (
-                <>
-                  {' '}| {t('LANGUAGE')}: <b>{workspace.language.language_name}</b>
-                </>
-              )}
-            </p>
-          </div>
-
-          {/* Statistics cards */}
-          <div className="grid mb-3">
-            {statsCards.map((c) => (
-              <div className="col-12 md:col-3" key={c.label}>
-                <div
-                  className={`p-3 border-round shadow-1 bg-${c.cls}-50`}
-                  style={{ border: `1px solid var(--${c.cls}-200)` }}
-                >
-                  <div className="flex align-items-center justify-content-between">
-                    <div>
-                      <div className="text-sm text-gray-600">{c.label}</div>
-                      <div className="text-2xl font-bold">{c.value}</div>
-                    </div>
-                    <i className={`${c.icon} text-3xl text-${c.cls}-500`} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Toolbar */}
-          <Toolbar
-            className="mb-4"
-            left={leftToolbarTemplate}
-            right={rightToolbarTemplate}
-          />
-
-          {/* Table */}
-          <DataTable
-            value={workspace.items}
-            dataKey="id"
-            className="datatable-responsive"
-            emptyMessage={t('NO_DATA')}
-            dir={isRTL() ? 'rtl' : 'ltr'}
-            style={{
-              direction: isRTL() ? 'rtl' : 'ltr',
-              fontFamily: "'iranyekan', sans-serif,iranyekan",
-            }}
-            scrollable
-            scrollHeight="flex"
-            responsiveLayout="scroll"
-            paginator={false}
-          >
-            <Column
-              header={t('ID')}
-              field="id"
-              body={(row: TranslationItem) => (
-                <span className="font-semibold">{row.id}</span>
-              )}
-              style={{ ...customCellStyle }}
-              headerStyle={{ minWidth: '70px' }}
-            />
-
-            {/* Context columns (dynamic per type) */}
-            {renderContextColumns()}
-
-            {/* Source columns (dynamic per type) */}
-            {workspace.fields.map((f: TranslationField) => renderSourceColumn(f))}
-
-            {/* Translation columns (dynamic per type) */}
-            {workspace.fields.map((f: TranslationField) =>
-              renderTranslationColumn(f)
+    const renderTranslationColumn = (field: TranslationField) => (
+        <Column
+            key={`trans-${field.key}`}
+            header={`${field.label} (${workspace.language?.language_name || ''})`}
+            body={(row: TranslationItem) => (
+                <Input
+                    value={getRowValue(row, field)}
+                    onChange={(e) => onTranslationChange(row, field, e.target.value)}
+                    placeholder={t('ENTER_TRANSLATION')}
+                    className={cn('h-9 min-w-[12rem] text-sm', isRowDirty(row.id) && 'border-amber-500 ring-2 ring-amber-500/20')}
+                    style={{ direction: (workspace.language?.direction as 'ltr' | 'rtl') || 'ltr' }}
+                />
             )}
+            style={{ ...customCellStyle }}
+            headerStyle={{ whiteSpace: 'nowrap', minWidth: '200px' }}
+        />
+    );
 
-            {/* Status */}
-            <Column
-              header={t('STATUS')}
-              body={statusBodyTemplate}
-              style={{ ...customCellStyle }}
-              headerStyle={{ minWidth: '120px' }}
-            />
-          </DataTable>
+    const description = [
+        `${t('MANAGING')}: ${workspace.entity_label || selectedType}`,
+        workspace.language ? `${t('LANGUAGE')}: ${workspace.language.language_name}` : null
+    ]
+        .filter(Boolean)
+        .join(' · ');
 
-          {/* Pagination */}
-          {workspace.pagination && (
-            <Paginator
-              first={
-                (workspace.pagination.page - 1) *
-                workspace.pagination.items_per_page
-              }
-              rows={workspace.pagination.items_per_page}
-              totalRecords={workspace.pagination.total}
-              onPageChange={(e) => {
-                const newPage = e.page + 1;
-                setPage(newPage);
-                setPerPage(e.rows);
-              }}
-              template={
-                isRTL()
-                  ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                  : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-              }
-              currentPageReportTemplate={t('SHOWING_PAGE_INFO')}
-              firstPageLinkIcon={
-                isRTL() ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'
-              }
-              lastPageLinkIcon={
-                isRTL() ? 'pi pi-angle-double-left' : 'pi pi-angle-double-right'
-              }
-            />
-          )}
+    return (
+        <>
+            <Toast ref={toast} />
+            <ListPage
+                title={t('TRANSLATION_WORKSPACE')}
+                description={description}
+                loading={workspace.loading || bulkSave.loading}
+                actions={
+                    <Button type="button" disabled={!hasDirtyRows || bulkSave.loading} onClick={handleSaveChangedRows} className="gap-2">
+                        <Save className="h-4 w-4" />
+                        {bulkSave.loading ? t('SAVING', { defaultValue: 'در حال ذخیره…' }) : t('SAVE_CHANGED_ROWS')}
+                    </Button>
+                }
+                toolbar={
+                    <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                            <StatCard label={t('TOTAL')} value={stats.total} icon={List} tone="slate" onClick={() => { setTranslationStatus('all'); setPage(1); }} />
+                            <StatCard label={t('MISSING')} value={stats.missing} icon={AlertTriangle} tone="rose" onClick={() => { setTranslationStatus('missing'); setPage(1); }} />
+                            <StatCard label={t('TRANSLATED')} value={stats.translated} icon={CheckCircle2} tone="primary" onClick={() => { setTranslationStatus('translated'); setPage(1); }} />
+                            <StatCard label={t('PARTIAL')} value={stats.partial} icon={Clock3} tone="amber" onClick={() => { setTranslationStatus('partial'); setPage(1); }} />
+                        </div>
 
-          {/* Unsaved-changes confirmation dialog */}
-          <Dialog
-            visible={languageChangeDialog}
-            style={{ width: '450px' }}
-            header={t('CONFIRM')}
-            modal
-            footer={
-              <>
-                <Button
-                  label={t('CANCEL')}
-                  icon="pi pi-times"
-                  severity="secondary"
-                  onClick={() => {
-                    setLanguageChangeDialog(false);
-                    setPendingLanguage(null);
-                  }}
-                />
-                <Button
-                  label={t('DISCARD_AND_CONTINUE')}
-                  icon="pi pi-check"
-                  severity="danger"
-                  onClick={() => {
-                    if (pendingLanguage) {
-                      setSelectedLanguage(pendingLanguage);
-                    }
-                    setPage(1);
-                    dispatch(_resetTranslationDirty());
-                    setLanguageChangeDialog(false);
-                    setPendingLanguage(null);
-                  }}
-                />
-              </>
-            }
-            onHide={() => {
-              setLanguageChangeDialog(false);
-              setPendingLanguage(null);
-            }}
-          >
-            <div className="flex align-items-center justify-content-center">
-              <i
-                className="pi pi-exclamation-triangle mr-3"
-                style={{ fontSize: '2rem', color: 'orange' }}
-              />
-              <span>{t('UNSAVED_CHANGES_WARNING')}</span>
-            </div>
-          </Dialog>
-        </div>
-      </div>
-    </div>
-  );
+                        <FilterBar
+                            search={searchInput}
+                            onSearchChange={setSearchInput}
+                            searchPlaceholder={t('SEARCH')}
+                            chips={filterChips}
+                            onRemoveChip={removeChip}
+                            onClearAll={selectedType === 'bundle' ? clearBundleFilters : undefined}
+                            onOpenFilters={selectedType === 'bundle' ? () => setFilterOpen(true) : undefined}
+                            extraActions={
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Select value={selectedType} onValueChange={requestTypeChange}>
+                                        <SelectTrigger className="h-10 w-[10.5rem]">
+                                            <SelectValue placeholder={t('CONTENT_TYPE')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(types || []).map((opt: any) => (
+                                                <SelectItem key={opt.type} value={opt.type}>
+                                                    {opt.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <Select value={selectedLanguage || undefined} onValueChange={requestLanguageChange}>
+                                        <SelectTrigger className="h-10 w-[10.5rem]">
+                                            <SelectValue placeholder={t('LANGUAGE')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(languages || []).map((opt: any) => (
+                                                <SelectItem key={opt.language_code} value={opt.language_code}>
+                                                    {opt.language_name} ({opt.language_code})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <Select
+                                        value={translationStatus}
+                                        onValueChange={(v) => {
+                                            setTranslationStatus(v as typeof translationStatus);
+                                            setPage(1);
+                                        }}
+                                    >
+                                        <SelectTrigger className="h-10 w-[9.5rem]">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">{t('ALL')}</SelectItem>
+                                            <SelectItem value="missing">{t('MISSING')}</SelectItem>
+                                            <SelectItem value="partial">{t('PARTIAL')}</SelectItem>
+                                            <SelectItem value="translated">{t('TRANSLATED')}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            }
+                        />
+                    </div>
+                }
+                footer={
+                    workspace.pagination ? (
+                        <div className="border-t border-slate-200 px-2 py-2">
+                            <Paginator
+                                first={(workspace.pagination.page - 1) * workspace.pagination.items_per_page}
+                                rows={workspace.pagination.items_per_page}
+                                totalRecords={workspace.pagination.total}
+                                onPageChange={(e) => {
+                                    setPage(e.page + 1);
+                                    setPerPage(e.rows);
+                                }}
+                                template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                                currentPageReportTemplate={t('SHOWING_PAGE_INFO')}
+                                firstPageLinkIcon={isRTL() ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'}
+                                lastPageLinkIcon={isRTL() ? 'pi pi-angle-double-left' : 'pi pi-angle-double-right'}
+                            />
+                        </div>
+                    ) : null
+                }
+            >
+                <DataTable
+                    value={workspace.items}
+                    dataKey="id"
+                    className="datatable-responsive"
+                    emptyMessage={t('NO_DATA')}
+                    dir={isRTL() ? 'rtl' : 'ltr'}
+                    style={{
+                        direction: isRTL() ? 'rtl' : 'ltr',
+                        fontFamily: "'iranyekan', sans-serif"
+                    }}
+                    scrollable
+                    responsiveLayout="scroll"
+                    paginator={false}
+                >
+                    <Column
+                        header={t('ID')}
+                        field="id"
+                        body={(row: TranslationItem) => <span className="font-semibold">{row.id}</span>}
+                        style={{ ...customCellStyle }}
+                        headerStyle={{ minWidth: '70px' }}
+                    />
+                    {renderContextColumns()}
+                    {workspace.fields.map((f: TranslationField) => renderSourceColumn(f))}
+                    {workspace.fields.map((f: TranslationField) => renderTranslationColumn(f))}
+                    <Column header={t('STATUS')} body={statusBodyTemplate} style={{ ...customCellStyle }} headerStyle={{ minWidth: '120px' }} />
+                </DataTable>
+            </ListPage>
+
+            <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                <SheetContent side="left" className="w-full sm:max-w-md">
+                    <SheetHeader>
+                        <SheetTitle>{t('FILTER', { defaultValue: 'فیلتر ترجمه بسته‌ها' })}</SheetTitle>
+                        <SheetDescription>
+                            {t('PAYMENT.FILTER.HINT', { defaultValue: 'فیلترها روی نتایج سرور اعمال می‌شوند.' })}
+                        </SheetDescription>
+                    </SheetHeader>
+                    <div className={FILTER_SHEET_BODY_CLASS}>
+                        <FormField label={t('COMPANY')}>
+                            <Select
+                                value={filterCompanyId ? String(filterCompanyId) : undefined}
+                                onValueChange={(v) => setFilterCompanyId(Number(v))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_COMPANY')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {(companies || []).map((c: any) => (
+                                        <SelectItem key={c.id} value={String(c.id)}>
+                                            {c.company_name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormField>
+
+                        <FormField label={t('SERVICE')}>
+                            <Select
+                                value={filterServiceId ? String(filterServiceId) : undefined}
+                                onValueChange={(v) => setFilterServiceId(Number(v))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_SERVICE')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {(services || []).map((s: any) => (
+                                        <SelectItem key={s.id} value={String(s.id)}>
+                                            {s.service_category?.category_name} — {s.company?.company_name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormField>
+
+                        <FormField label={t('CATEGORY_TYPE')}>
+                            <Select value={filterCategoryType || undefined} onValueChange={setFilterCategoryType}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_TYPE')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="social">{t('ORDER.FILTER.SOCIAL', { defaultValue: 'اجتماعی' })}</SelectItem>
+                                    <SelectItem value="nonsocial">{t('ORDER.FILTER.NONSOCIAL', { defaultValue: 'غیر اجتماعی' })}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormField>
+
+                        <FormField label={t('BUNDLE_TYPE')}>
+                            <Select value={filterBundleType || undefined} onValueChange={setFilterBundleType}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_TYPE')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="credit">{t('CREDIT', { defaultValue: 'اعتبار' })}</SelectItem>
+                                    <SelectItem value="package">{t('PACKAGE', { defaultValue: 'بسته' })}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormField>
+
+                        <FormField label={t('VALIDITY_TYPE')}>
+                            <Select value={filterValidityType || undefined} onValueChange={setFilterValidityType}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_TYPE')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {['unlimited', 'daily', 'nightly', 'weekly', 'monthly', 'yearly'].map((v) => (
+                                        <SelectItem key={v} value={v}>
+                                            {v}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormField>
+
+                        <FormField label={t('CURRENCY')}>
+                            <Select
+                                value={filterCurrencyId ? String(filterCurrencyId) : undefined}
+                                onValueChange={(v) => setFilterCurrencyId(Number(v))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_CURRENCY')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {(currencies || []).map((c: any) => (
+                                        <SelectItem key={c.id} value={String(c.id)}>
+                                            {c.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormField>
+
+                        <div className="flex gap-2 pt-2">
+                            <Button type="button" variant="outline" className="flex-1" onClick={clearBundleFilters}>
+                                {t('RESET', { defaultValue: 'بازنشانی' })}
+                            </Button>
+                            <Button type="button" className="flex-1" onClick={applyBundleFilters}>
+                                {t('APPLY', { defaultValue: 'اعمال' })}
+                            </Button>
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            <Dialog
+                visible={confirmDialog}
+                style={{ width: '450px' }}
+                header={t('CONFIRM')}
+                modal
+                footer={
+                    <>
+                        <PrimeButton label={t('CANCEL')} icon="pi pi-times" severity="secondary" onClick={hideConfirmDialog} />
+                        <PrimeButton label={t('DISCARD_AND_CONTINUE')} icon="pi pi-check" severity="danger" onClick={confirmDiscardAndContinue} />
+                    </>
+                }
+                onHide={hideConfirmDialog}
+            >
+                <div className="flex items-center justify-center gap-3">
+                    <i className="pi pi-exclamation-triangle me-0 text-[2rem] text-amber-500" />
+                    <span className="text-start">{t('UNSAVED_CHANGES_WARNING')}</span>
+                </div>
+            </Dialog>
+        </>
+    );
 };
 
 export default withAuth(TranslationWorkspacePage);

@@ -1,23 +1,24 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
-import { Button } from 'primereact/button';
-import { Dropdown } from 'primereact/dropdown';
-import { InputNumber } from 'primereact/inputnumber';
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Toast } from 'primereact/toast';
-import { Card } from 'primereact/card';
-import { Divider } from 'primereact/divider';
-import { ProgressBar } from 'primereact/progressbar';
-import { Checkbox } from 'primereact/checkbox';
-import { MultiSelect } from 'primereact/multiselect';
-import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { AppDispatch } from '@/app/redux/store';
 import { useTranslation } from 'react-i18next';
+import { AppDispatch } from '@/app/redux/store';
 import withAuth from '../../authGuard';
 import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { Service } from '@/types/interface';
 import { _bundlePriceAdjustmentUpdate } from '@/app/redux/actions/bundleActions';
+import { FormField, FormSection } from '@/components/admin/form-sheet';
+import { PageHeader } from '@/components/admin/page-header';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 interface PriceAdjustmentForm {
     adjustment_type: 'percentage' | 'fixed';
@@ -37,6 +38,7 @@ const BundlePricingPage = () => {
     });
 
     const [submitted, setSubmitted] = useState(false);
+    const [serviceFilter, setServiceFilter] = useState('');
     const toast = useRef<Toast>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { t } = useTranslation();
@@ -49,8 +51,8 @@ const BundlePricingPage = () => {
         dispatch(_fetchServiceList());
     }, [dispatch]);
 
-    const handleInputChange = (field: keyof PriceAdjustmentForm, value: any) => {
-        setFormData(prev => ({
+    const handleInputChange = <K extends keyof PriceAdjustmentForm>(field: K, value: PriceAdjustmentForm[K]) => {
+        setFormData((prev) => ({
             ...prev,
             [field]: value
         }));
@@ -89,10 +91,8 @@ const BundlePricingPage = () => {
             return;
         }
 
-        // Dispatch update action
         await dispatch(_bundlePriceAdjustmentUpdate(formData, toast, t));
 
-        // Reset form on success
         if (!priceAdjustment.updateError) {
             setFormData({
                 adjustment_type: 'percentage',
@@ -105,20 +105,22 @@ const BundlePricingPage = () => {
         }
     };
 
-    const adjustmentTypeOptions = [
-        { label: t('PERCENTAGE'), value: 'percentage' },
-        { label: t('FIXED_AMOUNT'), value: 'fixed' }
-    ];
+    type ServiceOption = { label: string; value: number };
 
-    const basePriceOptions = [
-        { label: t('ADMIN_BUYING_PRICE'), value: 'admin_buying_price' },
-        { label: t('CURRENT_BUYING_PRICE'), value: 'buying_price' }
-    ];
+    const serviceOptions = useMemo<ServiceOption[]>(
+        () =>
+            (services || []).map((service: Service) => ({
+                label: `${service.service_category?.category_name} - ${service.company?.company_name}`,
+                value: service.id
+            })),
+        [services]
+    );
 
-    const serviceOptions = services.map((service: Service) => ({
-        label: `${service.service_category?.category_name} - ${service.company?.company_name}`,
-        value: service.id
-    }));
+    const filteredServiceOptions = useMemo(() => {
+        const q = serviceFilter.trim().toLowerCase();
+        if (!q) return serviceOptions;
+        return serviceOptions.filter((opt: ServiceOption) => opt.label.toLowerCase().includes(q));
+    }, [serviceFilter, serviceOptions]);
 
     const getCalculationDescription = () => {
         const base = formData.base_price === 'admin_buying_price' ? t('ADMIN_BUYING_PRICE') : t('CURRENT_BUYING_PRICE');
@@ -128,11 +130,10 @@ const BundlePricingPage = () => {
             return value >= 0
                 ? t('INCREASE_BY_PERCENTAGE_FROM_BASE', { percentage: value, base })
                 : t('DECREASE_BY_PERCENTAGE_FROM_BASE', { percentage: Math.abs(value), base });
-        } else {
-            return value >= 0
-                ? t('ADD_FIXED_AMOUNT_TO_BASE', { amount: value, base })
-                : t('SUBTRACT_FIXED_AMOUNT_FROM_BASE', { amount: Math.abs(value), base });
         }
+        return value >= 0
+            ? t('ADD_FIXED_AMOUNT_TO_BASE', { amount: value, base })
+            : t('SUBTRACT_FIXED_AMOUNT_FROM_BASE', { amount: Math.abs(value), base });
     };
 
     const handleReset = () => {
@@ -144,194 +145,191 @@ const BundlePricingPage = () => {
             confirmation: false
         });
         setSubmitted(false);
+        setServiceFilter('');
+    };
+
+    const toggleServiceId = (id: number, checked: boolean) => {
+        handleInputChange(
+            'service_ids',
+            checked ? [...formData.service_ids, id] : formData.service_ids.filter((sid) => sid !== id)
+        );
     };
 
     return (
-        <div className="grid -m-5">
-            <div className="col-12">
-                <div className="card p-4">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
+        <div className="p-4 md:p-6">
+            <Toast ref={toast} />
+            <PageHeader title={t('BUNDLE_PRICING_ADJUSTMENT')} />
 
-                    <div className="flex justify-content-between align-items-center mb-4">
-                        <h2 className="m-0">{t('BUNDLE_PRICING_ADJUSTMENT')}</h2>
-                    </div>
+            {loading ? (
+                <span className="mb-4 block h-1.5 w-full overflow-hidden rounded-full bg-emerald-100">
+                    <span className="block h-full w-1/3 animate-pulse rounded-full bg-emerald-500" />
+                </span>
+            ) : null}
 
-                    <Divider />
+            <Card className="mb-4">
+                <CardContent className="pt-5">
+                    <FormSection title={t('BUNDLE_PRICING_ADJUSTMENT')} description={t('DEFAULT_BASE_PRICE_HELP')}>
+                        <FormField label={t('ADJUSTMENT_TYPE')} required>
+                            <Select
+                                value={formData.adjustment_type}
+                                onValueChange={(v) => handleInputChange('adjustment_type', v as PriceAdjustmentForm['adjustment_type'])}
+                            >
+                                <SelectTrigger id="adjustment_type">
+                                    <SelectValue placeholder={t('SELECT_ADJUSTMENT_TYPE')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="percentage">{t('PERCENTAGE')}</SelectItem>
+                                    <SelectItem value="fixed">{t('FIXED_AMOUNT')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormField>
 
-                    <Card className="shadow-2">
-                        <div className="p-fluid grid">
-                            {/* Adjustment Type */}
-                            <div className="field col-12 md:col-6">
-                                <label htmlFor="adjustment_type" style={{ fontWeight: 'bold' }}>
-                                    {t('ADJUSTMENT_TYPE')} *
-                                </label>
-                                <Dropdown
-                                    id="adjustment_type"
-                                    value={formData.adjustment_type}
-                                    options={adjustmentTypeOptions}
-                                    onChange={(e) => handleInputChange('adjustment_type', e.value)}
-                                    placeholder={t('SELECT_ADJUSTMENT_TYPE')}
-                                    className="w-full"
-                                />
-                                {submitted && !formData.adjustment_type && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
+                        <FormField
+                            label={
+                                formData.adjustment_type === 'percentage'
+                                    ? t('ADJUSTMENT_PERCENTAGE')
+                                    : t('ADJUSTMENT_AMOUNT')
+                            }
+                            required
+                            error={
+                                submitted && !formData.adjustment_value
+                                    ? t('THIS_FIELD_IS_REQUIRED')
+                                    : formData.adjustment_type === 'percentage' &&
+                                        Math.abs(formData.adjustment_value) > 1000
+                                      ? t('PERCENTAGE_RANGE_ERROR')
+                                      : null
+                            }
+                        >
+                            <NumberInput
+                                id="adjustment_value"
+                                value={formData.adjustment_value}
+                                min={formData.adjustment_type === 'percentage' ? -1000 : undefined}
+                                max={formData.adjustment_type === 'percentage' ? 1000 : undefined}
+                                allowNull={false}
+                                className="w-full"
+                                onValueChange={(v) => handleInputChange('adjustment_value', v ?? 0)}
+                            />
+                        </FormField>
 
-                            {/* Adjustment Value */}
-                            <div className="field col-12 md:col-6">
-                                <label htmlFor="adjustment_value" style={{ fontWeight: 'bold' }}>
-                                    {formData.adjustment_type === 'percentage' ? t('ADJUSTMENT_PERCENTAGE') : t('ADJUSTMENT_AMOUNT')} *
-                                </label>
-                                <InputNumber
-                                    id="adjustment_value"
-                                    value={formData.adjustment_value}
-                                    onValueChange={(e) => handleInputChange('adjustment_value', e.value)}
-                                    mode="decimal"
-                                    min={formData.adjustment_type === 'percentage' ? -1000 : undefined}
-                                    max={formData.adjustment_type === 'percentage' ? 1000 : undefined}
-                                    suffix={formData.adjustment_type === 'percentage' ? '%' : ''}
-                                    placeholder={formData.adjustment_type === 'percentage' ? t('ENTER_PERCENTAGE') : t('ENTER_AMOUNT')}
-                                    className="w-full"
-                                />
-                                {submitted && !formData.adjustment_value && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                                {formData.adjustment_type === 'percentage' && Math.abs(formData.adjustment_value) > 1000 && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('PERCENTAGE_RANGE_ERROR')}
-                                    </small>
-                                )}
-                            </div>
+                        <FormField label={t('BASE_PRICE')} hint={t('DEFAULT_BASE_PRICE_HELP')}>
+                            <Select
+                                value={formData.base_price}
+                                onValueChange={(v) =>
+                                    handleInputChange('base_price', v as PriceAdjustmentForm['base_price'])
+                                }
+                            >
+                                <SelectTrigger id="base_price">
+                                    <SelectValue placeholder={t('SELECT_BASE_PRICE')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="admin_buying_price">{t('ADMIN_BUYING_PRICE')}</SelectItem>
+                                    <SelectItem value="buying_price">{t('CURRENT_BUYING_PRICE')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormField>
 
-                            {/* Base Price */}
-                            <div className="field col-12 md:col-6">
-                                <label htmlFor="base_price" style={{ fontWeight: 'bold' }}>
-                                    {t('BASE_PRICE')}
-                                </label>
-                                <Dropdown
-                                    id="base_price"
-                                    value={formData.base_price}
-                                    options={basePriceOptions}
-                                    onChange={(e) => handleInputChange('base_price', e.value)}
-                                    placeholder={t('SELECT_BASE_PRICE')}
-                                    className="w-full"
-                                />
-                                <small className="p-text-secondary">
-                                    {t('DEFAULT_BASE_PRICE_HELP')}
-                                </small>
-                            </div>
-
-                            {/* Services Selection */}
-                            <div className="field col-12 md:col-6">
-                                <label htmlFor="service_ids" style={{ fontWeight: 'bold' }}>
-                                    {t('SPECIFIC_SERVICES')}
-                                </label>
-                                <MultiSelect
-                                    id="service_ids"
-                                    value={formData.service_ids}
-                                    options={serviceOptions}
-                                    onChange={(e) => handleInputChange('service_ids', e.value)}
-                                    placeholder={t('SELECT_SERVICES_OPTIONAL')}
-                                    className="w-full"
-                                    display="chip"
-                                    filter
-                                    showSelectAll={false}
-                                />
-                                <small className="p-text-secondary">
-                                    {t('ALL_SERVICES_IF_EMPTY')}
-                                </small>
-                            </div>
-
-                            {/* Calculation Description */}
-                            <div className="field col-12">
-                                <div className="p-3 border-round bg-blue-50">
-                                    <h4 className="mt-0 mb-2">{t('CALCULATION_DESCRIPTION')}</h4>
-                                    <p className="m-0 text-blue-800">
-                                        {getCalculationDescription()}
-                                    </p>
-                                    {formData.service_ids.length > 0 && (
-                                        <p className="m-0 mt-2 text-blue-600">
-                                            {t('APPLIED_TO_SELECTED_SERVICES', { count: formData.service_ids.length })}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Confirmation Checkbox */}
-                            <div className="field col-12">
-                                <div className="flex align-items-center">
-                                    <Checkbox
-                                        inputId="confirmation"
-                                        checked={formData.confirmation}
-                                        onChange={(e) => handleInputChange('confirmation', e.checked)}
-                                    />
-                                    <label htmlFor="confirmation" className="mx-2" style={{ fontWeight: 'bold', color: 'var(--red-500)' }}>
-                                        {t('CONFIRM_PRICE_UPDATE')}
+                        <FormField label={t('SPECIFIC_SERVICES')} hint={t('ALL_SERVICES_IF_EMPTY')} fullWidth>
+                            <Input
+                                value={serviceFilter}
+                                onChange={(e) => setServiceFilter(e.target.value)}
+                                placeholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو…' })}
+                                className="mb-2"
+                            />
+                            <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-emerald-100 p-2">
+                                {filteredServiceOptions.map((opt) => (
+                                    <label
+                                        key={opt.value}
+                                        className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-emerald-50/60"
+                                    >
+                                        <Checkbox
+                                            checked={formData.service_ids.includes(opt.value)}
+                                            onCheckedChange={(checked) =>
+                                                toggleServiceId(opt.value, Boolean(checked))
+                                            }
+                                            className="mt-0.5"
+                                        />
+                                        <span className="text-start">{opt.label}</span>
                                     </label>
-                                </div>
-                                {submitted && !formData.confirmation && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('CONFIRMATION_REQUIRED')}
-                                    </small>
-                                )}
+                                ))}
+                                {filteredServiceOptions.length === 0 ? (
+                                    <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                                        {t('DATA_TABLE.TABLE.NO_DATA')}
+                                    </p>
+                                ) : null}
                             </div>
+                        </FormField>
 
-                            {/* Action Buttons */}
-                            <div className="field col-12 flex gap-3 justify-content-end mt-4">
-                                <Button
-                                    label={t('RESET')}
-                                    icon="pi pi-times"
-                                    severity="secondary"
-                                    onClick={handleReset}
-                                    disabled={isUpdateLoading}
+                        <FormField label={t('CALCULATION_DESCRIPTION')} fullWidth>
+                            <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-start">
+                                <p className="m-0 text-sm text-blue-900">{getCalculationDescription()}</p>
+                                {formData.service_ids.length > 0 ? (
+                                    <p className="m-0 mt-2 text-xs text-blue-700">
+                                        {t('APPLIED_TO_SELECTED_SERVICES', { count: formData.service_ids.length })}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </FormField>
+
+                        <FormField
+                            label={t('CONFIRM_PRICE_UPDATE')}
+                            fullWidth
+                            error={submitted && !formData.confirmation ? t('CONFIRMATION_REQUIRED') : null}
+                        >
+                            <label className="flex items-center gap-2">
+                                <Checkbox
+                                    id="confirmation"
+                                    checked={formData.confirmation}
+                                    onCheckedChange={(checked) =>
+                                        handleInputChange('confirmation', Boolean(checked))
+                                    }
+                                    className={cn(submitted && !formData.confirmation && 'border-rose-400')}
                                 />
+                                <span className="text-sm font-medium text-rose-600">{t('CONFIRM_PRICE_UPDATE')}</span>
+                            </label>
+                        </FormField>
 
-                                <Button
-                                    label={t('UPDATE_PRICES')}
-                                    icon="pi pi-check"
-                                    severity="success"
-                                    onClick={handleSubmit}
-                                    loading={isUpdateLoading}
-                                    disabled={isUpdateLoading || !formData.confirmation}
-                                />
-                            </div>
+                        <div className="flex flex-wrap items-center justify-end gap-2 sm:col-span-2">
+                            <Button type="button" variant="outline" onClick={handleReset} disabled={isUpdateLoading}>
+                                {t('RESET')}
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={isUpdateLoading || !formData.confirmation}
+                            >
+                                {isUpdateLoading ? t('UPDATING') : t('UPDATE_PRICES')}
+                            </Button>
                         </div>
-                    </Card>
+                    </FormSection>
+                </CardContent>
+            </Card>
 
-                    {/* Examples Section */}
-                    <Card className="shadow-1 mt-4">
-                        <h3 className="mt-0">{t('EXAMPLES')}</h3>
-                        <Divider />
-                        
-                        <div className="grid">
-                            <div className="col-12 md:col-6">
-                                <h4>{t('COMMON_SCENARIOS')}</h4>
-                                <ul className="list-none p-0 m-0">
-                                    <li className="mb-2">• {t('ADD_10_PERCENT_MARGIN')}</li>
-                                    <li className="mb-2">• {t('INCREASE_CURRENT_PRICES_5_PERCENT')}</li>
-                                    <li className="mb-2">• {t('ADD_FIXED_AMOUNT_EXAMPLE')}</li>
-                                    <li className="mb-2">• {t('SPECIFIC_SERVICES_EXAMPLE')}</li>
-                                </ul>
-                            </div>
-                            
-                            <div className="col-12 md:col-6">
-                                <h4>{t('NOTES')}</h4>
-                                <ul className="list-none p-0 m-0">
-                                    <li className="mb-2">• {t('CONFIRMATION_REQUIRED_NOTE')}</li>
-                                    <li className="mb-2">• {t('PRICES_CANNOT_GO_BELOW_ADMIN')}</li>
-                                    <li className="mb-2">• {t('CHANGES_ARE_PERMANENT')}</li>
-                                </ul>
-                            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>{t('EXAMPLES')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        <div>
+                            <h4 className="mb-2 text-sm font-semibold">{t('COMMON_SCENARIOS')}</h4>
+                            <ul className="list-none space-y-2 p-0 text-sm text-muted-foreground">
+                                <li>• {t('ADD_10_PERCENT_MARGIN')}</li>
+                                <li>• {t('INCREASE_CURRENT_PRICES_5_PERCENT')}</li>
+                                <li>• {t('ADD_FIXED_AMOUNT_EXAMPLE')}</li>
+                                <li>• {t('SPECIFIC_SERVICES_EXAMPLE')}</li>
+                            </ul>
                         </div>
-                    </Card>
-                </div>
-            </div>
+                        <div>
+                            <h4 className="mb-2 text-sm font-semibold">{t('NOTES')}</h4>
+                            <ul className="list-none space-y-2 p-0 text-sm text-muted-foreground">
+                                <li>• {t('CONFIRMATION_REQUIRED_NOTE')}</li>
+                                <li>• {t('PRICES_CANNOT_GO_BELOW_ADMIN')}</li>
+                                <li>• {t('CHANGES_ARE_PERMANENT')}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 };

@@ -21,14 +21,24 @@ import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { InputText } from 'primereact/inputtext';
-import { Paginator } from 'primereact/paginator';
 import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { SearchSelect } from '@/components/admin/search-select';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { FilterField, FILTER_SHEET_BODY_CLASS } from '@/components/admin/filter-field';
+import { RowActions } from '@/components/admin/row-actions';
+import { Button as UiButton } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { cn } from '@/lib/utils';
+import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { classNames } from 'primereact/utils';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
@@ -85,8 +95,10 @@ const BundlePage = () => {
     const { bundles, pagination, loading } = useSelector((state: any) => state.bundleReducer);
     const { currencies } = useSelector((state: any) => state.currenciesReducer);
     const { t } = useTranslation();
-    const [searchTag, setSearchTag] = useState('');
-    const [filterDialogVisible, setFilterDialogVisible] = useState(false);
+    const [searchInput, setSearchInput] = useState('');
+    const searchTag = useDebouncedValue(searchInput, 350);
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
     const [filters, setFilters] = useState({
         filter_status: null as number | null,
         filter_service_category_type: null as string | null,
@@ -439,6 +451,12 @@ const BundlePage = () => {
         t
     ]);
 
+    useEffect(() => {
+        if (selectedProvider?.code === 'zoodpay' && selectedCapability !== 'bundles') {
+            setSelectedCapability('bundles');
+        }
+    }, [selectedProvider, selectedCapability]);
+
     // For other providers (non-paystore, non-mzr, non-manshorpay)
     useEffect(() => {
         if (!selectedProvider || ['mzr', 'paystore', 'manshorpay', 'inax'].includes(selectedProvider.code) || !selectedCapability) return;
@@ -545,8 +563,8 @@ const BundlePage = () => {
 
     const priceEditor = (options: any) => {
         return (
-            <InputText
-                value={options.value}
+            <Input
+                value={options.value ?? ''}
                 onChange={(e) => options.editorCallback(e.target.value)}
                 className="w-full"
             />
@@ -890,8 +908,18 @@ const BundlePage = () => {
                 internet_type: selectedProviderBundle.internet_type,
                 sim_type: selectedProviderBundle.sim_type,
                 product_id: selectedProviderBundle.id,
-                table_id: selectedProviderBundle.table_id,
+                table_id: selectedProvider.code === 'zoodpay'
+                    ? (selectedProviderBundle.ussd_plan_code || selectedProviderBundle.id)
+                    : selectedProviderBundle.table_id,
                 name: selectedProviderBundle.name,
+                ...(selectedProvider.code === 'zoodpay' ? {
+                    ussd_plan_code: selectedProviderBundle.ussd_plan_code || selectedProviderBundle.id,
+                    plan_name: selectedProviderBundle.name || selectedProviderBundle.title,
+                    plan_amount: selectedProviderBundle.price,
+                    currency: selectedProviderBundle.currency,
+                    mno: selectedProviderBundle.operator,
+                    bundle_id: selectedProviderBundle.bundle_id,
+                } : {}),
                 days: selectedProviderBundle.days,
                 volume: selectedProviderBundle.volume,
                 unit: selectedProviderBundle.unit,
@@ -1054,6 +1082,20 @@ const BundlePage = () => {
                         title: parsedApiBinding.title || parsedApiBinding.name
                     } as any);
                 }
+                else if (provider.code === 'zoodpay') {
+                    setSelectedCapability('bundles');
+                    setSelectedProviderBundle({
+                        ...parsedApiBinding,
+                        id: parsedApiBinding.ussd_plan_code || parsedApiBinding.product_id || bundle.api_provider_bundle_id,
+                        name: parsedApiBinding.plan_name || parsedApiBinding.name,
+                        title: parsedApiBinding.plan_name || parsedApiBinding.name,
+                        price: parsedApiBinding.plan_amount ?? parsedApiBinding.price,
+                        operator: parsedApiBinding.mno || parsedApiBinding.operator,
+                        currency: parsedApiBinding.currency,
+                        ussd_plan_code: parsedApiBinding.ussd_plan_code || bundle.api_provider_bundle_id,
+                        table_id: parsedApiBinding.ussd_plan_code || parsedApiBinding.product_id || bundle.api_provider_bundle_id,
+                    } as any);
+                }
                 else if (
                     provider.code !== 'mzr' &&
                     provider.code !== 'paystore' &&
@@ -1098,28 +1140,73 @@ const BundlePage = () => {
         setDeleteServiceDialog(false);
     };
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            if (target.closest('.p-dropdown-panel')) {
-                return;
-            }
-            if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
-                setFilterDialogVisible(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [filterDialogVisible]);
-
-    const filterRef = useRef<HTMLDivElement>(null);
-
-    const handleSubmitFilter = (filters: any) => {
-        setActiveFilters(filters);
+    const handleSubmitFilter = (nextFilters: {
+        filter_status: number | null;
+        filter_service_category_type: string | null;
+        filter_company_id: number | null;
+        filter_service_id: number | null;
+    }) => {
+        const cleaned = Object.fromEntries(
+            Object.entries(nextFilters).filter(([_, value]) => value !== null && value !== '')
+        );
+        setActiveFilters(cleaned);
     };
+
+    const filterChips = useMemo(() => {
+        const list: { key: string; label: string }[] = [];
+        if (filters.filter_service_category_type) {
+            list.push({
+                key: 'filter_service_category_type',
+                label: `${t('ORDER.FILTER.BUNDLE_TYPE')}: ${filters.filter_service_category_type}`
+            });
+        }
+        if (filters.filter_company_id) {
+            const company = companies.find((c: { id: number }) => c.id === filters.filter_company_id);
+            list.push({
+                key: 'filter_company_id',
+                label: `${t('ORDER.FILTER.COMPANY')}: ${company?.company_name || filters.filter_company_id}`
+            });
+        }
+        if (filters.filter_service_id) {
+            const service = services.find((s: Service) => s.id === filters.filter_service_id);
+            list.push({
+                key: 'filter_service_id',
+                label: `${t('ORDER.FILTER.SERVICE')}: ${service?.company?.company_name || filters.filter_service_id}`
+            });
+        }
+        return list;
+    }, [filters, companies, services, t]);
+
+    const applyFilters = () => {
+        handleSubmitFilter(filters);
+        setFilterOpen(false);
+    };
+
+    const clearAllFilters = () => {
+        const empty = {
+            filter_status: null,
+            filter_service_category_type: null,
+            filter_company_id: null,
+            filter_service_id: null
+        };
+        setFilters(empty);
+        setActiveFilters({});
+        setFilterOpen(false);
+    };
+
+    const removeFilterChip = (key: string) => {
+        const next = { ...filters, [key]: null };
+        setFilters(next);
+        handleSubmitFilter(next);
+    };
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await dispatch(_fetchBundleList(pagination?.page || 1, searchTag, activeFilters) as any);
+        setRefreshing(false);
+    };
+
+    const totalPages = Math.max(1, Math.ceil((pagination?.total || 0) / (pagination?.items_per_page || 20)));
 
     const confirmDeleteSelected = () => {
         if (!selectedBundles || (selectedBundles as any).length === 0) {
@@ -1178,184 +1265,20 @@ const BundlePage = () => {
         }
     };
 
-    const rightToolbarTemplate = () => {
-        const hasSelectedBundles = selectedBundles && (selectedBundles as any).length > 0;
-        return (
-            <React.Fragment>
-                <div className="my-2" style={{ display: 'flex', gap: '0.5rem', position: 'relative' }}>
-                    <div className="flex-shrink-0 h-10 min-w-0" ref={filterRef} style={{ position: 'relative' }}>
-                        <Button style={{ gap: '8px' }} label={t('ORDER.FILTER.FILTER')} icon="pi pi-filter" className="p-button-info" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
-                        {filterDialogVisible && (
-                            <div
-                                className="p-card p-fluid"
-                                style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    left: isRTL() ? '-100%' : '-20%',
-                                    right: isRTL() ? '-20%' : '-100%',
-                                    width: '300px',
-                                    zIndex: 1000,
-                                    marginTop: '0.5rem',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                }}
-                            >
-                                <div className="p-card-body" style={{ padding: '1rem' }}>
-                                    <div className="grid">
-                                        <div className="col-12">
-                                            <label htmlFor="bundleTypeFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('ORDER.FILTER.BUNDLE_TYPE')}
-                                            </label>
-                                            <Dropdown
-                                                id="bundleTypeFilter"
-                                                options={[
-                                                    { label: t('ORDER.FILTER.SOCIAL'), value: 'social' },
-                                                    { label: t('ORDER.FILTER.NONSOCIAL'), value: 'nonsocial' }
-                                                ]}
-                                                value={filters.filter_service_category_type}
-                                                onChange={(e) => setFilters({ ...filters, filter_service_category_type: e.value })}
-                                                placeholder={t('ORDER.FILTER.SELECT_TYPE')}
-                                                style={{ width: '100%' }}
-                                            />
-                                        </div>
-
-                                        <div className="col-12">
-                                            <label htmlFor="companyFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('ORDER.FILTER.COMPANY')}
-                                            </label>
-                                            <Dropdown
-                                                id="companyFilter"
-                                                options={companies}
-                                                value={filters.filter_company_id}
-                                                onChange={(e) => setFilters({ ...filters, filter_company_id: e.value })}
-                                                optionLabel="company_name"
-                                                optionValue="id"
-                                                placeholder={t('ORDER.FILTER.SELECT_COMPANY')}
-                                                style={{ width: '100%' }}
-                                            />
-                                        </div>
-
-                                        <div className="col-12">
-                                            <label htmlFor="serviceFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('ORDER.FILTER.SERVICE')}
-                                            </label>
-                                            <Dropdown
-                                                id="serviceFilter"
-                                                value={services.find((s: Service) => s.id === filters.filter_service_id) || null}
-                                                options={services}
-                                                onChange={(e) => {
-                                                    console.log(e.value.id), setFilters({ ...filters, filter_service_id: e.value.id });
-                                                }}
-                                                optionLabel="company.company_name"
-                                                placeholder={t('ORDER.FILTER.SELECT_SERVICE')}
-                                                style={{ width: '100%' }}
-                                                itemTemplate={(option) => (
-                                                    <div style={{ display: 'flex', gap: '5px' }}>
-                                                        <div>{option.service_category?.category_name}</div>
-                                                        <div>- {option.company?.company_name}</div>
-                                                    </div>
-                                                )}
-                                                valueTemplate={(option) => {
-                                                    if (!option) return t('BUNDLE.FORM.PLACEHOLDER.SERVICENAME');
-                                                    return (
-                                                        <div style={{ display: 'flex', gap: '5px' }}>
-                                                            <div>{option.service_category?.category_name}</div>
-                                                            <div>- {option.company?.company_name}</div>
-                                                        </div>
-                                                    );
-                                                }}
-                                            />
-                                        </div>
-
-                                        <div className="col-12 mt-3 flex justify-content-between gap-2">
-                                            <Button
-                                                label={t('RESET')}
-                                                icon="pi pi-times"
-                                                className="p-button-secondary p-button-sm"
-                                                onClick={() => {
-                                                    setFilters({
-                                                        filter_status: null,
-                                                        filter_service_category_type: null,
-                                                        filter_service_id: null,
-                                                        filter_company_id: null
-                                                    });
-                                                }}
-                                            />
-                                            <Button
-                                                label={t('APPLY')}
-                                                icon="pi pi-check"
-                                                className="p-button-sm"
-                                                onClick={() => {
-                                                    handleSubmitFilter(filters);
-                                                    setFilterDialogVisible(false);
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('BUNDLE.TABLE.CREATEBUNDLE')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                    <ManageTranslationsButton type="bundle" />
-                </div>
-            </React.Fragment>
-        );
-    };
-
-    const [localSearchTerm, setLocalSearchTerm] = useState('');
-
-    const leftToolbarTemplate = () => {
-
-        const handleSearch = () => {
-            setSearchTag(localSearchTerm);
-        };
-
-        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        };
-
-        return (
-            <React.Fragment>
-                <div className="flex align-items-center gap-2">
-                    <span className="p-input-icon-left">
-                        <i className="pi pi-search" />
-                        <InputText
-                            type="search"
-                            value={localSearchTerm}
-                            onChange={(e) => setLocalSearchTerm(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        />
-                    </span>
-                    <Button
-                        label={t('SEARCH')}
-                        onClick={handleSearch}
-                        className="p-button-sm"
-                    />
-                    {localSearchTerm && (
-                        <Button
-                            icon="pi pi-times"
-                            onClick={() => {
-                                setLocalSearchTerm('');
-                                setSearchTag('');
-                            }}
-                            className="p-button-sm p-button-secondary p-button-text"
-
-                        />
-                    )}
-                </div>
-            </React.Fragment>
-        );
-    };
+    const bundleRowActions = (rowData: Bundle) => [
+        {
+            label: t('TABLE.GENERAL.EDIT'),
+            icon: <Pencil className="h-4 w-4" />,
+            onClick: () => editService(rowData)
+        },
+        {
+            label: t('TABLE.GENERAL.DELETE'),
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => confirmDeleteService(rowData),
+            danger: true,
+            separatorBefore: true
+        }
+    ];
 
     // This flag indicates HOW the bundle was created, not which supplier it is bound to.
     // Admin-created bundles can also have an API provider, so api_provider_id alone
@@ -1589,21 +1512,8 @@ const BundlePage = () => {
         );
     };
 
-    const actionBodyTemplate = (rowData: Bundle) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editService(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteService(rowData)} />
-            </>
-        );
-    };
+    const actionBodyTemplate = (rowData: Bundle) => <RowActions items={bundleRowActions(rowData)} />;
 
-    const companyDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveService} />
-        </>
-    );
     const deleteCompanyDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteServiceDialog} />
@@ -1617,8 +1527,7 @@ const BundlePage = () => {
         </>
     );
 
-    const onPageChange = (event: any) => {
-        const page = event.page + 1;
+    const onPageChange = (page: number) => {
         dispatch(_fetchBundleList(page, searchTag, activeFilters));
     };
 
@@ -1638,7 +1547,7 @@ const BundlePage = () => {
     const isPaystore = selectedProvider?.code === 'paystore';
 
     return (
-        <div className="grid crud-demo -m-5">
+        <div className="space-y-4">
             <style>{`
                 /* Visual origin indicator: does not change bundle data or behavior. */
                 .bundle-source-table .p-datatable-tbody > tr.bundle-auto-inquiry-row > td {
@@ -1739,34 +1648,74 @@ const BundlePage = () => {
                     }
                 }
             `}</style>
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
-                    <div className="flex flex-wrap align-items-center gap-3 mb-3 text-sm">
-                        <label className="flex align-items-center gap-2 cursor-pointer" title={sourceText.pageOnly} style={{ padding: '6px 10px', borderRadius: 8, backgroundColor: '#edf7ff', border: '1px solid #bfdbfe' }}>
-                            <input
-                                type="checkbox"
-                                checked={bundleSourceFilter === 'inquiry'}
-                                onChange={(e) => setBundleSourceFilter(e.target.checked ? 'inquiry' : 'all')}
-                                style={{ accentColor: '#2563eb', width: 16, height: 16, cursor: 'pointer' }}
-                            />
-                            {sourceText.inquiry}
-                        </label>
-                        <label className="flex align-items-center gap-2 cursor-pointer" title={sourceText.pageOnly} style={{ padding: '6px 10px', borderRadius: 8, backgroundColor: '#f8fafc', border: '1px solid #d1d5db' }}>
-                            <input
-                                type="checkbox"
-                                checked={bundleSourceFilter === 'regular'}
-                                onChange={(e) => setBundleSourceFilter(e.target.checked ? 'regular' : 'all')}
-                                style={{ accentColor: '#64748b', width: 16, height: 16, cursor: 'pointer' }}
-                            />
-                            {sourceText.regular}
-                        </label>
-                        <small className="text-500">{sourceText.pageOnly}</small>
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.BUNDLE', { defaultValue: 'بسته‌ها' })}
+                description="مدیریت بسته‌ها، قیمت و اتصال به تأمین‌کننده"
+                loading={loading}
+                actions={
+                    <div className="flex flex-wrap items-center gap-2">
+                        <UiButton variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-4 w-4', (refreshing || loading) && 'animate-spin')} />
+                            {t('REFRESH', { defaultValue: 'بروزرسانی' })}
+                        </UiButton>
+                        <UiButton size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={openNew}>
+                            <Plus className="h-4 w-4" />
+                            {t('BUNDLE.TABLE.CREATEBUNDLE')}
+                        </UiButton>
+                        <ManageTranslationsButton type="bundle" />
                     </div>
-
+                }
+                toolbar={
+                    <div className="space-y-3">
+                        <FilterBar
+                            search={searchInput}
+                            onSearchChange={setSearchInput}
+                            searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو در بسته‌ها...' })}
+                            chips={filterChips}
+                            onRemoveChip={removeFilterChip}
+                            onClearAll={clearAllFilters}
+                            onOpenFilters={() => setFilterOpen(true)}
+                        />
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-start">
+                            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1.5" title={sourceText.pageOnly}>
+                                <input
+                                    type="checkbox"
+                                    checked={bundleSourceFilter === 'inquiry'}
+                                    onChange={(e) => setBundleSourceFilter(e.target.checked ? 'inquiry' : 'all')}
+                                    className="h-4 w-4 cursor-pointer accent-blue-600"
+                                />
+                                {sourceText.inquiry}
+                            </label>
+                            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1.5" title={sourceText.pageOnly}>
+                                <input
+                                    type="checkbox"
+                                    checked={bundleSourceFilter === 'regular'}
+                                    onChange={(e) => setBundleSourceFilter(e.target.checked ? 'regular' : 'all')}
+                                    className="h-4 w-4 cursor-pointer accent-slate-600"
+                                />
+                                {sourceText.regular}
+                            </label>
+                            <span className="text-xs text-muted-foreground">{sourceText.pageOnly}</span>
+                        </div>
+                    </div>
+                }
+                footer={
+                    <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-xs text-muted-foreground">
+                            صفحه {pagination?.page || 1} از {totalPages} · مجموع {pagination?.total || 0}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <UiButton variant="outline" size="sm" disabled={(pagination?.page || 1) <= 1} onClick={() => onPageChange((pagination?.page || 1) - 1)}>
+                                قبلی
+                            </UiButton>
+                            <UiButton variant="outline" size="sm" disabled={(pagination?.page || 1) >= totalPages} onClick={() => onPageChange((pagination?.page || 1) + 1)}>
+                                بعدی
+                            </UiButton>
+                        </div>
+                    </div>
+                }
+            >
                     <DataTable
                         ref={dt}
                         value={displayedBundles}
@@ -1788,7 +1737,12 @@ const BundlePage = () => {
                         currentPageReportTemplate={isRTL() ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`}
                         editMode="cell"
                     >
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }} ></Column>
+                        <Column
+                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            header={t('TABLE.GENERAL.ACTIONS', { defaultValue: 'عملیات' })}
+                            body={actionBodyTemplate}
+                            headerStyle={{ minWidth: '4.5rem' }}
+                        />
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Bundle Title" header={t('BUNDLE.TABLE.COLUMN.BUNDLENAME')} body={bundleTitleBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '120px' }}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Description" header={t('BUNDLE.TABLE.COLUMN.BUNDLEDESCRIPTION')} body={descriptionBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '120px' }}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Validity Type" header={t('BUNDLE.TABLE.COLUMN.VALIDITYTYPE')} body={validityTypeBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}></Column>
@@ -1801,369 +1755,381 @@ const BundlePage = () => {
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Created" header={t('BUNDLE_PROVIDER')} body={providerInfoBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Created" header={t('TABLE.GENERAL.CREATEDAT')} body={createdAtBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}></Column>
                     </DataTable>
-                    <Paginator
-                        first={(pagination?.page - 1) * pagination?.items_per_page}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        onPageChange={(e) => onPageChange(e)}
-                        template={isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'}
-                        currentPageReportTemplate={isRTL() ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`}
-                        firstPageLinkIcon={isRTL() ? "pi pi-angle-double-right" : "pi pi-angle-double-left"}
-                        lastPageLinkIcon={isRTL() ? "pi pi-angle-double-left" : "pi pi-angle-double-right"}
+            </ListPage>
+
+            <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                <SheetContent side="left" className="w-full sm:max-w-md">
+                    <SheetHeader>
+                        <SheetTitle>{t('FILTER', { defaultValue: 'فیلتر بسته‌ها' })}</SheetTitle>
+                        <SheetDescription>{t('PAYMENT.FILTER.HINT', { defaultValue: 'فیلترها روی نتایج سرور اعمال می‌شوند.' })}</SheetDescription>
+                    </SheetHeader>
+                    <div className={FILTER_SHEET_BODY_CLASS}>
+                        <FilterField label={t('ORDER.FILTER.BUNDLE_TYPE')}>
+                            <Select
+                                value={filters.filter_service_category_type ?? undefined}
+                                onValueChange={(v) => setFilters((p) => ({ ...p, filter_service_category_type: v }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('ORDER.FILTER.SELECT_TYPE')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="social">{t('ORDER.FILTER.SOCIAL')}</SelectItem>
+                                    <SelectItem value="nonsocial">{t('ORDER.FILTER.NONSOCIAL')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+                        <FilterField label={t('ORDER.FILTER.COMPANY')}>
+                            <Select
+                                value={filters.filter_company_id ? String(filters.filter_company_id) : undefined}
+                                onValueChange={(v) => setFilters((p) => ({ ...p, filter_company_id: Number(v) }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('ORDER.FILTER.SELECT_COMPANY')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {(companies || []).map((c: { id: number; company_name: string }) => (
+                                        <SelectItem key={c.id} value={String(c.id)}>
+                                            {c.company_name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+                        <FilterField label={t('ORDER.FILTER.SERVICE')}>
+                            <Select
+                                value={filters.filter_service_id ? String(filters.filter_service_id) : undefined}
+                                onValueChange={(v) => setFilters((p) => ({ ...p, filter_service_id: Number(v) }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('ORDER.FILTER.SELECT_SERVICE')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {(services || []).map((s: Service) => (
+                                        <SelectItem key={s.id} value={String(s.id)}>
+                                            {s.service_category?.category_name} — {s.company?.company_name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+                        <div className="flex gap-2 pt-2">
+                            <UiButton type="button" variant="outline" className="flex-1" onClick={clearAllFilters}>
+                                {t('RESET', { defaultValue: 'بازنشانی' })}
+                            </UiButton>
+                            <UiButton type="button" className="flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={applyFilters}>
+                                {t('APPLY', { defaultValue: 'اعمال' })}
+                            </UiButton>
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            <FormSheet
+                open={serviceDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                title={t('BUNDLE.DETAILS')}
+                description={bundle.id ? 'ویرایش باندل' : 'ثبت باندل جدید'}
+                size="full"
+                side="left"
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveService}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
                     />
-
-                    <Dialog
-                        visible={serviceDialog}
-                        style={{ width: '95%', maxWidth: '1200px', padding: '5px' }}
-                        header={t('BUNDLE.DETAILS')}
-                        modal
-                        className="p-fluid"
-                        footer={companyDialogFooter}
-                        onHide={hideDialog}
-                        breakpoints={{ '960px': '95vw', '640px': '95vw' }}
+                }
+            >
+                <FormSection title="اطلاعات پایه" description="عنوان و توضیحات باندل">
+                    <FormField
+                        label={t('BUNDLE.FORM.INPUT.BUNDLETITLE')}
+                        required
+                        error={submitted && !bundle.bundle_title ? t('THIS_FIELD_IS_REQUIRED') : null}
                     >
-                        <div className="card" style={{ padding: '20px' }}>
-                            {/* Basic Information Section */}
-                            <div className="grid formgrid p-fluid">
-                                <div className="field col-12 md:col-6">
-                                    <label htmlFor="bundle_title" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
-                                        {t('BUNDLE.FORM.INPUT.BUNDLETITLE')} <span className="text-red-500">*</span>
-                                    </label>
-                                    <InputText
-                                        id="bundle_title"
-                                        value={bundle.bundle_title}
-                                        onChange={(e) =>
-                                            setBundle((perv) => ({
-                                                ...perv,
-                                                bundle_title: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        placeholder={t('BUNDLE.FORM.PLACEHOLDER.BUNDLETITLE')}
-                                        className={classNames('w-full', {
-                                            'p-invalid': submitted && !bundle.bundle_title
-                                        })}
-                                    />
-                                    {submitted && !bundle.bundle_title && (
-                                        <small className="p-invalid text-red-500">
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
+                        <Input
+                            id="bundle_title"
+                            value={bundle.bundle_title}
+                            onChange={(e) =>
+                                setBundle((perv) => ({
+                                    ...perv,
+                                    bundle_title: e.target.value
+                                }))
+                            }
+                            required
+                            autoFocus
+                            placeholder={t('BUNDLE.FORM.PLACEHOLDER.BUNDLETITLE')}
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !bundle.bundle_title
+                            })}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('BUNDLE.FORM.INPUT.BUNDLEDESCRIPTION')}
+                        required
+                        error={submitted && !bundle.bundle_description ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="bundle_description"
+                            value={bundle.bundle_description}
+                            onChange={(e) =>
+                                setBundle((perv) => ({
+                                    ...perv,
+                                    bundle_description: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('BUNDLE.FORM.PLACEHOLDER.BUNDLEDESCRIPTION')}
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !bundle.bundle_description
+                            })}
+                        />
+                    </FormField>
+                </FormSection>
 
-                                <div className="field col-12 md:col-6">
-                                    <label htmlFor="bundle_description" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
-                                        {t('BUNDLE.FORM.INPUT.BUNDLEDESCRIPTION')} <span className="text-red-500">*</span>
-                                    </label>
-                                    <InputText
-                                        id="bundle_description"
-                                        value={bundle.bundle_description}
-                                        onChange={(e) =>
-                                            setBundle((perv) => ({
-                                                ...perv,
-                                                bundle_description: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        placeholder={t('BUNDLE.FORM.PLACEHOLDER.BUNDLEDESCRIPTION')}
-                                        className={classNames('w-full', {
-                                            'p-invalid': submitted && !bundle.bundle_description
-                                        })}
-                                    />
-                                    {submitted && !bundle.bundle_description && (
-                                        <small className="p-invalid text-red-500">
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
+                <FormSection title="قیمت‌گذاری" description="قیمت خرید و فروش">
+                    <FormField
+                        label={t('BUNDLE.FORM.INPUT.ADMINBUYINGPRICE')}
+                        required
+                        error={submitted && !bundle.admin_buying_price ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="admin_buying_price"
+                            value={bundle.admin_buying_price}
+                            onChange={(e) =>
+                                setBundle((perv) => ({
+                                    ...perv,
+                                    admin_buying_price: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('BUNDLE.FORM.PLACEHOLDER.ADMINBUYINGPRICE')}
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !bundle.admin_buying_price
+                            })}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('BUNDLE.FORM.INPUT.BUYINGPRICE')}
+                        required
+                        error={submitted && !bundle.buying_price ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="buying_price"
+                            value={bundle.buying_price}
+                            onChange={(e) =>
+                                setBundle((perv) => ({
+                                    ...perv,
+                                    buying_price: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('BUNDLE.FORM.PLACEHOLDER.BUYINGPRICE')}
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !bundle.buying_price
+                            })}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('BUNDLE.FORM.INPUT.SELLINGPRICE')}
+                        required
+                        error={submitted && !bundle.selling_price ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="selling_price"
+                            value={bundle.selling_price}
+                            onChange={(e) =>
+                                setBundle((perv) => ({
+                                    ...perv,
+                                    selling_price: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('BUNDLE.FORM.PLACEHOLDER.SELLINGPRICE')}
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !bundle.selling_price
+                            })}
+                        />
+                    </FormField>
+                </FormSection>
 
-                            {/* Pricing Section */}
-                            <div className="grid formgrid p-fluid">
-                                <div className="field col-12 md:col-4">
-                                    <label htmlFor="admin_buying_price" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
-                                        {t('BUNDLE.FORM.INPUT.ADMINBUYINGPRICE')} <span className="text-red-500">*</span>
-                                    </label>
-                                    <InputText
-                                        id="admin_buying_price"
-                                        value={bundle.admin_buying_price}
-                                        onChange={(e) =>
-                                            setBundle((perv) => ({
-                                                ...perv,
-                                                admin_buying_price: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        placeholder={t('BUNDLE.FORM.PLACEHOLDER.ADMINBUYINGPRICE')}
-                                        className={classNames('w-full', {
-                                            'p-invalid': submitted && !bundle.admin_buying_price
-                                        })}
-                                    />
-                                    {submitted && !bundle.admin_buying_price && (
-                                        <small className="p-invalid text-red-500">
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
+                <FormSection title="نوع و اعتبار" description="مدت اعتبار و نوع باندل">
+                    <FormField
+                        label={t('BUNDLE.FORM.INPUT.VALIDITYTYPE')}
+                        required
+                        error={submitted && !bundle.validity_type ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Select
+                            value={bundle.validity_type || undefined}
+                            onValueChange={(v) =>
+                                setBundle((prev) => ({
+                                    ...prev,
+                                    validity_type: v
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('BUNDLE.FORM.PLACEHOLDER.VALIDITYTYPE')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="unlimited">Unlimited</SelectItem>
+                                <SelectItem value="daily">Daily</SelectItem>
+                                <SelectItem value="nightly">Nightly</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                                <SelectItem value="yearly">Yearly</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField
+                        label={t('ORDER.FILTER.BUNDLE_TYPE')}
+                        required
+                        error={submitted && !bundle.bundle_type ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Select
+                            value={bundle.bundle_type || undefined}
+                            onValueChange={(v) => setBundle({ ...bundle, bundle_type: v })}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('ORDER.FILTER.SELECT_TYPE')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="credit">{t('BUNDLE.FORM.INPUT.SELECT.BUNDLETYPE.OPTION.CREDIT')}</SelectItem>
+                                <SelectItem value="package">{t('BUNDLE.FORM.INPUT.SELECT.BUNDLETYPE.OPTION.PACKAGE')}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField label={t('BUNDLE.FORM.INPUT.AMOUNT')}>
+                        <Input
+                            id="amount"
+                            value={bundle.amount?.toString()}
+                            onChange={(e) =>
+                                setBundle((perv) => ({
+                                    ...perv,
+                                    amount: e.target.value
+                                }))
+                            }
+                            placeholder={t('BUNDLE.FORM.PLACEHOLDER.AMOUNT')}
+                            className="w-full"
+                        />
+                    </FormField>
+                </FormSection>
 
-                                <div className="field col-12 md:col-4">
-                                    <label htmlFor="buying_price" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
-                                        {t('BUNDLE.FORM.INPUT.BUYINGPRICE')} <span className="text-red-500">*</span>
-                                    </label>
-                                    <InputText
-                                        id="buying_price"
-                                        value={bundle.buying_price}
-                                        onChange={(e) =>
-                                            setBundle((perv) => ({
-                                                ...perv,
-                                                buying_price: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        placeholder={t('BUNDLE.FORM.PLACEHOLDER.BUYINGPRICE')}
-                                        className={classNames('w-full', {
-                                            'p-invalid': submitted && !bundle.buying_price
-                                        })}
-                                    />
-                                    {submitted && !bundle.buying_price && (
-                                        <small className="p-invalid text-red-500">
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
+                <FormSection title="خدمت و ارز">
+                    <FormField
+                        label={t('BUNDLE.FORM.INPUT.SERVICENAME')}
+                        required
+                        error={submitted && !bundle.service_id ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <SearchSelect
+                            value={services.find((s: Service) => s.id === bundle.service_id) || bundle.service || null}
+                            options={services}
+                            onChange={(selected) => {
+                                setBundle((prev) => ({
+                                    ...prev,
+                                    service_id: selected?.id,
+                                    service: selected
+                                }));
+                            }}
+                            optionLabel="company_name"
+                            placeholder={t('BUNDLE.FORM.PLACEHOLDER.SERVICENAME')}
+                            error={submitted && !bundle.service_id}
+                            returnFullObject
+                            itemTemplate={(option) => (
+                                <div className="flex items-center gap-2">
+                                    <div>{option.service_category?.category_name}</div>
+                                    <div>- {option.company?.company_name}</div>
                                 </div>
-
-                                <div className="field col-12 md:col-4">
-                                    <label htmlFor="selling_price" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
-                                        {t('BUNDLE.FORM.INPUT.SELLINGPRICE')} <span className="text-red-500">*</span>
-                                    </label>
-                                    <InputText
-                                        id="selling_price"
-                                        value={bundle.selling_price}
-                                        onChange={(e) =>
-                                            setBundle((perv) => ({
-                                                ...perv,
-                                                selling_price: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        placeholder={t('BUNDLE.FORM.PLACEHOLDER.SELLINGPRICE')}
-                                        className={classNames('w-full', {
-                                            'p-invalid': submitted && !bundle.selling_price
-                                        })}
-                                    />
-                                    {submitted && !bundle.selling_price && (
-                                        <small className="p-invalid text-red-500">
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
+                            )}
+                            valueTemplate={(option) => (
+                                <div className="flex items-center gap-2 text-sm">
+                                    <span>{option.service_category?.category_name}</span>
+                                    <span className="text-muted-foreground">- {option.company?.company_name}</span>
                                 </div>
-                            </div>
+                            )}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('BUNDLE.FORM.INPUT.CURRENCY')}
+                        required
+                        error={submitted && !bundle.currency ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <SearchSelect
+                            value={bundle.currency}
+                            options={currencies || []}
+                            onChange={(selected) =>
+                                setBundle((prev) => ({
+                                    ...prev,
+                                    currency: selected
+                                }))
+                            }
+                            optionLabel="name"
+                            placeholder={t('CURRENCY.GENERAL.SELECTCURRENCY')}
+                            error={submitted && !bundle.currency}
+                            returnFullObject
+                        />
+                    </FormField>
+                </FormSection>
 
-                            {/* Validity and Bundle Type Section */}
-                            <div className="grid formgrid p-fluid">
-                                <div className="field col-12 md:col-4">
-                                    <label htmlFor="validity_type" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
-                                        {t('BUNDLE.FORM.INPUT.VALIDITYTYPE')} <span className="text-red-500">*</span>
-                                    </label>
-                                    <Dropdown
-                                        id="validity_type"
-                                        value={bundle.validity_type}
-                                        options={[
-                                            { label: 'Unlimited', value: 'unlimited' },
-                                            { label: 'Daily', value: 'daily' },
-                                            { label: 'Nightly', value: 'nightly' },
-                                            { label: 'Weekly', value: 'weekly' },
-                                            { label: 'Monthly', value: 'monthly' },
-                                            { label: 'Yearly', value: 'yearly' }
-                                        ]}
-                                        onChange={(e) =>
-                                            setBundle((prev) => ({
-                                                ...prev,
-                                                validity_type: e.value
-                                            }))
-                                        }
-                                        placeholder={t('BUNDLE.FORM.PLACEHOLDER.VALIDITYTYPE')}
-                                        className="w-full"
-                                    />
-                                    {submitted && !bundle.validity_type && (
-                                        <small className="p-invalid text-red-500">
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
+                <FormSection title="اتصال تأمین‌کننده API" description="انتخاب provider و محصول">
+                    <FormField label={t('BUNDLE_PROVIDER')} fullWidth>
+                        <SearchSelect
+                            value={selectedProvider}
+                            options={providers || []}
+                            onChange={(selected) => {
+                                setSelectedProvider(selected);
+                                setSelectedCapability('');
+                                setSelectedProviderBundle(null);
+                                setSelectedPaystoreGroup(null);
+                                setSelectedPaystoreOperator(null);
+                                setSelectedManshorPayService(null);
+                                setManshorPayProducts([]);
+                                setInaxResponseProducts([]);
+                                setSelectedInaxCategory(null);
+                                setSelectedInaxOperator(null);
+                                setSelectedInaxSimType(null);
+                            }}
+                            optionLabel="name"
+                            searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                            placeholder={t('SEARCH_PROVIDER')}
+                            onSearch={setProviderSearchTag}
+                            returnFullObject
+                            showClear
+                        />
+                    </FormField>
 
-                                <div className="field col-12 md:col-4">
-                                    <label htmlFor="bundle_type" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
-                                        {t('ORDER.FILTER.BUNDLE_TYPE')} <span className="text-red-500">*</span>
-                                    </label>
-                                    <Dropdown
-                                        id="bundle_type"
-                                        options={[
-                                            { label: t('BUNDLE.FORM.INPUT.SELECT.BUNDLETYPE.OPTION.CREDIT'), value: 'credit' },
-                                            { label: t('BUNDLE.FORM.INPUT.SELECT.BUNDLETYPE.OPTION.PACKAGE'), value: 'package' }
-                                        ]}
-                                        value={bundle.bundle_type}
-                                        onChange={(e) => setBundle({ ...bundle, bundle_type: e.value })}
-                                        placeholder={t('ORDER.FILTER.SELECT_TYPE')}
-                                        className="w-full"
-                                    />
-                                    {submitted && !bundle.bundle_type && (
-                                        <small className="p-invalid text-red-500">
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-
-                                <div className="field col-12 md:col-4">
-                                    <label htmlFor="amount" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
-                                        {t('BUNDLE.FORM.INPUT.AMOUNT')}
-                                    </label>
-                                    <InputText
-                                        id="amount"
-                                        value={bundle.amount?.toString()}
-                                        onChange={(e) =>
-                                            setBundle((perv) => ({
-                                                ...perv,
-                                                amount: e.target.value
-                                            }))
-                                        }
-                                        placeholder={t('BUNDLE.FORM.PLACEHOLDER.AMOUNT')}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Service and Currency Section */}
-                            <div className="grid formgrid p-fluid">
-                                <div className="field col-12 md:col-6">
-                                    <label htmlFor="service" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
-                                        {t('BUNDLE.FORM.INPUT.SERVICENAME')} <span className="text-red-500">*</span>
-                                    </label>
-                                    <Dropdown
-                                        id="service"
-                                        value={services.find((s: Service) => s.id === bundle.service_id) || null}
-                                        options={services}
-                                        onChange={(e) => {
-                                            setBundle((prev) => ({
-                                                ...prev,
-                                                service_id: e.value.id,
-                                                service: e.value
-                                            }));
-                                        }}
-                                        optionLabel="company.company_name"
-                                        placeholder={t('BUNDLE.FORM.PLACEHOLDER.SERVICENAME')}
-                                        className="w-full"
-                                        itemTemplate={(option) => (
-                                            <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                                                <div>{option.service_category?.category_name}</div>
-                                                <div>- {option.company?.company_name}</div>
-                                            </div>
-                                        )}
-                                        valueTemplate={(option) => {
-                                            if (!option) return t('BUNDLE.FORM.PLACEHOLDER.SERVICENAME');
-                                            return (
-                                                <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                                                    <div>{option.service_category?.category_name}</div>
-                                                    <div>- {option.company?.company_name}</div>
-                                                </div>
-                                            );
-                                        }}
-                                    />
-                                    {submitted && !bundle.service_id && (
-                                        <small className="p-invalid text-red-500">
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-
-                                <div className="field col-12 md:col-6">
-                                    <label htmlFor="currency" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
-                                        {t('BUNDLE.FORM.INPUT.CURRENCY')} <span className="text-red-500">*</span>
-                                    </label>
-                                    <Dropdown
-                                        id="currency"
-                                        value={bundle.currency}
-                                        options={currencies}
-                                        onChange={(e) =>
-                                            setBundle((prev) => ({
-                                                ...prev,
-                                                currency: e.value
-                                            }))
-                                        }
-                                        optionLabel="name"
-                                        placeholder={t('CURRENCY.GENERAL.SELECTCURRENCY')}
-                                        className="w-full"
-                                    />
-                                    {submitted && !bundle.currency && (
-                                        <small className="p-invalid text-red-500">
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Provider Section */}
-                            <div className="grid formgrid p-fluid">
-                                <div className="field col-12">
-                                    <label htmlFor="provider" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
-                                        {t('BUNDLE_PROVIDER')}
-                                    </label>
-                                    <Dropdown
-                                        id="provider"
-                                        value={selectedProvider}
-                                        options={providers}
-                                        onChange={(e) => {
-                                            setSelectedProvider(e.value);
-                                            setSelectedCapability('');
-                                            setSelectedProviderBundle(null);
-                                            setSelectedPaystoreGroup(null);
-                                            setSelectedPaystoreOperator(null);
-                                            setSelectedManshorPayService(null);
-                                            setManshorPayProducts([]);
-                                            setInaxResponseProducts([]);
-                                            setSelectedInaxCategory(null);
-                                            setSelectedInaxOperator(null);
-                                            setSelectedInaxSimType(null);
-                                        }}
-                                        optionLabel="name"
-                                        filter
-                                        filterBy="name"
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        showFilterClear
-                                        placeholder={t('SEARCH_PROVIDER')}
-                                        className=""
-                                        panelClassName=""
-                                        onFilter={(e) => {
-                                            setProviderSearchTag(e.filter);
-                                        }}
-                                    />
-                                </div>
-                            </div>
-
+                    <div className="sm:col-span-2 w-full space-y-4">
                             {/* Capabilities - Only show for regular providers */}
                             {selectedProvider &&
                                 selectedProvider.code !== 'mzr' &&
                                 selectedProvider.code !== 'paystore' &&
                                 selectedProvider.code !== 'manshorpay' &&
-                                selectedProvider.code !== 'inax' && (
+                                selectedProvider.code !== 'inax' &&
+                                selectedProvider.code !== 'zoodpay' && (
                                 <div className="grid formgrid p-fluid">
                                     <div className="field col-12">
                                         <label htmlFor="capabilities" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
                                             {t('CAPABILITIES')}
                                         </label>
-                                        <Dropdown
-                                            id="capabilities"
-                                            value={selectedCapability}
-                                            options={selectedProvider?.capabilities || []}
-                                            onChange={(e) => {
-                                                setSelectedCapability(e.value);
+                                        <Select
+                                            value={selectedCapability || undefined}
+                                            onValueChange={(v) => {
+                                                setSelectedCapability(v);
                                                 setSelectedProviderBundle(null);
                                             }}
-                                            placeholder={t('SEARCH_CAPABILITIES')}
-                                            className=""
-                                            panelClassName=""
-                                        />
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder={t('SEARCH_CAPABILITIES')} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {(selectedProvider?.capabilities || []).map((cap: string) => (
+                                                    <SelectItem key={cap} value={cap}>
+                                                        {cap}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
                             )}
@@ -2176,24 +2142,20 @@ const BundlePage = () => {
                                             <label htmlFor="category" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
                                                 {t('CATEGORIES')}
                                             </label>
-                                            <Dropdown
-                                                id="category"
+                                            <SearchSelect
                                                 value={selectedCategory}
-                                                options={categories}
-                                                onChange={(e) => {
-                                                    setSelectedCategory(e.value);
+                                                options={categories || []}
+                                                onChange={(selected) => {
+                                                    setSelectedCategory(selected);
                                                     setSelectedProviderBundle(null);
                                                 }}
                                                 optionLabel="name"
-                                                filter
-                                                filterBy="name"
-                                                filterPlaceholder={t('SEARCH_CATEGORY')}
-                                                showFilterClear
+                                                searchPlaceholder={t('SEARCH_CATEGORY')}
                                                 placeholder={t('SELECT_CATEGORY')}
-                                                className=""
-                                                panelClassName=""
+                                                returnFullObject
+                                                showClear
                                                 itemTemplate={(option) => (
-                                                    <div className="flex flex-col p-2 gap-1">
+                                                    <div className="flex flex-col gap-1">
                                                         <div className="font-semibold">{option.name}</div>
                                                         <div className="text-xs text-gray-500">
                                                             Products: {option.product_count} | Type: {option.purchase_type}
@@ -2210,23 +2172,17 @@ const BundlePage = () => {
                                                 <label htmlFor="product" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
                                                     {t('PRODUCTS')}
                                                 </label>
-                                                <Dropdown
-                                                    id="product"
+                                                <SearchSelect
                                                     value={selectedProviderBundle}
-                                                    options={categoryProducts}
-                                                    onChange={(e) => {
-                                                        setSelectedProviderBundle(e.value);
-                                                    }}
+                                                    options={categoryProducts || []}
+                                                    onChange={(selected) => setSelectedProviderBundle(selected)}
                                                     optionLabel="name"
-                                                    filter
-                                                    filterBy="name"
-                                                    filterPlaceholder={t('SEARCH_PRODUCT')}
-                                                    showFilterClear
+                                                    searchPlaceholder={t('SEARCH_PRODUCT')}
                                                     placeholder={t('SELECT_PRODUCT')}
-                                                    className=""
-                                                    panelClassName=""
+                                                    returnFullObject
+                                                    showClear
                                                     itemTemplate={(option) => (
-                                                        <div className="flex flex-col p-2 gap-2">
+                                                        <div className="flex flex-col gap-2">
                                                             <div className="font-semibold text-sm">{option.name}</div>
                                                             <div className="flex flex-wrap gap-2 text-xs text-gray-600">
                                                                 <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">Price: {option.price}</span>
@@ -2236,15 +2192,12 @@ const BundlePage = () => {
                                                             </div>
                                                         </div>
                                                     )}
-                                                    valueTemplate={(option) => {
-                                                        if (!option) return t('SELECT_PRODUCT');
-                                                        return (
-                                                            <div className="flex flex-col">
-                                                                <span className="font-semibold text-sm">{option.name}</span>
-                                                                <span className="text-xs text-gray-600">Price: {option.price}</span>
-                                                            </div>
-                                                        );
-                                                    }}
+                                                    valueTemplate={(option) => (
+                                                        <div className="flex flex-col">
+                                                            <span className="font-semibold text-sm">{option.name}</span>
+                                                            <span className="text-xs text-gray-600">Price: {option.price}</span>
+                                                        </div>
+                                                    )}
                                                 />
                                             </div>
                                         </div>
@@ -2321,27 +2274,22 @@ const BundlePage = () => {
                                             ManshorPay Service <span className="text-red-500">*</span>
                                         </label>
 
-                                        <Dropdown
-                                            id="manshor_service"
+                                        <SearchSelect
                                             value={selectedManshorPayService}
-                                            options={manshorPayServices}
+                                            options={manshorPayServices || []}
                                             optionLabel="_display_name"
-                                            dataKey="id"
-                                            onChange={(e) => {
-                                                setSelectedManshorPayService(e.value);
+                                            onChange={(selected) => {
+                                                setSelectedManshorPayService(selected);
                                                 setSelectedProviderBundle(null);
                                                 setManshorPayProducts([]);
                                             }}
                                             disabled={manshorPayServicesLoading}
-                                            filter
-                                            filterBy="_display_name,_operator_name,_category_name"
-                                            filterPlaceholder="Search service"
-                                            showFilterClear
+                                            isLoading={manshorPayServicesLoading}
+                                            searchPlaceholder="Search service"
                                             placeholder="Select ManshorPay service"
-                                            className="w-full"
-                                            panelClassName={isRTL() ? 'manshorpay-dropdown-panel manshorpay-dropdown-panel-rtl' : 'manshorpay-dropdown-panel'}
-                                            scrollHeight="320px"
                                             emptyMessage="No ManshorPay services found"
+                                            returnFullObject
+                                            showClear
                                             itemTemplate={(option: any) => (
                                                 <div className="flex flex-column gap-1 p-2">
                                                     <div className="font-semibold">
@@ -2377,16 +2325,11 @@ const BundlePage = () => {
                                                     </div>
                                                 </div>
                                             )}
-                                            valueTemplate={(option: any) => {
-                                                if (!option) return 'Select ManshorPay service';
-
-                                                return (
-                                                    <div className="flex align-items-center gap-2">
-                                                        <i className="pi pi-sitemap" style={{ color: '#2563eb' }} />
-                                                        <span>{getManshorPayServiceLabel(option)}</span>
-                                                    </div>
-                                                );
-                                            }}
+                                            valueTemplate={(option: any) => (
+                                                <div className="flex items-center gap-2">
+                                                    <span>{getManshorPayServiceLabel(option)}</span>
+                                                </div>
+                                            )}
                                         />
                                     </div>
 
@@ -2402,29 +2345,23 @@ const BundlePage = () => {
                                             ManshorPay Product <span className="text-red-500">*</span>
                                         </label>
 
-                                        <Dropdown
-                                            id="manshor_product"
+                                        <SearchSelect
                                             value={selectedProviderBundle}
-                                            options={manshorPayProducts}
-                                            onChange={(e) => {
-                                                console.log('Selected ManshorPay product:', e.value);
-                                                setSelectedProviderBundle(e.value);
+                                            options={manshorPayProducts || []}
+                                            onChange={(selected) => {
+                                                console.log('Selected ManshorPay product:', selected);
+                                                setSelectedProviderBundle(selected);
                                             }}
                                             disabled={!selectedManshorPayService || manshorPayProductsLoading}
+                                            isLoading={manshorPayProductsLoading}
                                             optionLabel="title"
-                                            filter
-                                            filterBy="title,name,operator,category,type,validity"
-                                            filterPlaceholder="Search product"
-                                            showFilterClear
+                                            searchPlaceholder="Search product"
                                             placeholder={
-                                                selectedManshorPayService
-                                                    ? 'Select ManshorPay product'
-                                                    : 'Select service first'
+                                                selectedManshorPayService ? 'Select ManshorPay product' : 'Select service first'
                                             }
-                                            className="w-full"
-                                            panelClassName={isRTL() ? 'manshorpay-dropdown-panel manshorpay-dropdown-panel-rtl' : 'manshorpay-dropdown-panel'}
-                                            scrollHeight="320px"
                                             emptyMessage="No ManshorPay products found"
+                                            returnFullObject
+                                            showClear
                                             itemTemplate={(option: any) => (
                                                 <div className="flex flex-column gap-2 p-2">
                                                     <div
@@ -2507,39 +2444,24 @@ const BundlePage = () => {
                                                     </div>
                                                 </div>
                                             )}
-                                            valueTemplate={(option: any) => {
-                                                if (!option) {
-                                                    return selectedManshorPayService
-                                                        ? 'Select ManshorPay product'
-                                                        : 'Select service first';
-                                                }
-
-                                                return (
-                                                    <div className="flex justify-content-between align-items-center gap-2">
-                                                        <div className="flex flex-column">
-                                                            <span className="font-semibold">
-                                                                {getManshorPayProductTitle(option)}
-                                                            </span>
-
-                                                            <span
-                                                                style={{
-                                                                    fontSize: '0.75rem',
-                                                                    color: '#64748b'
-                                                                }}
-                                                            >
-                                                                {typeof option.operator === 'object'
-                                                                    ? option.operator?.name
-                                                                    : option.operator || ''}
-                                                                {option.price !== undefined && option.price !== null
-                                                                    ? ` • ${option.price} ${option.currency || ''}`
-                                                                    : ''}
-                                                            </span>
-                                                        </div>
-
-                                                        <i className="pi pi-check-circle" style={{ color: '#16a34a' }} />
+                                            valueTemplate={(option: any) => (
+                                                <div>
+                                                    <div className="font-semibold">{getManshorPayProductTitle(option)}</div>
+                                                    <div
+                                                        style={{
+                                                            fontSize: '0.75rem',
+                                                            color: '#64748b'
+                                                        }}
+                                                    >
+                                                        {typeof option.operator === 'object'
+                                                            ? option.operator?.name
+                                                            : option.operator || ''}
+                                                        {option.price !== undefined && option.price !== null
+                                                            ? ` • ${option.price} ${option.currency || ''}`
+                                                            : ''}
                                                     </div>
-                                                );
-                                            }}
+                                                </div>
+                                            )}
                                         />
                                     </div>
 
@@ -2656,36 +2578,104 @@ const BundlePage = () => {
                                      {inaxLoading && <div className="col-12"><ProgressBar mode="indeterminate" style={{ height: '4px' }} /></div>}
                                      <div className="field col-12 md:col-4">
                                          <label>Category</label>
-                                         <Dropdown value={selectedInaxCategory} options={inaxCategories.map((v) => ({ label: v, value: v }))} onChange={(e) => { setSelectedInaxCategory(e.value); setSelectedInaxOperator(null); setSelectedInaxSimType(null); setSelectedProviderBundle(null); }} filter showClear placeholder="All categories" className="w-full" />
+                                         <SearchSelect
+                                             value={
+                                                 selectedInaxCategory
+                                                     ? { label: selectedInaxCategory, value: selectedInaxCategory }
+                                                     : null
+                                             }
+                                             options={inaxCategories.map((v) => ({ label: v, value: v }))}
+                                             onChange={(opt: { label: string; value: string } | null) => {
+                                                 setSelectedInaxCategory(opt?.value ?? null);
+                                                 setSelectedInaxOperator(null);
+                                                 setSelectedInaxSimType(null);
+                                                 setSelectedProviderBundle(null);
+                                             }}
+                                             optionLabel="label"
+                                             placeholder="All categories"
+                                             searchPlaceholder="Filter categories"
+                                             returnFullObject
+                                             showClear
+                                         />
                                      </div>
                                      <div className="field col-12 md:col-4">
                                          <label>Company / Operator</label>
-                                         <Dropdown value={selectedInaxOperator} options={inaxOperators.map((v) => ({ label: v, value: v }))} onChange={(e) => { setSelectedInaxOperator(e.value); setSelectedInaxSimType(null); setSelectedProviderBundle(null); }} filter showClear placeholder="All companies" className="w-full" />
+                                         <SearchSelect
+                                             value={
+                                                 selectedInaxOperator
+                                                     ? { label: selectedInaxOperator, value: selectedInaxOperator }
+                                                     : null
+                                             }
+                                             options={inaxOperators.map((v) => ({ label: v, value: v }))}
+                                             onChange={(opt: { label: string; value: string } | null) => {
+                                                 setSelectedInaxOperator(opt?.value ?? null);
+                                                 setSelectedInaxSimType(null);
+                                                 setSelectedProviderBundle(null);
+                                             }}
+                                             optionLabel="label"
+                                             placeholder="All companies"
+                                             searchPlaceholder="Filter companies"
+                                             returnFullObject
+                                             showClear
+                                         />
                                      </div>
                                      <div className="field col-12 md:col-4">
                                          <label>SIM Type</label>
-                                         <Dropdown value={selectedInaxSimType} options={inaxSimTypes.map((v) => ({ label: v, value: v }))} onChange={(e) => { setSelectedInaxSimType(e.value); setSelectedProviderBundle(null); }} showClear placeholder="All SIM types" className="w-full" />
+                                         <SearchSelect
+                                             value={
+                                                 selectedInaxSimType
+                                                     ? { label: selectedInaxSimType, value: selectedInaxSimType }
+                                                     : null
+                                             }
+                                             options={inaxSimTypes.map((v) => ({ label: v, value: v }))}
+                                             onChange={(opt: { label: string; value: string } | null) => {
+                                                 setSelectedInaxSimType(opt?.value ?? null);
+                                                 setSelectedProviderBundle(null);
+                                             }}
+                                             optionLabel="label"
+                                             placeholder="All SIM types"
+                                             searchPlaceholder="Filter SIM types"
+                                             returnFullObject
+                                             showClear
+                                         />
                                      </div>
                                      <div className="field col-12">
                                          <label>Provider Product ({filteredInaxProducts.length})</label>
-                                         <Dropdown
-                                             value={filteredInaxProducts.find((p: any) => String(p.id) === String((selectedProviderBundle as any)?.id) && String(p.table_id || p.provider_table_id) === String((selectedProviderBundle as any)?.table_id || (selectedProviderBundle as any)?.provider_table_id)) || selectedProviderBundle}
-                                             options={filteredInaxProducts}
-                                             onChange={(e) => setSelectedProviderBundle(e.value)}
+                                         <SearchSelect
+                                             value={
+                                                 filteredInaxProducts.find(
+                                                     (p: any) =>
+                                                         String(p.id) === String((selectedProviderBundle as any)?.id) &&
+                                                         String(p.table_id || p.provider_table_id) ===
+                                                             String(
+                                                                 (selectedProviderBundle as any)?.table_id ||
+                                                                     (selectedProviderBundle as any)?.provider_table_id
+                                                             )
+                                                 ) || selectedProviderBundle
+                                             }
+                                             options={filteredInaxProducts || []}
+                                             onChange={(selected) => setSelectedProviderBundle(selected)}
                                              optionLabel="title"
-                                             filter filterBy="title,name,desc,operator,sim_type"
-                                             filterPlaceholder="Search product or package"
+                                             optionValue="table_id"
+                                             searchPlaceholder="Search product or package"
                                              placeholder="Select INAX product"
-                                             dataKey="table_id"
-                                             scrollHeight="350px"
                                              emptyMessage="No products found"
-                                             className="w-full"
-                                             itemTemplate={(p: any) => <div className="flex flex-column gap-1 p-2">
-                                                 <strong>{p.title || p.name}</strong>
-                                                 <span className="text-sm text-gray-600">{p.operator || p.meta?.operator} · {p.sim_type || p.meta?.sim_type} · {p.validity || '-'} · {p.meta?.volume ? `${p.meta.volume} ${p.meta.unit || ''}` : ''}</span>
-                                                 <span className="text-sm text-blue-700">Price: {p.price ?? '-'} {p.currency || 'IRT'} · Total: {p.tprice ?? '-'} {p.currency || 'IRT'} · Table #{p.table_id || p.provider_table_id}</span>
-                                             </div>}
-                                             valueTemplate={(p: any) => p ? <span>{inaxProductLabel(p)}</span> : <span>Select INAX product</span>}
+                                             returnFullObject
+                                             showClear
+                                             itemTemplate={(p: any) => (
+                                                 <div className="flex flex-col gap-1">
+                                                     <strong>{p.title || p.name}</strong>
+                                                     <span className="text-sm text-gray-600">
+                                                         {p.operator || p.meta?.operator} · {p.sim_type || p.meta?.sim_type} · {p.validity || '-'} ·{' '}
+                                                         {p.meta?.volume ? `${p.meta.volume} ${p.meta.unit || ''}` : ''}
+                                                     </span>
+                                                     <span className="text-sm text-blue-700">
+                                                         Price: {p.price ?? '-'} {p.currency || 'IRT'} · Total: {p.tprice ?? '-'} {p.currency || 'IRT'} · Table #
+                                                         {p.table_id || p.provider_table_id}
+                                                     </span>
+                                                 </div>
+                                             )}
+                                             valueTemplate={(p: any) => <span>{inaxProductLabel(p)}</span>}
                                          />
                                      </div>
                                      {selectedProviderBundle && <div className="col-12">
@@ -2714,33 +2704,30 @@ const BundlePage = () => {
                                         <label htmlFor="operator_group" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
                                             {t('OPERATOR_GROUP')}
                                         </label>
-                                        <Dropdown
-                                            id="operator_group"
+                                        <SearchSelect
                                             value={selectedPaystoreGroup}
-                                            options={operatorGroups}
-                                            onChange={(e) => {
-                                                setSelectedPaystoreGroup(e.value);
+                                            options={operatorGroups || []}
+                                            onChange={(selected) => {
+                                                setSelectedPaystoreGroup(selected);
                                                 setSelectedPaystoreOperator(null);
                                                 setSelectedProviderBundle(null);
                                             }}
                                             optionLabel="op_firm"
                                             placeholder={t('SELECT_OPERATOR_GROUP')}
-                                            className="w-full"
+                                            returnFullObject
+                                            showClear
                                             itemTemplate={(option: PaystoreGroup) => (
-                                                <div className="flex justify-content-between align-items-center p-2">
+                                                <div className="flex items-center justify-between gap-2">
                                                     <span className="font-semibold">{option.op_firm}</span>
                                                     <span className="text-xs text-gray-500">Products: {option.product_count}</span>
                                                 </div>
                                             )}
-                                            valueTemplate={(option: PaystoreGroup) => {
-                                                if (!option) return t('SELECT_OPERATOR_GROUP');
-                                                return (
-                                                    <div className="flex justify-content-between align-items-center">
-                                                        <span>{option.op_firm}</span>
-                                                        <span className="text-xs text-gray-500">({option.product_count} products)</span>
-                                                    </div>
-                                                );
-                                            }}
+                                            valueTemplate={(option: PaystoreGroup) => (
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span>{option.op_firm}</span>
+                                                    <span className="text-xs text-gray-500">({option.product_count} products)</span>
+                                                </div>
+                                            )}
                                         />
                                     </div>
 
@@ -2750,31 +2737,26 @@ const BundlePage = () => {
                                             <label htmlFor="operator" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
                                                 {t('OPERATOR')}
                                             </label>
-                                            <Dropdown
-                                                id="operator"
+                                            <SearchSelect
                                                 value={selectedPaystoreOperator}
-                                                options={selectedPaystoreGroup.operators}
-                                                onChange={(e) => {
-                                                    setSelectedPaystoreOperator(e.value);
-                                                }}
+                                                options={selectedPaystoreGroup.operators || []}
+                                                onChange={(selected) => setSelectedPaystoreOperator(selected)}
                                                 optionLabel="code"
                                                 placeholder={t('SELECT_OPERATOR')}
-                                                className="w-full"
+                                                returnFullObject
+                                                showClear
                                                 itemTemplate={(option: PaystoreOperator) => (
-                                                    <div className="flex justify-content-between align-items-center p-2">
+                                                    <div className="flex items-center justify-between gap-2">
                                                         <span>{option.code}</span>
                                                         <span className="text-xs text-gray-500">Products: {option.product_count}</span>
                                                     </div>
                                                 )}
-                                                valueTemplate={(option: PaystoreOperator) => {
-                                                    if (!option) return t('SELECT_OPERATOR');
-                                                    return (
-                                                        <div className="flex justify-content-between align-items-center">
-                                                            <span>{option.code}</span>
-                                                            <span className="text-xs text-gray-500">({option.product_count} products)</span>
-                                                        </div>
-                                                    );
-                                                }}
+                                                valueTemplate={(option: PaystoreOperator) => (
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span>{option.code}</span>
+                                                        <span className="text-xs text-gray-500">({option.product_count} products)</span>
+                                                    </div>
+                                                )}
                                             />
                                         </div>
                                     )}
@@ -2805,25 +2787,21 @@ const BundlePage = () => {
                                             <label htmlFor="product_select" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
                                                 {t('PRODUCTS')}
                                             </label>
-                                            <Dropdown
-                                                id="product_select"
+                                            <SearchSelect
                                                 value={selectedProviderBundle}
-                                                options={products}
-                                                onChange={(e) => {
-                                                    console.log('Selected product:', e.value);
-                                                    setSelectedProviderBundle(e.value);
+                                                options={products || []}
+                                                onChange={(selected) => {
+                                                    console.log('Selected product:', selected);
+                                                    setSelectedProviderBundle(selected);
                                                 }}
                                                 optionLabel="title"
-                                                filter
-                                                filterBy="title,operator,type"
-                                                filterPlaceholder={t('SEARCH_PRODUCT')}
-                                                showFilterClear
+                                                searchPlaceholder={t('SEARCH_PRODUCT')}
                                                 placeholder={t('SELECT_PRODUCT')}
-                                                className="w-full"
-                                                panelClassName="w-full"
                                                 emptyMessage="No products found for this operator"
+                                                returnFullObject
+                                                showClear
                                                 itemTemplate={(option: any) => (
-                                                    <div className="flex flex-col p-2 gap-2">
+                                                    <div className="flex flex-col gap-2">
                                                         <div className="font-semibold text-sm">{option.title || option.name || option.package_name || 'N/A'}</div>
                                                         <div className="flex flex-wrap gap-2 text-xs text-gray-600">
                                                             {option.operator && <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">{option.operator}</span>}
@@ -2834,19 +2812,16 @@ const BundlePage = () => {
                                                         </div>
                                                     </div>
                                                 )}
-                                                valueTemplate={(option: any) => {
-                                                    if (!option) return t('SELECT_PRODUCT');
-                                                    return (
-                                                        <div className="flex flex-col gap-1">
-                                                            <span className="font-semibold text-sm">
-                                                                {option.title || option.name || option.package_name || 'N/A'}
-                                                            </span>
-                                                            <span className="text-xs text-gray-600">
-                                                                {option.operator} - {option.price}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                }}
+                                                valueTemplate={(option: any) => (
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="font-semibold text-sm">
+                                                            {option.title || option.name || option.package_name || 'N/A'}
+                                                        </span>
+                                                        <span className="text-xs text-gray-600">
+                                                            {option.operator} - {option.price}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             />
                                         </div>
                                     )}
@@ -2865,25 +2840,21 @@ const BundlePage = () => {
                                         <label htmlFor="bundle_select" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
                                             {t('BUNDLE')}
                                         </label>
-                                        <Dropdown
-                                            id="bundle_select"
+                                        <SearchSelect
                                             value={selectedProviderBundle}
-                                            options={rawInternets}
-                                            onChange={(e) => {
-                                                console.log('Selected bundle:', e.value);
-                                                setSelectedProviderBundle(e.value);
+                                            options={rawInternets || []}
+                                            onChange={(selected) => {
+                                                console.log('Selected bundle:', selected);
+                                                setSelectedProviderBundle(selected);
                                             }}
                                             optionLabel="name"
-                                            filter
-                                            filterBy="title,operator,validity"
-                                            filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                            showFilterClear
+                                            searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
                                             placeholder={t('SEARCH_BUNDLE')}
-                                            className="w-full"
-                                            panelClassName="w-full"
                                             emptyMessage="No bundles found"
+                                            returnFullObject
+                                            showClear
                                             itemTemplate={(option: any) => (
-                                                <div className="flex flex-col p-2 gap-2">
+                                                <div className="flex flex-col gap-2">
                                                     <div className="font-semibold text-sm">{option.name || option.title}</div>
                                                     <div className="flex flex-wrap gap-2 text-xs text-gray-600">
                                                         <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">{option.operator}</span>
@@ -2892,19 +2863,14 @@ const BundlePage = () => {
                                                     </div>
                                                 </div>
                                             )}
-                                            valueTemplate={(option: any) => {
-                                                if (!option) return t('SEARCH_BUNDLE');
-                                                return (
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="font-semibold text-sm">
-                                                            {option.name || option.title}
-                                                        </span>
-                                                        <span className="text-xs text-gray-600">
-                                                            {option.operator} - {option.price}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            }}
+                                            valueTemplate={(option: any) => (
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="font-semibold text-sm">{option.name || option.title}</span>
+                                                    <span className="text-xs text-gray-600">
+                                                        {option.operator} - {option.price}
+                                                    </span>
+                                                </div>
+                                            )}
                                         />
                                     </div>
                                 </div>
@@ -2924,10 +2890,9 @@ const BundlePage = () => {
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    </Dialog>
-
-
+                    </div>
+                </FormSection>
+            </FormSheet>
 
                     <Dialog visible={deleteServiceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteServiceDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -2969,10 +2934,9 @@ const BundlePage = () => {
                             )}
                         </div>
                     </Dialog>
-                </div>
-            </div>
         </div>
     );
 };
+
 
 export default withAuth(BundlePage);

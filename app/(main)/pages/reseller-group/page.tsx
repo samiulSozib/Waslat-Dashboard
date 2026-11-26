@@ -1,27 +1,32 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
-import { Button } from 'primereact/button';
+import { Button as PrimeButton } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { ResellerGroup } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RowActions } from '@/components/admin/row-actions';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { cn } from '@/lib/utils';
+import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { _addResellerGroup, _deleteResellerGroup, _editResellerGroup, _fetchResellerGroups } from '@/app/redux/actions/resellerGroupActions';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import { _fetchLanguages } from '@/app/redux/actions/languageActions';
-import { FileUpload } from 'primereact/fileupload';
 import { resellerGroupReducer } from '../../../redux/reducers/resellerGroupReducer';
-import { InputTextarea } from 'primereact/inputtextarea';
 import { useTranslation } from 'react-i18next';
 import { customCellStyle, customCellStyleImage } from '../../utilities/customRow';
 import i18n from '@/i18n';
@@ -51,7 +56,9 @@ const ResellerGroupPage = () => {
     const [resellerGroup, setResellerGroup] = useState<ResellerGroup>(emptyResellerGroup);
     const [selectedCompanies, setSelectedResellerGroup] = useState(null);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const globalFilter = useDebouncedValue(searchInput, 350);
+    const [refreshing, setRefreshing] = useState(false);
     const toast = useRef<Toast>(null);
     const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
@@ -119,22 +126,26 @@ const ResellerGroupPage = () => {
         setDeleteResellerGroupsDialog(true);
     };
 
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('RESELLER.GROUP.CREATENEW')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                </div>
-            </React.Fragment>
-        );
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await dispatch(_fetchResellerGroups() as any);
+        setRefreshing(false);
     };
+
+    const resellerGroupRowActions = (rowData: ResellerGroup) => [
+        {
+            label: t('TABLE.GENERAL.EDIT'),
+            icon: <Pencil className="h-4 w-4" />,
+            onClick: () => editResellerGroup(rowData)
+        },
+        {
+            label: t('TABLE.GENERAL.DELETE'),
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => confirmDeleteResellerGroup(rowData),
+            danger: true,
+            separatorBefore: true
+        }
+    ];
 
     const resellerGroupNameBodyTemplate = (rowData: ResellerGroup) => {
         return (
@@ -242,42 +253,48 @@ const ResellerGroupPage = () => {
         );
     };
 
-    const actionBodyTemplate = (rowData: ResellerGroup) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editResellerGroup(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteResellerGroup(rowData)} />
-            </>
-        );
-    };
+    const actionBodyTemplate = (rowData: ResellerGroup) => <RowActions items={resellerGroupRowActions(rowData)} />;
 
-    const resellerGroupDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveResellerGroup} />
-        </>
-    );
     const deleteResellerGroupDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteResellerGroupDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteResellerGroup} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteResellerGroupDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteResellerGroup} />
         </>
     );
     const deleteCompaniesDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteResellerGroupsDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteResellerGroupsDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
         </>
     );
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" right={rightToolbarTemplate}></Toolbar>
-
+        <div className="space-y-4">
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.RESELLERGROUP', { defaultValue: 'گروه فروشندگان' })}
+                description="تعریف گروه‌ها، تخفیف و محدودیت زیرفروشنده"
+                loading={loading}
+                actions={
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-4 w-4', (refreshing || loading) && 'animate-spin')} />
+                            {t('REFRESH', { defaultValue: 'بروزرسانی' })}
+                        </Button>
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={openNew}>
+                            <Plus className="h-4 w-4" />
+                            {t('RESELLER.GROUP.CREATENEW')}
+                        </Button>
+                    </div>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو در گروه‌ها...' })}
+                    />
+                }
+            >
                     <DataTable
                         ref={dt}
                         value={reseller_groups}
@@ -302,6 +319,12 @@ const ResellerGroupPage = () => {
                         globalFilter={globalFilter}
                         responsiveLayout="scroll"
                     >
+                        <Column
+                            style={{ ...customCellStyle, textAlign: 'start' }}
+                            header={t('TABLE.GENERAL.ACTIONS', { defaultValue: 'عملیات' })}
+                            body={actionBodyTemplate}
+                            headerStyle={{ minWidth: '4.5rem' }}
+                        ></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="name" header={t('RESELLER.GROUP.TABLE.RESELLEGROUP')} body={resellerGroupNameBodyTemplate}></Column>
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
@@ -353,264 +376,244 @@ const ResellerGroupPage = () => {
                         ></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="status" header={t('RESELLER.GROUP.TABLE.STATUS')} body={statusBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="notes" header={t('RESELLER.GROUP.TABLE.NOTES')} body={notesBodyTemplate}></Column>
-                        <Column body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
+            </ListPage>
 
-                    <Dialog visible={resellerGroupDialog} style={{ width: '900px', padding: '5px' }} header={t('RESELLER.GROUP.DETAILS')} modal className="p-fluid" footer={resellerGroupDialogFooter} onHide={hideDialog}>
-                        <div className="card flex flex-wrap p-fluid mt-3 gap-4">
-                            <div className="flex-1 col-12 lg:col-6">
-                                <div className="field">
-                                    <label htmlFor="supplier" style={{ fontWeight: 'bold' }}>
-                                        {t('RESELLER.GROUP.LABEL.GROUPNAME')}
-                                    </label>
-                                    <InputText
-                                        id="name"
-                                        value={resellerGroup.name}
-                                        onChange={(e) =>
-                                            setResellerGroup((prev) => ({
-                                                ...prev,
-                                                name: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        className={classNames({
-                                            'p-invalid': submitted && !resellerGroup.name
-                                        })}
-                                        placeholder={t('RESELLER.GROUP.PLACEHOLDER.GROUPNAME')}
-                                    />
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="supplier" style={{ fontWeight: 'bold' }}>
-                                        {t('RESELLER.GROUP.LABEL.DISCOUNTVALUE')}
-                                    </label>
-                                    <InputText
-                                        id="discount_value"
-                                        value={resellerGroup.discount_value}
-                                        onChange={(e) =>
-                                            setResellerGroup((prev) => ({
-                                                ...prev,
-                                                discount_value: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        className={classNames({
-                                            'p-invalid': submitted && !resellerGroup.discount_value
-                                        })}
-                                        placeholder={t('RESELLER.GROUP.PLACEHOLDER.DISCOUNTVALUE')}
-                                    />
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="supplier" style={{ fontWeight: 'bold' }}>
-                                        {t('RESELLER.GROUP.LABEL.SUBRESELLERLIMIT')}
-                                    </label>
-                                    <InputText
-                                        id="sub_reseller_limit"
-                                        value={resellerGroup.sub_reseller_limit.toString()}
-                                        onChange={(e) =>
-                                            setResellerGroup((prev) => ({
-                                                ...prev,
-                                                sub_reseller_limit: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        className={classNames({
-                                            'p-invalid': submitted && !resellerGroup.sub_reseller_limit
-                                        })}
-                                        placeholder={t('RESELLER.GROUP.PLACEHOLDER.SUBRESELLERLIMIT')}
-                                    />
-                                </div>
-
-
-
-                                <div className="field">
-                                    <label htmlFor="status" style={{ fontWeight: 'bold' }}>
-                                        {t('RESELLER.GROUP.LABEL.STATUS')}
-                                    </label>
-                                    <Dropdown
-                                        id="status"
-                                        value={resellerGroup.status}
-                                        options={[
-                                            { label: 'Active', value: 'active' },
-                                            { label: 'Inactive', value: 'inactive' }
-                                        ]}
-                                        onChange={(e) =>
-                                            setResellerGroup((prev) => ({
-                                                ...prev,
-                                                status: e.value
-                                            }))
-                                        }
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        placeholder={t('RESELLER.GROUP.PLACEHOLDER.STATUS')}
-                                        className="w-full"
-                                    />
-                                </div>
-                                <div className="field">
-                                    <label htmlFor="notes" style={{ fontWeight: 'bold' }}>
-                                        {t('RESELLER.GROUP.LABEL.NOTES')}
-                                    </label>
-                                    <InputTextarea
-                                        value={resellerGroup.notes}
-                                        onChange={(e) =>
-                                            setResellerGroup((prev) => ({
-                                                ...prev,
-                                                notes: e.target.value
-                                            }))
-                                        }
-                                        rows={3}
-                                        cols={30}
-                                        placeholder={t('RESELLER.GROUP.PLACEHOLDER.NOTES')}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex-1 col-12 lg:col-6">
-                                <div className="field">
-                                    <label htmlFor="discount_type" style={{ fontWeight: 'bold' }}>
-                                        {t('RESELLER.GROUP.LABEL.DISCOUNTTYPE')}
-                                    </label>
-                                    <Dropdown
-                                        id="discount_type"
-                                        value={resellerGroup.discount_type}
-                                        options={[
-                                            { label: 'Percentage', value: 'Percentage' },
-                                            { label: 'Fixed', value: 'Fixed' }
-                                        ]}
-                                        onChange={(e) =>
-                                            setResellerGroup((prev) => ({
-                                                ...prev,
-                                                discount_type: e.value
-                                            }))
-                                        }
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        placeholder={t('RESELLER.GROUP.PLACEHOLDER.DISCOUNTTYPE')}
-                                        className="w-full"
-                                    />
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="can_create_sub_resellers" style={{ fontWeight: 'bold' }}>
-                                        {t('RESELLER.GROUP.LABEL.CANADDSUBRESELLER')}
-                                    </label>
-                                    <Dropdown
-                                        id="can_create_sub_resellers"
-                                        value={resellerGroup.can_create_sub_resellers}
-                                        options={[
-                                            { label: 'Yes', value: 1 },
-                                            { label: 'No', value: 0 }
-                                        ]}
-                                        onChange={(e) =>
-                                            setResellerGroup((prev) => ({
-                                                ...prev,
-                                                can_create_sub_resellers: e.value
-                                            }))
-                                        }
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        placeholder={t('RESELLER.GROUP.PLACEHOLDER.CANADDSUBRESELLER')}
-                                        className="w-full"
-                                    />
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="can_sub_reseller_create_subs" style={{ fontWeight: 'bold' }}>
-                                        {t('RESELLER.GROUP.LABEL.CANSUBRESELLERADDSUBS')}
-                                    </label>
-                                    <Dropdown
-                                        id="can_sub_reseller_create_subs"
-                                        value={resellerGroup.can_sub_reseller_create_subs}
-                                        options={[
-                                            { label: 'Yes', value: 1 },
-                                            { label: 'No', value: 0 }
-                                        ]}
-                                        onChange={(e) =>
-                                            setResellerGroup((prev) => ({
-                                                ...prev,
-                                                can_sub_reseller_create_subs: e.value
-                                            }))
-                                        }
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        placeholder={t('RESELLER.GROUP.PLACEHOLDER.CANSUBRESELLERADDSUBS')}
-                                        className="w-full"
-                                    />
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="afg_custom_recharge_adjust_type" style={{ fontWeight: 'bold' }}>
-                                        {t('RECHARGE_ADJUST_TYPE')}
-                                    </label>
-                                    <Dropdown
-                                        id="afg_custom_recharge_adjust_type"
-                                        value={resellerGroup.afg_custom_recharge_adjust_type}
-                                        options={[
-                                            { label: t('DECREASE'), value: 'decrease' },
-                                            { label: t('INCREASE'), value: 'increase' }
-                                        ]}
-                                        onChange={(e) =>
-                                            setResellerGroup((prev) => ({
-                                                ...prev,
-                                                afg_custom_recharge_adjust_type: e.value
-                                            }))
-                                        }
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        placeholder={t('SELECT_ADJUST_TYPE')}
-                                        className="w-full"
-                                    />
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="afg_custom_recharge_adjust_mode" style={{ fontWeight: 'bold' }}>
-                                        {t('RECHARGE_ADJUST_MODE')}
-                                    </label>
-                                    <Dropdown
-                                        id="afg_custom_recharge_adjust_mode"
-                                        value={resellerGroup.afg_custom_recharge_adjust_mode}
-                                        options={[
-                                            { label: t('PERCENTAGE'), value: 'percentage' },
-                                            { label: t('FIXED'), value: 'fixed' }
-                                        ]}
-                                        onChange={(e) =>
-                                            setResellerGroup((prev) => ({
-                                                ...prev,
-                                                afg_custom_recharge_adjust_mode: e.value
-                                            }))
-                                        }
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        placeholder={t('SELECT_ADJUST_MODE')}
-                                        className="w-full"
-                                    />
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="afg_custom_recharge_adjust_value" style={{ fontWeight: 'bold' }}>
-                                        {t('RECHARGE_ADJUST_VALUE')}
-                                    </label>
-                                    <InputText
-                                        id="afg_custom_recharge_adjust_value"
-                                        value={resellerGroup.afg_custom_recharge_adjust_value?.toString() || ''}
-                                        onChange={(e) =>
-                                            setResellerGroup((prev) => ({
-                                                ...prev,
-                                                afg_custom_recharge_adjust_value: parseFloat(e.target.value) || 0
-                                            }))
-                                        }
-                                        placeholder={t('ENTER_ADJUST_VALUE')}
-                                    />
-                                </div>
-
-
-                            </div>
-                        </div>
-                    </Dialog>
+            <FormSheet
+                open={resellerGroupDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                size="xl"
+                side="left"
+                title={t('RESELLER.GROUP.DETAILS')}
+                description={
+                    resellerGroup.id
+                        ? t('RESELLER.GROUP.FORM.EDIT_HINT', { defaultValue: 'ویرایش گروه فروشنده' })
+                        : t('RESELLER.GROUP.FORM.CREATE_HINT', { defaultValue: 'تعریف گروه فروشنده جدید' })
+                }
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveResellerGroup}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection title={t('RESELLER.GROUP.FORM.SECTION.CORE', { defaultValue: 'اطلاعات اصلی' })}>
+                    <FormField
+                        label={t('RESELLER.GROUP.LABEL.GROUPNAME')}
+                        required
+                        error={submitted && !resellerGroup.name ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="name"
+                            value={resellerGroup.name}
+                            onChange={(e) =>
+                                setResellerGroup((prev) => ({
+                                    ...prev,
+                                    name: e.target.value
+                                }))
+                            }
+                            required
+                            autoFocus
+                            className={cn('w-full', submitted && !resellerGroup.name && 'border-rose-300')}
+                            placeholder={t('RESELLER.GROUP.PLACEHOLDER.GROUPNAME')}
+                        />
+                    </FormField>
+                    <FormField label={t('RESELLER.GROUP.LABEL.DISCOUNTTYPE')}>
+                        <Select
+                            value={resellerGroup.discount_type || undefined}
+                            onValueChange={(v) =>
+                                setResellerGroup((prev) => ({
+                                    ...prev,
+                                    discount_type: v
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('RESELLER.GROUP.PLACEHOLDER.DISCOUNTTYPE')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Percentage">Percentage</SelectItem>
+                                <SelectItem value="Fixed">Fixed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField
+                        label={t('RESELLER.GROUP.LABEL.DISCOUNTVALUE')}
+                        required
+                        error={submitted && !resellerGroup.discount_value ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="discount_value"
+                            value={resellerGroup.discount_value}
+                            onChange={(e) =>
+                                setResellerGroup((prev) => ({
+                                    ...prev,
+                                    discount_value: e.target.value
+                                }))
+                            }
+                            required
+                            className={cn('w-full', submitted && !resellerGroup.discount_value && 'border-rose-300')}
+                            placeholder={t('RESELLER.GROUP.PLACEHOLDER.DISCOUNTVALUE')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('RESELLER.GROUP.LABEL.SUBRESELLERLIMIT')}
+                        required
+                        error={submitted && !resellerGroup.sub_reseller_limit ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="sub_reseller_limit"
+                            value={resellerGroup.sub_reseller_limit.toString()}
+                            onChange={(e) =>
+                                setResellerGroup((prev) => ({
+                                    ...prev,
+                                    sub_reseller_limit: e.target.value
+                                }))
+                            }
+                            required
+                            className={cn('w-full', submitted && !resellerGroup.sub_reseller_limit && 'border-rose-300')}
+                            placeholder={t('RESELLER.GROUP.PLACEHOLDER.SUBRESELLERLIMIT')}
+                        />
+                    </FormField>
+                    <FormField label={t('RESELLER.GROUP.LABEL.STATUS')}>
+                        <Select
+                            value={resellerGroup.status || undefined}
+                            onValueChange={(v) =>
+                                setResellerGroup((prev) => ({
+                                    ...prev,
+                                    status: v
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('RESELLER.GROUP.PLACEHOLDER.STATUS')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="inactive">Inactive</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField label={t('RESELLER.GROUP.LABEL.NOTES')} fullWidth>
+                        <Textarea
+                            value={resellerGroup.notes}
+                            onChange={(e) =>
+                                setResellerGroup((prev) => ({
+                                    ...prev,
+                                    notes: e.target.value
+                                }))
+                            }
+                            rows={3}
+                            placeholder={t('RESELLER.GROUP.PLACEHOLDER.NOTES')}
+                            className="w-full"
+                        />
+                    </FormField>
+                </FormSection>
+                <FormSection title={t('RESELLER.GROUP.FORM.SECTION.SUBS', { defaultValue: 'زیرفروشنده و شارژ' })}>
+                    <FormField label={t('RESELLER.GROUP.LABEL.CANADDSUBRESELLER')}>
+                        <Select
+                            value={
+                                resellerGroup.can_create_sub_resellers != null
+                                    ? String(resellerGroup.can_create_sub_resellers)
+                                    : undefined
+                            }
+                            onValueChange={(v) =>
+                                setResellerGroup((prev) => ({
+                                    ...prev,
+                                    can_create_sub_resellers: Number(v)
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('RESELLER.GROUP.PLACEHOLDER.CANADDSUBRESELLER')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="1">Yes</SelectItem>
+                                <SelectItem value="0">No</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField label={t('RESELLER.GROUP.LABEL.CANSUBRESELLERADDSUBS')}>
+                        <Select
+                            value={
+                                resellerGroup.can_sub_reseller_create_subs != null
+                                    ? String(resellerGroup.can_sub_reseller_create_subs)
+                                    : undefined
+                            }
+                            onValueChange={(v) =>
+                                setResellerGroup((prev) => ({
+                                    ...prev,
+                                    can_sub_reseller_create_subs: Number(v)
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('RESELLER.GROUP.PLACEHOLDER.CANSUBRESELLERADDSUBS')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="1">Yes</SelectItem>
+                                <SelectItem value="0">No</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField label={t('RECHARGE_ADJUST_TYPE')}>
+                        <Select
+                            value={resellerGroup.afg_custom_recharge_adjust_type || undefined}
+                            onValueChange={(v) =>
+                                setResellerGroup((prev) => ({
+                                    ...prev,
+                                    afg_custom_recharge_adjust_type: v
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('SELECT_ADJUST_TYPE')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="decrease">{t('DECREASE')}</SelectItem>
+                                <SelectItem value="increase">{t('INCREASE')}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField label={t('RECHARGE_ADJUST_MODE')}>
+                        <Select
+                            value={resellerGroup.afg_custom_recharge_adjust_mode || undefined}
+                            onValueChange={(v) =>
+                                setResellerGroup((prev) => ({
+                                    ...prev,
+                                    afg_custom_recharge_adjust_mode: v
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('SELECT_ADJUST_MODE')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="percentage">{t('PERCENTAGE')}</SelectItem>
+                                <SelectItem value="fixed">{t('FIXED')}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField label={t('RECHARGE_ADJUST_VALUE')} fullWidth>
+                        <Input
+                            id="afg_custom_recharge_adjust_value"
+                            value={resellerGroup.afg_custom_recharge_adjust_value?.toString() || ''}
+                            onChange={(e) =>
+                                setResellerGroup((prev) => ({
+                                    ...prev,
+                                    afg_custom_recharge_adjust_value: parseFloat(e.target.value) || 0
+                                }))
+                            }
+                            placeholder={t('ENTER_ADJUST_VALUE')}
+                            className="w-full"
+                        />
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
                     <Dialog visible={deleteResellerGroupDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteResellerGroupDialogFooter} onHide={hideDeleteResellerGroupDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -629,8 +632,6 @@ const ResellerGroupPage = () => {
                             {resellerGroup && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>
-                </div>
-            </div>
         </div>
     );
 };

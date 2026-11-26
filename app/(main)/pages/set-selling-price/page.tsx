@@ -1,24 +1,24 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
-import { Button } from 'primereact/button';
-import { Dropdown } from 'primereact/dropdown';
-import { InputNumber } from 'primereact/inputnumber';
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Toast } from 'primereact/toast';
-import { Card } from 'primereact/card';
-import { Divider } from 'primereact/divider';
-import { ProgressBar } from 'primereact/progressbar';
-import { Checkbox } from 'primereact/checkbox';
-import { RadioButton } from 'primereact/radiobutton';
-import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { AppDispatch } from '@/app/redux/store';
 import { useTranslation } from 'react-i18next';
+import { AppDispatch } from '@/app/redux/store';
 import withAuth from '../../authGuard';
 import { _blukbundlePriceUpdate } from '@/app/redux/actions/bundleActions';
-import { MultiSelect } from 'primereact/multiselect';
 import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { Service } from '@/types/interface';
+import { FormField, FormSection } from '@/components/admin/form-sheet';
+import { PageHeader } from '@/components/admin/page-header';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 interface BulkBundlePriceForm {
     adjustment_type: 'percentage' | 'fixed';
@@ -40,31 +40,43 @@ const BulkBundlePriceUpdatePage = () => {
     });
 
     const [submitted, setSubmitted] = useState(false);
+    const [serviceFilter, setServiceFilter] = useState('');
     const toast = useRef<Toast>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { t } = useTranslation();
 
     const { bulkUpdate } = useSelector((state: any) => state.bundleReducer);
-    const { services, loading } = useSelector((state: any) => state.serviceReducer);
+    const { services } = useSelector((state: any) => state.serviceReducer);
 
     useEffect(() => {
         dispatch(_fetchServiceList());
     }, [dispatch]);
 
-    const serviceOptions = services.map((service: Service) => ({
-            label: `${service.service_category?.category_name} - ${service.company?.company_name}`,
-            value: service.id
-        }));
-
-
     const isUpdateLoading = bulkUpdate.loading;
 
-    const handleInputChange = (field: keyof BulkBundlePriceForm, value: any) => {
-        setFormData(prev => ({
+    const handleInputChange = <K extends keyof BulkBundlePriceForm>(field: K, value: BulkBundlePriceForm[K]) => {
+        setFormData((prev) => ({
             ...prev,
             [field]: value
         }));
     };
+
+    type ServiceOption = { label: string; value: number };
+
+    const serviceOptions = useMemo<ServiceOption[]>(
+        () =>
+            (services || []).map((service: Service) => ({
+                label: `${service.service_category?.category_name} - ${service.company?.company_name}`,
+                value: service.id
+            })),
+        [services]
+    );
+
+    const filteredServiceOptions = useMemo(() => {
+        const q = serviceFilter.trim().toLowerCase();
+        if (!q) return serviceOptions;
+        return serviceOptions.filter((opt: ServiceOption) => opt.label.toLowerCase().includes(q));
+    }, [serviceFilter, serviceOptions]);
 
     const handleSubmit = async () => {
         setSubmitted(true);
@@ -105,7 +117,7 @@ const BulkBundlePriceUpdatePage = () => {
             base_price: formData.base_price,
             adjustment_direction: formData.adjustment_direction,
             confirmation: formData.confirmation,
-            service_ids:formData.service_ids
+            service_ids: formData.service_ids
         };
 
         await dispatch(_blukbundlePriceUpdate(payload, toast, t));
@@ -115,23 +127,13 @@ const BulkBundlePriceUpdatePage = () => {
         }
     };
 
-    const adjustmentTypeOptions = [
-        { label: t('PERCENTAGE'), value: 'percentage' },
-        { label: t('FIXED_AMOUNT'), value: 'fixed' }
-    ];
-
-    const basePriceOptions = [
-        { label: t('ADMIN_BUYING_PRICE'), value: 'admin_buying_price' },
-        { label: t('CURRENT_BUYING_PRICE'), value: 'buying_price' },
-        { label: t('CURRENT_SELLING_PRICE'), value: 'selling_price' }
-    ];
-
     const getCalculationDescription = () => {
-        const base = formData.base_price === 'admin_buying_price'
-            ? t('ADMIN_BUYING_PRICE')
-            : formData.base_price === 'buying_price'
-                ? t('CURRENT_BUYING_PRICE')
-                : t('CURRENT_SELLING_PRICE');
+        const base =
+            formData.base_price === 'admin_buying_price'
+                ? t('ADMIN_BUYING_PRICE')
+                : formData.base_price === 'buying_price'
+                  ? t('CURRENT_BUYING_PRICE')
+                  : t('CURRENT_SELLING_PRICE');
 
         const value = formData.adjustment_value;
         const direction = formData.adjustment_direction === 'increase' ? t('INCREASE') : t('DECREASE');
@@ -140,11 +142,10 @@ const BulkBundlePriceUpdatePage = () => {
             return direction === t('INCREASE')
                 ? t('INCREASE_BY_PERCENTAGE_FROM_BASE', { percentage: value, base })
                 : t('DECREASE_BY_PERCENTAGE_FROM_BASE', { percentage: value, base });
-        } else {
-            return direction === t('INCREASE')
-                ? t('ADD_FIXED_AMOUNT_TO_BASE', { amount: value, base })
-                : t('SUBTRACT_FIXED_AMOUNT_FROM_BASE', { amount: value, base });
         }
+        return direction === t('INCREASE')
+            ? t('ADD_FIXED_AMOUNT_TO_BASE', { amount: value, base })
+            : t('SUBTRACT_FIXED_AMOUNT_FROM_BASE', { amount: value, base });
     };
 
     const handleReset = () => {
@@ -154,262 +155,214 @@ const BulkBundlePriceUpdatePage = () => {
             adjustment_direction: 'increase',
             base_price: 'selling_price',
             confirmation: false,
-            service_ids: [],
+            service_ids: []
         });
         setSubmitted(false);
+        setServiceFilter('');
     };
 
-        
+    const toggleServiceId = (id: number, checked: boolean) => {
+        handleInputChange(
+            'service_ids',
+            checked ? [...formData.service_ids, id] : formData.service_ids.filter((sid) => sid !== id)
+        );
+    };
 
     return (
-        <div className="grid -m-5">
-            <div className="col-12">
-                <div className="card p-2 md:p-4">
-                    <Toast ref={toast} />
+        <div className="p-4 md:p-6">
+            <Toast ref={toast} />
+            <PageHeader title={t('BULK_BUNDLE_PRICE_UPDATE')} />
 
-                    <div className="flex justify-content-between align-items-center mb-3">
-                        <h3 className="m-0 text-lg md:text-xl">{t('BULK_BUNDLE_PRICE_UPDATE')}</h3>
-                    </div>
+            <Card className="mb-4">
+                <CardContent className="pt-5">
+                    <FormSection title={t('BULK_BUNDLE_PRICE_UPDATE')} description={t('BASE_PRICE_HELP_TEXT')}>
+                        <FormField label={t('BASE_PRICE_FOR_CALCULATION')} required hint={t('BASE_PRICE_HELP_TEXT')}>
+                            <Select
+                                value={formData.base_price}
+                                onValueChange={(v) =>
+                                    handleInputChange('base_price', v as BulkBundlePriceForm['base_price'])
+                                }
+                            >
+                                <SelectTrigger id="base_price">
+                                    <SelectValue placeholder={t('SELECT_BASE_PRICE')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="admin_buying_price">{t('ADMIN_BUYING_PRICE')}</SelectItem>
+                                    <SelectItem value="buying_price">{t('CURRENT_BUYING_PRICE')}</SelectItem>
+                                    <SelectItem value="selling_price">{t('CURRENT_SELLING_PRICE')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormField>
 
-                    <Divider className="my-2" />
+                        <FormField label={t('ADJUSTMENT_TYPE')} required>
+                            <Select
+                                value={formData.adjustment_type}
+                                onValueChange={(v) =>
+                                    handleInputChange('adjustment_type', v as BulkBundlePriceForm['adjustment_type'])
+                                }
+                            >
+                                <SelectTrigger id="adjustment_type">
+                                    <SelectValue placeholder={t('SELECT_ADJUSTMENT_TYPE')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="percentage">{t('PERCENTAGE')}</SelectItem>
+                                    <SelectItem value="fixed">{t('FIXED_AMOUNT')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormField>
 
-                    <Card className="shadow-1 p-2 md:p-3">
-                        <div className="p-fluid grid">
-                            {/* Base Price */}
-                            <div className="field col-12 md:col-6">
-                                <label htmlFor="base_price" className="font-semibold text-sm">
-                                    {t('BASE_PRICE_FOR_CALCULATION')} *
-                                </label>
-                                <Dropdown
-                                    id="base_price"
-                                    value={formData.base_price}
-                                    options={basePriceOptions}
-                                    onChange={(e) => handleInputChange('base_price', e.value)}
-                                    placeholder={t('SELECT_BASE_PRICE')}
-                                    className="w-full text-sm"
-                                />
-                                <small className="p-text-secondary text-xs">
-                                    {t('BASE_PRICE_HELP_TEXT')}
-                                </small>
-                            </div>
+                        <FormField
+                            label={
+                                formData.adjustment_type === 'percentage'
+                                    ? t('ADJUSTMENT_PERCENTAGE')
+                                    : t('ADJUSTMENT_AMOUNT')
+                            }
+                            required
+                            error={
+                                submitted && (!formData.adjustment_value || formData.adjustment_value <= 0)
+                                    ? t('PLEASE_ENTER_VALID_VALUE')
+                                    : null
+                            }
+                        >
+                            <NumberInput
+                                id="adjustment_value"
+                                value={formData.adjustment_value}
+                                min={0}
+                                max={formData.adjustment_type === 'percentage' ? 1000 : undefined}
+                                allowNull={false}
+                                className="w-full"
+                                onValueChange={(v) => handleInputChange('adjustment_value', v ?? 0)}
+                            />
+                        </FormField>
 
-                            {/* Adjustment Type */}
-                            <div className="field col-12 md:col-6">
-                                <label htmlFor="adjustment_type" className="font-semibold text-sm">
-                                    {t('ADJUSTMENT_TYPE')} *
-                                </label>
-                                <Dropdown
-                                    id="adjustment_type"
-                                    value={formData.adjustment_type}
-                                    options={adjustmentTypeOptions}
-                                    onChange={(e) => handleInputChange('adjustment_type', e.value)}
-                                    placeholder={t('SELECT_ADJUSTMENT_TYPE')}
-                                    className="w-full text-sm"
-                                />
-                            </div>
-
-                            
-
-                            {/* Adjustment Value */}
-                            <div className="field col-12 md:col-6 mt-2">
-                                <label htmlFor="adjustment_value" className="font-semibold text-sm">
-                                    {formData.adjustment_type === 'percentage'
-                                        ? t('ADJUSTMENT_PERCENTAGE')
-                                        : t('ADJUSTMENT_AMOUNT')} *
-                                </label>
-                                <InputNumber
-                                    id="adjustment_value"
-                                    value={formData.adjustment_value}
-                                    onValueChange={(e) => handleInputChange('adjustment_value', e.value)}
-                                    mode="decimal"
-                                    min={0}
-                                    max={formData.adjustment_type === 'percentage' ? 1000 : undefined}
-                                    suffix={formData.adjustment_type === 'percentage' ? '%' : ''}
-                                    placeholder={
-                                        formData.adjustment_type === 'percentage'
-                                            ? t('ENTER_PERCENTAGE')
-                                            : t('ENTER_AMOUNT')
-                                    }
-                                    className="w-full text-sm"
-                                    inputClassName="p-inputtext-sm"
-                                />
-                                {submitted && (!formData.adjustment_value || formData.adjustment_value <= 0) && (
-                                    <small className="text-red-500 text-xs">
-                                        {t('PLEASE_ENTER_VALID_VALUE')}
-                                    </small>
-                                )}
-                            </div>
-
-                            {/* Services Selection */}
-                            <div className="field col-12 md:col-6 mt-2">
-                                <label htmlFor="service_ids" style={{ fontWeight: 'bold' }}>
-                                    {t('SPECIFIC_SERVICES')}
-                                </label>
-                                <MultiSelect
-                                    id="service_ids"
-                                    value={formData.service_ids}
-                                    options={serviceOptions}
-                                    onChange={(e) => handleInputChange('service_ids', e.value)}
-                                    placeholder={t('SELECT_SERVICES_OPTIONAL')}
-                                    className="w-full"
-                                    display="chip"
-                                    filter
-                                    showSelectAll={false}
-                                />
-                                <small className="p-text-secondary">
-                                    {t('ALL_SERVICES_IF_EMPTY')}
-                                </small>
-                            </div>
-
-                            {/* Adjustment Direction */}
-                            <div className="field col-12 mt-2">
-                                <label className="font-semibold text-sm block mb-1">
-                                    {t('ADJUSTMENT_DIRECTION')} *
-                                </label>
-                                <div className="flex flex-wrap gap-2">
-                                    <div className="flex align-items-center">
-                                        <RadioButton
-                                            inputId="increase"
-                                            name="direction"
-                                            value="increase"
-                                            checked={formData.adjustment_direction === 'increase'}
-                                            onChange={(e) => handleInputChange('adjustment_direction', e.value)}
-                                            className="mr-1"
+                        <FormField label={t('SPECIFIC_SERVICES')} hint={t('ALL_SERVICES_IF_EMPTY')}>
+                            <Input
+                                value={serviceFilter}
+                                onChange={(e) => setServiceFilter(e.target.value)}
+                                placeholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو…' })}
+                                className="mb-2"
+                            />
+                            <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-emerald-100 p-2">
+                                {filteredServiceOptions.map((opt) => (
+                                    <label
+                                        key={opt.value}
+                                        className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-emerald-50/60"
+                                    >
+                                        <Checkbox
+                                            checked={formData.service_ids.includes(opt.value)}
+                                            onCheckedChange={(checked) =>
+                                                toggleServiceId(opt.value, Boolean(checked))
+                                            }
+                                            className="mt-0.5"
                                         />
-                                        <label htmlFor="increase" className="text-sm ml-1">
-                                            {t('INCREASE_PRICE')}
-                                        </label>
-                                    </div>
-                                    <div className="flex align-items-center">
-                                        <RadioButton
-                                            inputId="decrease"
-                                            name="direction"
-                                            value="decrease"
-                                            checked={formData.adjustment_direction === 'decrease'}
-                                            onChange={(e) => handleInputChange('adjustment_direction', e.value)}
-                                            className="mr-1"
-                                        />
-                                        <label htmlFor="decrease" className="text-sm ml-1">
-                                            {t('DECREASE_PRICE')}
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Calculation Preview */}
-                            <div className="field col-12 mt-3">
-                                <div className="p-2 border-round bg-blue-50">
-                                    <h5 className="mt-0 mb-1 text-sm font-semibold">{t('CALCULATION_PREVIEW')}</h5>
-                                    <p className="m-0 text-blue-800 text-xs">
-                                        {getCalculationDescription()}
-                                    </p>
-                                    <p className="m-0 mt-1 text-gray-600 text-xs">
-                                        {t('THIS_WILL_AFFECT_ALL_BUNDLES')}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Important Notes */}
-                            <div className="field col-12 mt-2">
-                                <div className="p-2 border-round surface-ground">
-                                    <h6 className="mt-0 mb-1 text-red-600 text-sm">
-                                        <i className="pi pi-exclamation-triangle mr-1"></i>
-                                        {t('IMPORTANT_NOTES')}
-                                    </h6>
-                                    <ul className="m-0 pl-3 text-xs">
-                                        <li>{t('BULK_UPDATE_IRREVERSIBLE')}</li>
-                                        <li>{t('ALL_BUNDLES_AFFECTED')}</li>
-                                        <li>{t('RECOMMEND_PREVIEW_FIRST')}</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            {/* Confirmation */}
-                            <div className="field col-12 mt-2">
-                                <div className="flex align-items-center">
-                                    <Checkbox
-                                        inputId="confirmation"
-                                        checked={formData.confirmation}
-                                        onChange={(e) => handleInputChange('confirmation', e.checked)}
-                                        className={submitted && !formData.confirmation ? 'p-invalid mr-1' : 'mr-1'}
-                                    />
-                                    <label htmlFor="confirmation" className="text-sm font-semibold ml-1">
-                                        {t('I_CONFIRM_BULK_PRICE_UPDATE')}
+                                        <span className="text-start">{opt.label}</span>
                                     </label>
-                                </div>
-                                {submitted && !formData.confirmation && (
-                                    <small className="text-red-500 text-xs">
-                                        {t('CONFIRMATION_REQUIRED')}
-                                    </small>
-                                )}
+                                ))}
                             </div>
+                        </FormField>
 
-                            {/* Loading */}
-                            {isUpdateLoading && (
-                                <div className="field col-12 mt-2">
-                                    <div className="flex align-items-center gap-2 p-2 border-round surface-ground">
-                                        <ProgressBar mode="indeterminate" style={{ height: '3px', flex: 1 }} />
-                                        <span className="text-xs">{t('UPDATING_PRICES')}...</span>
-                                    </div>
-                                </div>
-                            )}
+                        <FormField label={t('ADJUSTMENT_DIRECTION')} required fullWidth>
+                            <Select
+                                value={formData.adjustment_direction}
+                                onValueChange={(v) =>
+                                    handleInputChange(
+                                        'adjustment_direction',
+                                        v as BulkBundlePriceForm['adjustment_direction']
+                                    )
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="increase">{t('INCREASE_PRICE')}</SelectItem>
+                                    <SelectItem value="decrease">{t('DECREASE_PRICE')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormField>
 
-                            {/* Actions */}
-                            <div className="field col-12 flex gap-2 justify-content-end mt-3">
-                                <Button
-                                    label={t('RESET')}
-                                    icon="pi pi-times"
-                                    severity="secondary"
-                                    onClick={handleReset}
-                                    disabled={isUpdateLoading}
-                                    outlined
-                                    size="small"
-                                    className="text-xs"
-                                />
-
-                                <Button
-                                    label={isUpdateLoading ? t('UPDATING') : t('UPDATE_ALL_PRICES')}
-                                    icon={isUpdateLoading ? 'pi pi-spinner pi-spin' : 'pi pi-check'}
-                                    severity="danger"
-                                    onClick={handleSubmit}
-                                    loading={isUpdateLoading}
-                                    disabled={isUpdateLoading || !formData.confirmation}
-                                    size="small"
-                                    className="text-xs"
-                                />
+                        <FormField label={t('CALCULATION_PREVIEW')} fullWidth>
+                            <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-start">
+                                <p className="m-0 text-sm text-blue-900">{getCalculationDescription()}</p>
+                                <p className="m-0 mt-1 text-xs text-muted-foreground">{t('THIS_WILL_AFFECT_ALL_BUNDLES')}</p>
                             </div>
+                        </FormField>
+
+                        <FormField label={t('IMPORTANT_NOTES')} fullWidth>
+                            <div className="rounded-xl border border-rose-100 bg-rose-50/40 p-3 text-start text-xs text-muted-foreground">
+                                <p className="mb-2 text-sm font-semibold text-rose-700">{t('IMPORTANT_NOTES')}</p>
+                                <ul className="m-0 list-disc space-y-1 ps-4">
+                                    <li>{t('BULK_UPDATE_IRREVERSIBLE')}</li>
+                                    <li>{t('ALL_BUNDLES_AFFECTED')}</li>
+                                    <li>{t('RECOMMEND_PREVIEW_FIRST')}</li>
+                                </ul>
+                            </div>
+                        </FormField>
+
+                        <FormField
+                            label={t('I_CONFIRM_BULK_PRICE_UPDATE')}
+                            fullWidth
+                            error={submitted && !formData.confirmation ? t('CONFIRMATION_REQUIRED') : null}
+                        >
+                            <label className="flex items-center gap-2">
+                                <Checkbox
+                                    id="confirmation"
+                                    checked={formData.confirmation}
+                                    onCheckedChange={(checked) =>
+                                        handleInputChange('confirmation', Boolean(checked))
+                                    }
+                                    className={cn(submitted && !formData.confirmation && 'border-rose-400')}
+                                />
+                                <span className="text-sm font-semibold">{t('I_CONFIRM_BULK_PRICE_UPDATE')}</span>
+                            </label>
+                        </FormField>
+
+                        {isUpdateLoading ? (
+                            <div className="sm:col-span-2 flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/40 p-3">
+                                <span className="h-1 flex-1 overflow-hidden rounded-full bg-emerald-100">
+                                    <span className="block h-full w-1/3 animate-pulse rounded-full bg-emerald-500" />
+                                </span>
+                                <span className="text-xs text-muted-foreground">{t('UPDATING_PRICES')}…</span>
+                            </div>
+                        ) : null}
+
+                        <div className="flex flex-wrap items-center justify-end gap-2 sm:col-span-2">
+                            <Button type="button" variant="outline" onClick={handleReset} disabled={isUpdateLoading}>
+                                {t('RESET')}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={handleSubmit}
+                                disabled={isUpdateLoading || !formData.confirmation}
+                            >
+                                {isUpdateLoading ? t('UPDATING') : t('UPDATE_ALL_PRICES')}
+                            </Button>
                         </div>
-                    </Card>
+                    </FormSection>
+                </CardContent>
+            </Card>
 
-                    {/* Results */}
-                    {bulkUpdate.result && (
-                        <Card className="shadow-1 mt-3 border-green-200 p-2">
-                            <div className="p-2">
-                                <h5 className="mt-0 mb-2 text-green-700 text-sm">
-                                    <i className="pi pi-check-circle mr-1"></i>
-                                    {t('UPDATE_SUMMARY')}
-                                </h5>
-                                <div className="grid">
-                                    <div className="col-12 md:col-6">
-                                        <p className="m-0 text-xs">
-                                            <strong>{t('TOTAL_BUNDLES_UPDATED')}:</strong>{' '}
-                                            <span className="text-green-600">
-                                                {bulkUpdate.result.updated_bundles?.length || bulkUpdate.result.total_updated || 0}
-                                            </span>
-                                        </p>
-                                    </div>
-                                    <div className="col-12 md:col-6">
-                                        <p className="m-0 text-xs">
-                                            <strong>{t('UPDATED_AT')}:</strong>{' '}
-                                            <span>{new Date().toLocaleString()}</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </Card>
-                    )}
-                </div>
-            </div>
+            {bulkUpdate.result ? (
+                <Card className="border-green-200">
+                    <CardContent className="pt-5">
+                        <h3 className="mb-3 text-sm font-semibold text-green-700">{t('UPDATE_SUMMARY')}</h3>
+                        <div className="grid grid-cols-1 gap-3 text-xs md:grid-cols-2">
+                            <p className="m-0">
+                                <strong>{t('TOTAL_BUNDLES_UPDATED')}:</strong>{' '}
+                                <span className="text-green-600">
+                                    {bulkUpdate.result.updated_bundles?.length ||
+                                        bulkUpdate.result.total_updated ||
+                                        0}
+                                </span>
+                            </p>
+                            <p className="m-0">
+                                <strong>{t('UPDATED_AT')}:</strong> <span>{new Date().toLocaleString()}</span>
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            ) : null}
         </div>
     );
 };

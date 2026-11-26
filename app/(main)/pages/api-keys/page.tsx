@@ -12,20 +12,31 @@ import { AppDispatch } from '@/app/redux/store';
 import i18n from '@/i18n';
 import { ApiKey } from '@/types/interface';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Button } from 'primereact/button';
-import { Calendar } from 'primereact/calendar';
-import { Chip } from 'primereact/chip';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { FILTER_SHEET_BODY_CLASS } from '@/components/admin/filter-field';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { SearchSelect } from '@/components/admin/search-select';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { RowActions } from '@/components/admin/row-actions';
+import { Button as UiButton } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { cn } from '@/lib/utils';
+import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { DateField } from '@/components/ui/date-field';
+import { TagInput } from '@/components/ui/tag-input';
+import { Button as PrimeButton } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
 import { Dropdown } from 'primereact/dropdown';
-import { InputText } from 'primereact/inputtext';
-import { ProgressBar } from 'primereact/progressbar';
 import { Tag } from 'primereact/tag';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
@@ -51,25 +62,24 @@ const ApiKeysPage = () => {
     const [regenerateDialog, setRegenerateDialog] = useState(false);
     const [apiKey, setApiKey] = useState<Partial<ApiKey>>(emptyApiKey);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
     const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { apiKeys, loading, pagination } = useSelector((state: any) => state.apiKeyReducer);
     const { resellers } = useSelector((state: any) => state.resellerReducer);
     const { t } = useTranslation();
-    const [searchTag, setSearchTag] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const searchTag = useDebouncedValue(searchInput, 350);
     const [resellerSearchTerm, setResellerSearchTerm] = useState('');
-    const [filterDialogVisible, setFilterDialogVisible] = useState(false);
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
     const [filters, setFilters] = useState({
         filter_status: null as string | null,
         filter_expired: null as boolean | null,
         filter_reseller_id: null as number | null
     });
-    const [activeFilters, setActiveFilters] = useState({});
-    const filterRef = useRef<HTMLDivElement>(null);
+    const [activeFilters, setActiveFilters] = useState<Record<string, string | number | boolean>>({});
     const [showKey, setShowKey] = useState<{ [key: number]: boolean }>({});
-    const [newIp, setNewIp] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
 
     const searchParams = useSearchParams();
@@ -109,13 +119,11 @@ const ApiKeysPage = () => {
         setApiKey(emptyApiKey);
         setSubmitted(false);
         setApiKeyDialog(true);
-        setNewIp('');
     };
 
     const hideDialog = () => {
         setSubmitted(false);
         setApiKeyDialog(false);
-        setNewIp('');
         setResellerSearchTerm('');
     };
 
@@ -210,216 +218,86 @@ const ApiKeysPage = () => {
         setShowKey(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
-    const addIpAddress = () => {
-        if (!newIp) return;
-
-        const ipPattern = /^(\*|(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?)$/;
-        if (!ipPattern.test(newIp) && newIp !== '*') {
-            toast.current?.show({
-                severity: 'error',
-                summary: t('ERROR'),
-                detail: t('INVALID_IP'),
-                life: 3000
-            });
-            return;
-        }
-
-        const currentIps = apiKey.allowed_ips || [];
-        if (!currentIps.includes(newIp)) {
-            setApiKey({
-                ...apiKey,
-                allowed_ips: [...currentIps, newIp]
-            });
-            setNewIp('');
-        }
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await dispatch(_fetchApiKeys(currentPage, searchTag, activeFilters) as any);
+        setRefreshing(false);
     };
 
-    const removeIpAddress = (ipToRemove: string) => {
-        setApiKey({
-            ...apiKey,
-            allowed_ips: (apiKey.allowed_ips || []).filter(ip => ip !== ipToRemove)
-        });
-    };
-
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex flex-wrap gap-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('CREATE_API_KEY')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                    <div className="relative" ref={filterRef}>
-                        {/* <Button
-                            label={t('FILTER')}
-                            icon="pi pi-filter"
-                            className="p-button-info"
-                            onClick={() => setFilterDialogVisible(!filterDialogVisible)}
-                        /> */}
-                        {filterDialogVisible && (
-                            <div
-                                className="p-card p-fluid absolute top-full right-0 mt-2 z-10"
-                                style={{ width: '300px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-                            >
-                                <div className="p-card-body p-3">
-                                    <div className="grid">
-                                        {/* Reseller Filter */}
-                                        <div className="col-12">
-                                            <label className="text-sm">{t('RESELLER')}</label>
-                                            <Dropdown
-                                                options={resellers}
-                                                value={filters.filter_reseller_id}
-                                                onChange={(e) => setFilters({ ...filters, filter_reseller_id: e.value })}
-                                                optionLabel="reseller_name"
-                                                optionValue="id"
-                                                filter
-                                                filterBy="reseller_name"
-                                                filterPlaceholder={t('SEARCH')}
-                                                showFilterClear
-                                                placeholder={t('SELECT_RESELLER')}
-                                                className="w-full"
-                                            />
-                                        </div>
-
-                                        {/* Status Filter */}
-                                        <div className="col-12">
-                                            <label className="text-sm">{t('STATUS')}</label>
-                                            <Dropdown
-                                                options={[
-                                                    { label: t('ACTIVE'), value: 'active' },
-                                                    { label: t('INACTIVE'), value: 'inactive' }
-                                                ]}
-                                                value={filters.filter_status}
-                                                onChange={(e) => setFilters({ ...filters, filter_status: e.value })}
-                                                placeholder={t('SELECT_STATUS')}
-                                                className="w-full"
-                                            />
-                                        </div>
-
-                                        {/* Expired Filter */}
-                                        <div className="col-12">
-                                            <label className="text-sm">{t('EXPIRATION')}</label>
-                                            <Dropdown
-                                                options={[
-                                                    { label: t('EXPIRED'), value: true },
-                                                    { label: t('NOT_EXPIRED'), value: false }
-                                                ]}
-                                                value={filters.filter_expired}
-                                                onChange={(e) => setFilters({ ...filters, filter_expired: e.value })}
-                                                placeholder={t('SELECT_EXPIRATION')}
-                                                className="w-full"
-                                            />
-                                        </div>
-
-                                        {/* Action Buttons */}
-                                        <div className="col-12 flex justify-content-between gap-2 mt-3">
-                                            <Button
-                                                label={t('RESET')}
-                                                icon="pi pi-times"
-                                                className="p-button-secondary p-button-sm"
-                                                onClick={() => {
-                                                    setFilters({
-                                                        filter_status: null,
-                                                        filter_expired: null,
-                                                        filter_reseller_id: null
-                                                    });
-                                                }}
-                                            />
-                                            <Button
-                                                label={t('APPLY')}
-                                                icon="pi pi-check"
-                                                className="p-button-sm"
-                                                onClick={() => {
-                                                    handleSubmitFilter(filters);
-                                                    setFilterDialogVisible(false);
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </React.Fragment>
-        );
-    };
-
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <div className="p-input-icon-left w-full sm:w-auto">
-    //             <i className="pi pi-search" />
-    //             <InputText
-    //                 type="search"
-    //                 onInput={(e) => setSearchTag(e.currentTarget.value)}
-    //                 placeholder={t('SEARCH_API_KEYS')}
-    //                 className="w-full"
-    //             />
-    //         </div>
-    //     );
-    // };
-    const [localSearchTerm, setLocalSearchTerm] = useState('');
-
-    const leftToolbarTemplate = () => {
-
-        const handleSearch = () => {
-            setSearchTag(localSearchTerm);
-        };
-
-        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        };
-
-        return (
-            <React.Fragment>
-                <div className="flex align-items-center gap-2">
-                    <span className="p-input-icon-left">
-                        <i className="pi pi-search" />
-                        <InputText
-                            type="search"
-                            value={localSearchTerm}
-                            onChange={(e) => setLocalSearchTerm(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        />
-                    </span>
-                    <Button
-                        label={t('SEARCH')}
-                        onClick={handleSearch}
-                        className="p-button-sm"
-                    />
-                    {localSearchTerm && (
-                        <Button
-                            icon="pi pi-times"
-                            onClick={() => {
-                                setLocalSearchTerm('');
-                                setSearchTag('');
-                            }}
-                            className="p-button-sm p-button-secondary p-button-text"
-
-                        />
-                    )}
-                </div>
-            </React.Fragment>
-        );
-    };
-
-    const handleSubmitFilter = (filters: any) => {
+    const handleSubmitFilter = (nextFilters: typeof filters) => {
         const cleanedFilters: any = {};
-        if (filters.filter_status) cleanedFilters.status = filters.filter_status;
-        if (filters.filter_expired !== null && filters.filter_expired !== undefined) {
-            cleanedFilters.expired = filters.filter_expired;
+        if (nextFilters.filter_status) cleanedFilters.status = nextFilters.filter_status;
+        if (nextFilters.filter_expired !== null && nextFilters.filter_expired !== undefined) {
+            cleanedFilters.expired = nextFilters.filter_expired;
         }
-        if (filters.filter_reseller_id) cleanedFilters.reseller_id = filters.filter_reseller_id;
+        if (nextFilters.filter_reseller_id) cleanedFilters.reseller_id = nextFilters.filter_reseller_id;
         setActiveFilters(cleanedFilters);
         setCurrentPage(1);
     };
+
+    const filterChips = useMemo(() => {
+        const chips: { key: string; label: string }[] = [];
+        if (activeFilters.status) {
+            chips.push({
+                key: 'status',
+                label: `${t('STATUS')}: ${activeFilters.status === 'active' ? t('ACTIVE') : t('INACTIVE')}`
+            });
+        }
+        if (activeFilters.expired !== undefined && activeFilters.expired !== null) {
+            chips.push({
+                key: 'expired',
+                label: `${t('EXPIRATION')}: ${activeFilters.expired ? t('EXPIRED') : t('NOT_EXPIRED')}`
+            });
+        }
+        if (activeFilters.reseller_id) {
+            const reseller = resellers.find((r: { id: number }) => r.id === activeFilters.reseller_id);
+            chips.push({
+                key: 'reseller_id',
+                label: `${t('RESELLER')}: ${reseller?.reseller_name || activeFilters.reseller_id}`
+            });
+        }
+        return chips;
+    }, [activeFilters, resellers, t]);
+
+    const removeFilterChip = (key: string) => {
+        const nextActive = { ...activeFilters };
+        delete nextActive[key];
+        setActiveFilters(nextActive);
+        if (key === 'status') setFilters((f) => ({ ...f, filter_status: null }));
+        if (key === 'expired') setFilters((f) => ({ ...f, filter_expired: null }));
+        if (key === 'reseller_id') setFilters((f) => ({ ...f, filter_reseller_id: null }));
+        setCurrentPage(1);
+    };
+
+    const clearAllFilters = () => {
+        setActiveFilters({});
+        setFilters({
+            filter_status: null,
+            filter_expired: null,
+            filter_reseller_id: null
+        });
+        setCurrentPage(1);
+    };
+
+    const apiKeyRowActions = (rowData: ApiKey) => [
+        {
+            label: t('EDIT'),
+            icon: <Pencil className="h-4 w-4" />,
+            onClick: () => editApiKey(rowData)
+        },
+        {
+            label: t('REGENERATE'),
+            icon: <RefreshCw className="h-4 w-4" />,
+            onClick: () => confirmRegenerateApiKey(rowData)
+        },
+        {
+            label: t('DELETE'),
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => confirmDeleteApiKey(rowData),
+            danger: true,
+            separatorBefore: true
+        }
+    ];
 
     const resellerBodyTemplate = (rowData: ApiKey) => {
         return (
@@ -454,7 +332,7 @@ const ApiKeysPage = () => {
                         {showKey[rowData.id] ? rowData.key : maskedKey}
                     </code>
                     <div className="flex gap-1">
-                        <Button
+                        <PrimeButton
                             icon={showKey[rowData.id] ? "pi pi-eye-slash" : "pi pi-eye"}
                             rounded
                             text
@@ -463,7 +341,7 @@ const ApiKeysPage = () => {
                             tooltip={showKey[rowData.id] ? t('HIDE_KEY') : t('SHOW_KEY')}
                             className="p-button-sm"
                         />
-                        <Button
+                        <PrimeButton
                             icon="pi pi-copy"
                             rounded
                             text
@@ -511,10 +389,14 @@ const ApiKeysPage = () => {
                 <span className="p-column-title">{t('ALLOWED_IPS')}</span>
                 <div className="flex flex-wrap gap-1">
                     {displayIps.map((ip, index) => (
-                        <Chip key={index} label={ip} className="text-xs" />
+                        <Badge key={index} variant="secondary" className="text-[10px] font-normal">
+                            {ip}
+                        </Badge>
                     ))}
                     {remainingCount > 0 && (
-                        <Chip label={`+${remainingCount}`} className="text-xs" />
+                        <Badge variant="outline" className="text-[10px] font-normal">
+                            +{remainingCount}
+                        </Badge>
                     )}
                     {ips.length === 0 && (
                         <span className="text-gray-400 text-sm">*</span>
@@ -606,87 +488,65 @@ const ApiKeysPage = () => {
         );
     };
 
-    const actionBodyTemplate = (rowData: ApiKey) => {
-        return (
-            <div className="flex gap-1">
-                <Button
-                    icon="pi pi-pencil"
-                    rounded
-                    severity="info"
-                    className="p-button-sm"
-                    onClick={() => editApiKey(rowData)}
-                    tooltip={t('EDIT')}
-                    tooltipOptions={{ position: 'top' }}
-                />
-                <Button
-                    icon="pi pi-refresh"
-                    rounded
-                    severity="warning"
-                    className="p-button-sm"
-                    onClick={() => confirmRegenerateApiKey(rowData)}
-                    tooltip={t('REGENERATE')}
-                    tooltipOptions={{ position: 'top' }}
-                />
-                <Button
-                    icon="pi pi-trash"
-                    rounded
-                    severity="danger"
-                    className="p-button-sm"
-                    onClick={() => confirmDeleteApiKey(rowData)}
-                    tooltip={t('DELETE')}
-                    tooltipOptions={{ position: 'top' }}
-                />
-            </div>
-        );
-    };
+    const actionBodyTemplate = (rowData: ApiKey) => <RowActions items={apiKeyRowActions(rowData)} />;
 
     const onPageChange = (event: any) => {
         const page = event.page + 1;
         setCurrentPage(page);
     };
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            if (target.closest('.p-dropdown-panel')) return;
-            if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
-                setFilterDialogVisible(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [filterDialogVisible]);
-
-    const apiKeyDialogFooter = (
-        <>
-            <Button label={t('CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('SAVE')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveApiKey} />
-        </>
-    );
-
     const deleteApiKeyDialogFooter = (
         <>
-            <Button label={t('CANCEL')} icon="pi pi-times" severity="secondary" onClick={hideDeleteApiKeyDialog} />
-            <Button label={t('DELETE')} icon="pi pi-trash" severity="danger" onClick={deleteApiKey} />
+            <PrimeButton label={t('CANCEL')} icon="pi pi-times" severity="secondary" onClick={hideDeleteApiKeyDialog} />
+            <PrimeButton label={t('DELETE')} icon="pi pi-trash" severity="danger" onClick={deleteApiKey} />
         </>
     );
 
     const regenerateDialogFooter = (
         <>
-            <Button label={t('CANCEL')} icon="pi pi-times" severity="secondary" onClick={() => setRegenerateDialog(false)} />
-            <Button label={t('REGENERATE')} icon="pi pi-refresh" severity="warning" onClick={regenerateApiKey} />
+            <PrimeButton label={t('CANCEL')} icon="pi pi-times" severity="secondary" onClick={() => setRegenerateDialog(false)} />
+            <PrimeButton label={t('REGENERATE')} icon="pi pi-refresh" severity="warning" onClick={regenerateApiKey} />
         </>
     );
 
     return (
-        <div className="grid -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
+        <div className="space-y-4">
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.API_KEYS', { defaultValue: 'کلیدهای API' })}
+                description="مدیریت کلیدهای دسترسی نمایندگان"
+                loading={loading}
+                actions={
+                    <div className="flex flex-wrap items-center gap-2">
+                        <UiButton variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-4 w-4', (refreshing || loading) && 'animate-spin')} />
+                            {t('REFRESH', { defaultValue: 'بروزرسانی' })}
+                        </UiButton>
+                        <UiButton size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={openNew}>
+                            <Plus className="h-4 w-4" />
+                            {t('CREATE_API_KEY')}
+                        </UiButton>
+                    </div>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('SEARCH_API_KEYS', { defaultValue: 'جستجو در کلیدهای API...' })}
+                        chips={filterChips}
+                        onRemoveChip={removeFilterChip}
+                        onClearAll={clearAllFilters}
+                        onOpenFilters={() => setFilterOpen(true)}
+                    />
+                }
+                footer={
+                    pagination?.total ? (
+                        <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
+                            {t('TOTAL', { defaultValue: 'مجموع' })}: {pagination.total}
+                        </div>
+                    ) : null
+                }
+            >
                     <DataTable
                         ref={dt}
                         value={apiKeys}
@@ -706,7 +566,6 @@ const ApiKeysPage = () => {
                         emptyMessage={t('NO_API_KEYS')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
                         style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        globalFilter={globalFilter}
                         responsiveLayout="scroll"
                         totalRecords={pagination?.total}
                         lazy
@@ -765,133 +624,172 @@ const ApiKeysPage = () => {
                             sortable
                         ></Column>
                         <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            style={{ ...customCellStyle, textAlign: 'start' }}
                             body={actionBodyTemplate}
-                            headerStyle={{ minWidth: '8rem' }}
-                            header={t('COMMON.ACTIONS')}
+                            headerStyle={{ minWidth: '4.5rem' }}
+                            header={t('TABLE.GENERAL.ACTIONS', { defaultValue: 'عملیات' })}
                         ></Column>
                     </DataTable>
+            </ListPage>
 
-                    {/* Create/Edit API Key Dialog */}
-                    <Dialog
-                        visible={apiKeyDialog}
-                        style={{ width: '700px', padding: '5px' }}
-                        header={apiKey.id ? t('EDIT_API_KEY') : t('CREATE_API_KEY')}
-                        modal
-                        className="p-fluid"
-                        footer={apiKeyDialogFooter}
-                        onHide={hideDialog}
-                    >
-                        <div className="card" style={{ padding: '20px' }}>
-                            {/* Reseller Selection */}
-                            <div className="field mb-4">
-                                <label htmlFor="reseller" style={{ fontWeight: 'bold' }}>
-                                    {t('RESELLER')} *
-                                </label>
-                                <Dropdown
-                                    id="reseller"
-                                    value={apiKey.reseller}
-                                    options={resellers}
-                                    onChange={(e) => setApiKey({ ...apiKey, reseller: e.value })}
-                                    optionLabel="reseller_name"
-                                    filter
-                                    filterBy="reseller_name"
-                                    filterPlaceholder={t('SEARCH')}
-                                    showFilterClear
-                                    placeholder={t('SELECT_RESELLER')}
-                                    className={classNames('w-full', { 'p-invalid': submitted && !apiKey.reseller })}
-                                    onFilter={(e) => setResellerSearchTerm(e.filter)}
-                                />
-                                {submitted && !apiKey.reseller && (
-                                    <small className="p-error">{t('REQUIRED')}</small>
-                                )}
-                            </div>
-
-                            {/* API Key Name */}
-                            <div className="field mb-4">
-                                <label htmlFor="name" style={{ fontWeight: 'bold' }}>
-                                    {t('API_KEY_NAME')} *
-                                </label>
-                                <InputText
-                                    id="name"
-                                    value={apiKey.name}
-                                    onChange={(e) => setApiKey({ ...apiKey, name: e.target.value })}
-                                    placeholder={t('ENTER_API_KEY_NAME')}
-                                    className={classNames('w-full', { 'p-invalid': submitted && !apiKey.name })}
-                                />
-                                {submitted && !apiKey.name && (
-                                    <small className="p-error">{t('REQUIRED')}</small>
-                                )}
-                            </div>
-
-                            {/* Rate Limit */}
-                            <div className="field mb-4">
-                                <label htmlFor="rate_limit" style={{ fontWeight: 'bold' }}>
-                                    {t('RATE_LIMIT')}
-                                </label>
-                                <InputText
-                                    id="rate_limit"
-                                    type="number"
-                                    value={apiKey.rate_limit?.toString()}
-                                    onChange={(e) => setApiKey({ ...apiKey, rate_limit: parseInt(e.target.value) || 1000 })}
-                                    placeholder="1000"
-                                    className="w-full"
-                                />
-                                <small className="text-gray-400">{t('RATE_LIMIT_HELP')}</small>
-                            </div>
-
-                            {/* Expiration Date */}
-                            <div className="field mb-4">
-                                <label htmlFor="expires_at" style={{ fontWeight: 'bold' }}>
-                                    {t('EXPIRES_AT')}
-                                </label>
-                                <Calendar
-                                    id="expires_at"
-                                    value={apiKey.expires_at ? new Date(apiKey.expires_at) : null}
-                                    onChange={(e) => setApiKey({ ...apiKey, expires_at: e.value?.toISOString() || '' })}
-                                    showIcon
-                                    dateFormat="yy-mm-dd"
-                                    placeholder={t('SELECT_EXPIRATION_DATE')}
-                                    className="w-full"
-                                />
-                                <small className="text-gray-400">{t('EXPIRES_AT_HELP')}</small>
-                            </div>
-
-                            {/* Allowed IPs */}
-                            <div className="field mb-4">
-                                <label htmlFor="allowed_ips" style={{ fontWeight: 'bold' }}>
-                                    {t('ALLOWED_IPS')}
-                                </label>
-                                <div className="flex flex-wrap gap-2 mb-2">
-                                    <InputText
-                                        id="allowed_ips"
-                                        value={newIp}
-                                        onChange={(e) => setNewIp(e.target.value)}
-                                        placeholder={t('IP_ADDRESS_PLACEHOLDER')}
-                                        className="flex-1"
-                                        onKeyPress={(e) => e.key === 'Enter' && addIpAddress()}
-                                    />
-                                    <Button icon="pi pi-plus" severity="info" onClick={addIpAddress} tooltip={t('ADD_IP')} />
-                                </div>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                    {(apiKey.allowed_ips || []).map((ip, index) => (
-                                        <Chip key={index} label={ip} removable onRemove={() => removeIpAddress(ip)} />
-                                    ))}
-                                </div>
-                                <small className="text-gray-400">{t('ALLOWED_IPS_HELP')}</small>
-                            </div>
-
-                            {/* Warning for new API keys */}
-                            {!apiKey.id && (
-                                <div className="bg-yellow-50 border-round p-3 mt-3">
-                                    <div className="flex gap-2 align-items-center">
-                                        <i className="pi pi-exclamation-triangle text-yellow-600"></i>
-                                        <span className="text-sm text-yellow-700">{t('WARNING_KEY_SHOWN')}</span>
-                                    </div>
-                                </div>
-                            )}
+            <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                <SheetContent side={isRTL() ? 'right' : 'left'} className="w-full sm:max-w-md">
+                    <SheetHeader>
+                        <SheetTitle>{t('FILTER', { defaultValue: 'فیلتر' })}</SheetTitle>
+                        <SheetDescription>فیلترها روی نتایج سرور اعمال می‌شوند.</SheetDescription>
+                    </SheetHeader>
+                    <div className={FILTER_SHEET_BODY_CLASS}>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">{t('RESELLER')}</label>
+                            <Dropdown
+                                options={resellers}
+                                value={filters.filter_reseller_id}
+                                onChange={(e) => setFilters({ ...filters, filter_reseller_id: e.value })}
+                                optionLabel="reseller_name"
+                                optionValue="id"
+                                filter
+                                filterBy="reseller_name"
+                                filterPlaceholder={t('SEARCH')}
+                                showFilterClear
+                                placeholder={t('SELECT_RESELLER')}
+                                className="w-full"
+                            />
                         </div>
-                    </Dialog>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">{t('STATUS')}</label>
+                            <Dropdown
+                                options={[
+                                    { label: t('ACTIVE'), value: 'active' },
+                                    { label: t('INACTIVE'), value: 'inactive' }
+                                ]}
+                                value={filters.filter_status}
+                                onChange={(e) => setFilters({ ...filters, filter_status: e.value })}
+                                placeholder={t('SELECT_STATUS')}
+                                className="w-full"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">{t('EXPIRATION')}</label>
+                            <Dropdown
+                                options={[
+                                    { label: t('EXPIRED'), value: true },
+                                    { label: t('NOT_EXPIRED'), value: false }
+                                ]}
+                                value={filters.filter_expired}
+                                onChange={(e) => setFilters({ ...filters, filter_expired: e.value })}
+                                placeholder={t('SELECT_EXPIRATION')}
+                                className="w-full"
+                            />
+                        </div>
+                        <div className="flex flex-wrap gap-2 pt-2">
+                            <UiButton
+                                type="button"
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() =>
+                                    setFilters({
+                                        filter_status: null,
+                                        filter_expired: null,
+                                        filter_reseller_id: null
+                                    })
+                                }
+                            >
+                                {t('RESET')}
+                            </UiButton>
+                            <UiButton
+                                type="button"
+                                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                                onClick={() => {
+                                    handleSubmitFilter(filters);
+                                    setFilterOpen(false);
+                                }}
+                            >
+                                {t('APPLY')}
+                            </UiButton>
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            <FormSheet
+                open={apiKeyDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                size="xl"
+                side="left"
+                title={apiKey.id ? t('EDIT_API_KEY') : t('CREATE_API_KEY')}
+                description={t('API_KEY.FORM.SHEET_HINT', { defaultValue: 'اطلاعات کلید API را تکمیل کنید.' })}
+                footer={
+                    <FormActions onCancel={hideDialog} onSubmit={saveApiKey} cancelLabel={t('CANCEL')} submitLabel={t('SAVE')} />
+                }
+            >
+                <FormSection title={t('API_KEY.FORM.SECTION.MAIN', { defaultValue: 'اطلاعات اصلی' })}>
+                    <FormField label={t('RESELLER')} required error={submitted && !apiKey.reseller ? t('REQUIRED') : null} fullWidth>
+                        <SearchSelect
+                            value={apiKey.reseller}
+                            options={resellers || []}
+                            onChange={(selected) => setApiKey({ ...apiKey, reseller: selected })}
+                            optionLabel="reseller_name"
+                            searchPlaceholder={t('SEARCH')}
+                            placeholder={t('SELECT_RESELLER')}
+                            error={submitted && !apiKey.reseller}
+                            returnFullObject
+                            onSearch={(term) => setResellerSearchTerm(term)}
+                        />
+                    </FormField>
+                    <FormField label={t('API_KEY_NAME')} required error={submitted && !apiKey.name ? t('REQUIRED') : null}>
+                        <Input
+                            id="name"
+                            value={apiKey.name}
+                            onChange={(e) => setApiKey({ ...apiKey, name: e.target.value })}
+                            placeholder={t('ENTER_API_KEY_NAME')}
+                            className={classNames('w-full', { 'p-invalid': submitted && !apiKey.name })}
+                        />
+                    </FormField>
+                    <FormField label={t('RATE_LIMIT')} hint={t('RATE_LIMIT_HELP')}>
+                        <Input
+                            id="rate_limit"
+                            type="number"
+                            value={apiKey.rate_limit?.toString()}
+                            onChange={(e) => setApiKey({ ...apiKey, rate_limit: parseInt(e.target.value) || 1000 })}
+                            placeholder="1000"
+                            className="w-full"
+                        />
+                    </FormField>
+                    <FormField label={t('EXPIRES_AT')} hint={t('EXPIRES_AT_HELP')}>
+                        <DateField
+                            id="expires_at"
+                            value={apiKey.expires_at ? apiKey.expires_at.slice(0, 10) : ''}
+                            onValueChange={(v) =>
+                                setApiKey({
+                                    ...apiKey,
+                                    expires_at: v ? new Date(`${v}T00:00:00`).toISOString() : ''
+                                })
+                            }
+                            className="w-full"
+                        />
+                    </FormField>
+                </FormSection>
+                <FormSection title={t('API_KEY.FORM.SECTION.ACCESS', { defaultValue: 'دسترسی IP' })}>
+                    <FormField label={t('ALLOWED_IPS')} fullWidth hint={t('ALLOWED_IPS_HELP')}>
+                        <TagInput
+                            value={apiKey.allowed_ips || []}
+                            onChange={(ips) => setApiKey({ ...apiKey, allowed_ips: ips })}
+                            placeholder={t('IP_ADDRESS_PLACEHOLDER')}
+                            addLabel={t('ADD_IP')}
+                        />
+                    </FormField>
+                </FormSection>
+                {!apiKey.id && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                        <div className="flex items-center gap-2">
+                            <i className="pi pi-exclamation-triangle text-amber-600" />
+                            <span>{t('WARNING_KEY_SHOWN')}</span>
+                        </div>
+                    </div>
+                )}
+            </FormSheet>
 
                     {/* Delete Confirmation Dialog */}
                     <Dialog
@@ -922,8 +820,6 @@ const ApiKeysPage = () => {
                             <span>{t('API_KEY_REGENERATE_CONFIRM')}</span>
                         </div>
                     </Dialog>
-                </div>
-            </div>
         </div>
     );
 };

@@ -9,7 +9,7 @@ import {
 } from '../constants/authConstants'
 import { Toast } from "primereact/toast";
 
-export const _login = (username: string, password: string,toast: React.RefObject<Toast>) => async (dispatch: Dispatch) => {
+export const _login = (username: string, password: string, _toast?: React.RefObject<Toast> | null) => async (dispatch: Dispatch) => {
     dispatch({ type: LOGIN_REQUEST });
 
     try {

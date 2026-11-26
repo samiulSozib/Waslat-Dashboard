@@ -1,26 +1,28 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
-import { Button } from 'primereact/button';
+import { Button as PrimeButton } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { FileUpload } from 'primereact/fileupload';
-import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { RowActions } from '@/components/admin/row-actions';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
 import { _fetchCountries } from '@/app/redux/actions/countriesActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import {PaymentType } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
-import { InputTextarea } from 'primereact/inputtextarea';
 import { customCellStyleImage } from '../../utilities/customRow';
 import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
@@ -130,17 +132,6 @@ const PaymentTypePage = () => {
 
 
 
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }} label={t('CREATE_PAYMENT_TYPE')} icon="pi pi-plus" severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"} onClick={openNew} />
-                    {/* <Button style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }} label={t("APP.GENERAL.DELETE")} icon="pi pi-trash" severity="danger" onClick={confirmDeleteSelected} disabled={!selectedCompanies || !(selectedCompanies as any).length} /> */}
-                </div>
-            </React.Fragment>
-        );
-    };
-
     // const leftToolbarTemplate = () => {
     //     return (
     //         <div className="flex items-center">
@@ -180,14 +171,24 @@ const PaymentTypePage = () => {
 
 
 
-    const actionBodyTemplate = (rowData: PaymentType) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"}  onClick={()=>editType(rowData)}/>
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteType(rowData)} />
-            </>
-        );
-    };
+    const actionBodyTemplate = (rowData: PaymentType) => (
+        <RowActions
+            items={[
+                {
+                    label: t('TABLE.GENERAL.EDIT'),
+                    icon: <Pencil className="h-4 w-4" />,
+                    onClick: () => editType(rowData)
+                },
+                {
+                    label: t('TABLE.GENERAL.DELETE'),
+                    icon: <Trash2 className="h-4 w-4" />,
+                    danger: true,
+                    separatorBefore: true,
+                    onClick: () => confirmDeleteType(rowData)
+                }
+            ]}
+        />
+    );
 
     // const header = (
     //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
@@ -199,22 +200,16 @@ const PaymentTypePage = () => {
     //     </div>
     // );
 
-    const methodDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''} onClick={saveType} />
-        </>
-    );
     const deleteTypeDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteTypeDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''} onClick={deleteType} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteTypeDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''} onClick={deleteType} />
         </>
     );
     const deleteTypesDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteTypesDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''}  />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteTypesDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''}  />
         </>
     );
 
@@ -222,97 +217,122 @@ const PaymentTypePage = () => {
 
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4"  right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={payment_types}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedCompanies(e.value as any)}
-                        dataKey="id"
-                        paginator
-                        rows={10}
-                        rowsPerPageOptions={[5, 10, 25]}
-                        className="datatable-responsive"
-                       paginatorTemplate={
-                            isRTL()
+        <>
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.PAYMENTTYPE', { defaultValue: 'انواع پرداخت' })}
+                description="مدیریت و تعریف انواع پرداخت"
+                loading={loading}
+                actions={
+                    <Button type="button" size="sm" onClick={openNew}>
+                        <Plus className="h-4 w-4" />
+                        {t('CREATE_PAYMENT_TYPE')}
+                    </Button>
+                }
+                toolbar={
+                    <FilterBar
+                        search={globalFilter}
+                        onSearchChange={setGlobalFilter}
+                        searchPlaceholder={t('TABLE.GENERAL.SEARCH', { defaultValue: 'جستجو...' })}
+                    />
+                }
+            >
+                <DataTable
+                    ref={dt}
+                    value={payment_types}
+                    selection={selectedCompanies}
+                    onSelectionChange={(e) => setSelectedCompanies(e.value as any)}
+                    dataKey="id"
+                    paginator
+                    rows={10}
+                    rowsPerPageOptions={[5, 10, 25]}
+                    size="small"
+                    className="datatable-responsive p-datatable-sm"
+                    paginatorTemplate={
+                        isRTL()
                             ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink'
                             : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                            ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`  // localized RTL string
-                            : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        globalFilter={globalFilter}
-                        // header={header}
-                        responsiveLayout="scroll"
+                    }
+                    currentPageReportTemplate={t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}
+                    emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
+                    dir={isRTL() ? 'rtl' : 'ltr'}
+                    style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                    globalFilter={globalFilter}
+                    responsiveLayout="scroll"
+                >
+                    <Column
+                        header={t('TABLE.GENERAL.ACTION')}
+                        body={actionBodyTemplate}
+                        headerStyle={{ width: '4.5rem' }}
+                        style={{ ...customCellStyleImage, textAlign: 'start' }}
+                    />
+                    <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="name" header={t('NAME')}  body={nameBodyTemplate}></Column>
+                    <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="Account Details" header={t('DESCRIPTION')} body={descriptionBodyTemplate} ></Column>
+                </DataTable>
+            </ListPage>
+
+            <FormSheet
+                open={methodDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                title={t('PAYMENT.TYPE.DETAILS')}
+                description={paymentType.id ? 'ویرایش نوع پرداخت' : 'ثبت نوع پرداخت جدید'}
+                size="xl"
+                side="left"
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveType}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection title={t('PAYMENT.TYPE.DETAILS')} description="نام و توضیحات نوع پرداخت">
+                    <FormField
+                        label={t('NAME')}
+                        required
+                        error={submitted && !paymentType.name ? t('THIS_FIELD_IS_REQUIRED') : null}
                     >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="name" header={t('NAME')}  body={nameBodyTemplate}></Column>
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="Account Details" header={t('DESCRIPTION')} body={descriptionBodyTemplate} ></Column>
-                        <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
-                    </DataTable>
-
-                    <Dialog visible={methodDialog}  style={{ width: '700px',padding:'5px' }} header={t('PAYMENT.TYPE.DETAILS')} modal className="p-fluid" footer={methodDialogFooter} onHide={hideDialog}>
-                        <div className='card' style={{padding:'40px'}}>
-
-
-                            <div className="field">
-                                <label htmlFor="name" style={{fontWeight:'bold'}}>{t('NAME')}</label>
-                                <InputText
-                                    id="name"
-                                    value={paymentType?.name}
-                                    onChange={(e) =>
-                                        setPaymentType((prev) => ({
-                                            ...prev,
-                                            name: e.target.value,
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('PAYMENT_TYPE.PLACEHOLDER.NAME')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !paymentType.name
-                                    })}
-                                />
-                                {submitted && !paymentType.name && <small className="p-invalid" style={{ color: 'red' }}>{t('THIS_FIELD_IS_REQUIRED')}</small>}
-                            </div>
-
-
-
-
-                            <div className="field">
-                                <label htmlFor="account_details" style={{fontWeight:'bold'}}>{t('PAYMENTMETHOD.FORM.INPUT.ACCOUNTDETAILS')}</label>
-                                <InputTextarea
-                                    id="description"
-                                    value={paymentType.description || ''}
-                                    onChange={(e) =>
-                                        setPaymentType((prev) => ({
-                                            ...prev,
-                                            description: e.target.value,
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('PAYMENT_TYPE.PLACEHOLDER.DESCRIPTION')}
-                                    className="w-full p-2 border rounded"
-                                    rows={4} // Adjust the number of visible rows as needed
-                                />
-                                {submitted && !paymentType.description && <small className="p-invalid" style={{ color: 'red' }}>{t('THIS_FIELD_IS_REQUIRED')}</small>}
-
-                            </div>
-                        </div>
-
-                    </Dialog>
+                        <Input
+                            id="name"
+                            value={paymentType?.name}
+                            onChange={(e) =>
+                                setPaymentType((prev) => ({
+                                    ...prev,
+                                    name: e.target.value
+                                }))
+                            }
+                            required
+                            autoFocus
+                            placeholder={t('PAYMENT_TYPE.PLACEHOLDER.NAME')}
+                            className={cn('w-full', submitted && !paymentType.name && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('PAYMENTMETHOD.FORM.INPUT.ACCOUNTDETAILS')}
+                        required
+                        fullWidth
+                        error={submitted && !paymentType.description ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Textarea
+                            id="description"
+                            value={paymentType.description || ''}
+                            onChange={(e) =>
+                                setPaymentType((prev) => ({
+                                    ...prev,
+                                    description: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('PAYMENT_TYPE.PLACEHOLDER.DESCRIPTION')}
+                            className={cn('w-full', submitted && !paymentType.description && 'border-rose-300')}
+                            rows={4}
+                        />
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
                     <Dialog visible={deleteTypeDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteTypeDialogFooter} onHide={hideDeleteTypeDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -331,9 +351,7 @@ const PaymentTypePage = () => {
                             {paymentType && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>
-                </div>
-            </div>
-        </div>
+        </>
     );
 };
 

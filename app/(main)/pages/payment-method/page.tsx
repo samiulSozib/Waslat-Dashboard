@@ -4,17 +4,22 @@ import { _addPaymentMethod, _deletePaymentMethod, _editPaymentMethod, _fetchPaym
 import { AppDispatch } from '@/app/redux/store';
 import i18n from '@/i18n';
 import { PaymentMethod } from '@/types/interface';
-import { Button } from 'primereact/button';
+import { Button as PrimeButton } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { FileUpload } from 'primereact/fileupload';
-import { InputText } from 'primereact/inputtext';
-import { InputTextarea } from 'primereact/inputtextarea';
-import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { RowActions } from '@/components/admin/row-actions';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { FileDrop } from '@/components/ui/file-drop';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -187,23 +192,6 @@ const PaymentMethodPage = () => {
         setDeleteMethodsDialog(true);
     };
 
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('PAYMENTMETHOD.TABLE.CREATEPAYMENTMETHOD')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"}
-                        onClick={openNew}
-                    />
-                </div>
-            </React.Fragment>
-        );
-    };
-
     // Method Type Body Template for Table
     const methodTypeBodyTemplate = (rowData: PaymentMethod) => {
         const type = rowData.method_type;
@@ -324,70 +312,89 @@ const PaymentMethodPage = () => {
         );
     };
 
-    const actionBodyTemplate = (rowData: PaymentMethod) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"} onClick={() => editMethod(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteMethod(rowData)} />
-            </>
-        );
-    };
-
-    const methodDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveMethod} />
-        </>
+    const actionBodyTemplate = (rowData: PaymentMethod) => (
+        <RowActions
+            items={[
+                {
+                    label: t('TABLE.GENERAL.EDIT'),
+                    icon: <Pencil className="h-4 w-4" />,
+                    onClick: () => editMethod(rowData)
+                },
+                {
+                    label: t('TABLE.GENERAL.DELETE'),
+                    icon: <Trash2 className="h-4 w-4" />,
+                    danger: true,
+                    separatorBefore: true,
+                    onClick: () => confirmDeleteMethod(rowData)
+                }
+            ]}
+        />
     );
 
     const deleteMethodDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteMethodDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteMethod} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteMethodDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteMethod} />
         </>
     );
 
     const deleteMethodsDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteMethodsDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteMethodsDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
         </>
     );
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={paymentMethods}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedCompanies(e.value as any)}
-                        dataKey="id"
-                        paginator
-                        rows={10}
-                        rowsPerPageOptions={[5, 10, 25]}
-                        className="datatable-responsive"
-                        paginatorTemplate={
-                            isRTL()
-                                ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink'
-                                : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        globalFilter={globalFilter}
-                        responsiveLayout="scroll"
-                    >
+        <>
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.PAYMENTMETHOD', { defaultValue: 'روش پرداخت' })}
+                description="مدیریت روش‌ها و حساب‌های پرداخت"
+                loading={loading}
+                actions={
+                    <Button type="button" size="sm" onClick={openNew}>
+                        <Plus className="h-4 w-4" />
+                        {t('PAYMENTMETHOD.TABLE.CREATEPAYMENTMETHOD')}
+                    </Button>
+                }
+                toolbar={
+                    <FilterBar
+                        search={globalFilter}
+                        onSearchChange={setGlobalFilter}
+                        searchPlaceholder={t('TABLE.GENERAL.SEARCH', { defaultValue: 'جستجو...' })}
+                    />
+                }
+            >
+                <DataTable
+                    ref={dt}
+                    value={paymentMethods}
+                    selection={selectedCompanies}
+                    onSelectionChange={(e) => setSelectedCompanies(e.value as any)}
+                    dataKey="id"
+                    paginator
+                    rows={10}
+                    rowsPerPageOptions={[5, 10, 25]}
+                    size="small"
+                    className="datatable-responsive p-datatable-sm"
+                    paginatorTemplate={
+                        isRTL()
+                            ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink'
+                            : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                    }
+                    currentPageReportTemplate={t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}
+                    emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
+                    dir={isRTL() ? 'rtl' : 'ltr'}
+                    style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                    globalFilter={globalFilter}
+                    responsiveLayout="scroll"
+                >
+                        <Column
+                            header={t('TABLE.GENERAL.ACTION')}
+                            body={actionBodyTemplate}
+                            headerStyle={{ width: '4.5rem' }}
+                            style={{ ...customCellStyleImage, textAlign: 'start' }}
+                        />
                         <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="name" header={t('PAYMENTMETHOD.TABLE.COLUMN.METHODNAME')} body={nameBodyTemplate}></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="method_type" header={t('PAYMENTMETHOD.TABLE.COLUMN.METHODTYPE')} body={methodTypeBodyTemplate}></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="bank_name" header={t('PAYMENTMETHOD.TABLE.COLUMN.BANKNAME')} body={bankNameBodyTemplate}></Column>
@@ -399,280 +406,240 @@ const PaymentMethodPage = () => {
                         <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="notes" header={t('PAYMENTMETHOD.TABLE.COLUMN.NOTES')} body={notesBodyTemplate}></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} header={t('PAYMENTMETHOD.TABLE.COLUMN.IMAGE')} body={imageBodyTemplate}></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} header={t('PAYMENTMETHOD.TABLE.COLUMN.STATUS')} body={statusBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
+            </ListPage>
 
-                    <Dialog
-                        visible={methodDialog}
-                        style={{ width: '700px', padding: '5px' }}
-                        header={t('PAYMENT.METHOD.DETAILS')}
-                        modal
-                        className="p-fluid"
-                        footer={methodDialogFooter}
-                        onHide={hideDialog}
+            <FormSheet
+                open={methodDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                title={t('PAYMENT.METHOD.DETAILS')}
+                description={paymentMethod.id ? 'ویرایش روش پرداخت' : 'ثبت روش پرداخت جدید'}
+                size="xl"
+                side="left"
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveMethod}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection title={t('PAYMENTMETHOD.TABLE.COLUMN.IMAGE')} description="تصویر حساب یا کارت">
+                    <FormField label={t('PAYMENTMETHOD.TABLE.COLUMN.IMAGE')} fullWidth>
+                        <FileDrop
+                            value={paymentMethod.account_image instanceof File ? paymentMethod.account_image : null}
+                            previewUrl={
+                                typeof paymentMethod.account_image === 'string' ? paymentMethod.account_image : null
+                            }
+                            onChange={(file) =>
+                                setPaymentMethod((prev) => ({
+                                    ...prev,
+                                    account_image: file ?? ''
+                                }))
+                            }
+                            accept="image/*"
+                        />
+                    </FormField>
+                </FormSection>
+
+                <FormSection title={t('PAYMENT.METHOD.DETAILS')} description="اطلاعات روش و حساب بانکی">
+                    <FormField
+                        label={t('PAYMENTMETHOD.FORM.INPUT.METHODNAME')}
+                        required
+                        error={submitted && !paymentMethod.method_name ? t('THIS_FIELD_IS_REQUIRED') : null}
                     >
-                        <div className="card p-4">
-                            {/* Image + upload stays full width */}
-                            {paymentMethod.account_image && (
-                                <img
-                                    src={
-                                        paymentMethod.account_image instanceof File
-                                            ? URL.createObjectURL(paymentMethod.account_image)
-                                            : paymentMethod.account_image
+                        <Input
+                            id="method_name"
+                            value={paymentMethod?.method_name}
+                            onChange={(e) =>
+                                setPaymentMethod((prev) => ({
+                                    ...prev,
+                                    method_name: e.target.value
+                                }))
+                            }
+                            className={classNames('w-full', {
+                                'p-invalid': submitted && !paymentMethod.method_name
+                            })}
+                        />
+                    </FormField>
+                    <FormField label={t('PAYMENTMETHOD.FORM.INPUT.METHODTYPE')} hint={t('TIP_TYPE_NEW_METHOD_TYPE')}>
+                        <Select
+                            value={
+                                paymentMethod.method_type &&
+                                PAYMENT_METHOD_TYPES.some((o) => o.value === paymentMethod.method_type)
+                                    ? paymentMethod.method_type
+                                    : undefined
+                            }
+                            onValueChange={(v) => setPaymentMethod((prev) => ({ ...prev, method_type: v as any }))}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('PAYMENTMETHOD.FORM.PLACEHOLDER.METHODTYPE')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {PAYMENT_METHOD_TYPES.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Input
+                            className="mt-2"
+                            value={
+                                customMethodType ||
+                                (paymentMethod.method_type &&
+                                !PAYMENT_METHOD_TYPES.some((o) => o.value === paymentMethod.method_type)
+                                    ? paymentMethod.method_type
+                                    : '')
+                            }
+                            onChange={(e) => setCustomMethodType(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    const value = (e.currentTarget.value || customMethodType).trim();
+                                    if (value) {
+                                        const normalized = normalizeToSnakeCase(value);
+                                        setPaymentMethod((prev) => ({ ...prev, method_type: normalized as any }));
+                                        setCustomMethodType('');
                                     }
-                                    alt="Uploaded Preview"
-                                    width="150"
-                                    className="mt-0 mx-auto mb-4 block shadow-2"
-                                />
-                            )}
-
-                            <FileUpload
-                                mode="basic"
-                                name="account_image"
-                                accept="image/*"
-                                customUpload
-                                onSelect={(e) =>
-                                    setPaymentMethod((prev) => ({
-                                        ...prev,
-                                        account_image: e.files[0],
-                                    }))
                                 }
-                                style={{ textAlign: 'center' }}
-                                className="mb-4"
-                            />
-
-                            {/* Grid starts here */}
-                            <div className="grid">
-                                <div className="col-12 md:col-6 field">
-                                    <label htmlFor="method_name" className="font-bold">
-                                        {t('PAYMENTMETHOD.FORM.INPUT.METHODNAME')} *
-                                    </label>
-                                    <InputText
-                                        id="method_name"
-                                        value={paymentMethod?.method_name}
-                                        onChange={(e) =>
-                                            setPaymentMethod((prev) => ({
-                                                ...prev,
-                                                method_name: e.target.value,
-                                            }))
-                                        }
-                                        className={classNames({
-                                            'p-invalid': submitted && !paymentMethod.method_name,
-                                        })}
-                                    />
-                                    {submitted && !paymentMethod.method_name && (
-                                        <small className="p-invalid text-red-500">
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-
-                                {/* Method Type Dropdown - Searchable and Creatable */}
-                                <div className="col-12 md:col-6 field">
-                                    <label htmlFor="method_type" className="font-bold">
-                                        {t('PAYMENTMETHOD.FORM.INPUT.METHODTYPE')}
-                                    </label>
-                                    <Dropdown
-                                        id="method_type"
-                                        value={paymentMethod.method_type}
-                                        options={PAYMENT_METHOD_TYPES}
-                                        onChange={handleMethodTypeChange}
-                                        placeholder={t('PAYMENTMETHOD.FORM.PLACEHOLDER.METHODTYPE')}
-                                        className="w-full"
-                                       
-                                        editable
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && (e.target as HTMLInputElement).value) {
-                                                const value = (e.target as HTMLInputElement).value.trim();
-                                                if (value) {
-                                                    const normalized = normalizeToSnakeCase(value);
-                                                    setPaymentMethod((prev) => ({
-                                                        ...prev,
-                                                        method_type: normalized as any,
-                                                    }));
-                                                    setCustomMethodType('');
-                                                }
-                                            }
-                                        }}
-                                        onBlur={(e) => {
-                                            const value = (e.target as HTMLInputElement).value?.trim();
-                                            if (value && !PAYMENT_METHOD_TYPES.some(option => option.value === paymentMethod.method_type)) {
-                                                const normalized = normalizeToSnakeCase(value);
-                                                setPaymentMethod((prev) => ({
-                                                    ...prev,
-                                                    method_type: normalized as any,
-                                                }));
-                                            }
-                                        }}
-                                        itemTemplate={(option) => (
-                                            <div className="flex items-center gap-2">
-                                                <span>{option.label}</span>
-                                                <span className="text-xs text-gray-400 ml-auto">{option.value}</span>
-                                            </div>
-                                        )}
-                                        valueTemplate={(option) => {
-                                            if (!option) return t('PAYMENTMETHOD.FORM.PLACEHOLDER.METHODTYPE');
-                                            // Handle custom value that might not be in options
-                                            const found = PAYMENT_METHOD_TYPES.find(o => o.value === option);
-                                            return found ? found.label : option;
-                                        }}
-                                    />
-                                    {paymentMethod.method_type && !PAYMENT_METHOD_TYPES.some(o => o.value === paymentMethod.method_type) && (
-                                        <small className="text-blue-500 text-xs mt-1 block">
-                                            Custom type: <strong>{paymentMethod.method_type}</strong>
-                                        </small>
-                                    )}
-                                    <small className="text-gray-400 text-xs mt-1 block">
-                                        {t('TIP_TYPE_NEW_METHOD_TYPE')}
-                                    </small>
-                                </div>
-
-                                <div className="col-12 md:col-6 field">
-                                    <label htmlFor="bank_name" className="font-bold">
-                                        {t('PAYMENTMETHOD.FORM.INPUT.BANKNAME')}
-                                    </label>
-                                    <InputText
-                                        id="bank_name"
-                                        value={paymentMethod?.bank_name || ''}
-                                        onChange={(e) =>
-                                            setPaymentMethod((prev) => ({
-                                                ...prev,
-                                                bank_name: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-
-                                <div className="col-12 md:col-6 field">
-                                    <label htmlFor="account_holder_name" className="font-bold">
-                                        {t('PAYMENTMETHOD.FORM.INPUT.ACCOUNTHOLDER')}
-                                    </label>
-                                    <InputText
-                                        id="account_holder_name"
-                                        value={paymentMethod?.account_holder_name || ''}
-                                        onChange={(e) =>
-                                            setPaymentMethod((prev) => ({
-                                                ...prev,
-                                                account_holder_name: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-
-                                <div className="col-12 md:col-6 field">
-                                    <label htmlFor="card_number" className="font-bold">
-                                        {t('PAYMENTMETHOD.FORM.INPUT.CARDNUMBER')}
-                                    </label>
-                                    <InputText
-                                        id="card_number"
-                                        value={paymentMethod?.card_number || ''}
-                                        onChange={(e) =>
-                                            setPaymentMethod((prev) => ({
-                                                ...prev,
-                                                card_number: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-
-                                <div className="col-12 md:col-6 field">
-                                    <label htmlFor="account_number" className="font-bold">
-                                        {t('PAYMENTMETHOD.FORM.INPUT.ACCOUNTNUMBER')}
-                                    </label>
-                                    <InputText
-                                        id="account_number"
-                                        value={paymentMethod?.account_number || ''}
-                                        onChange={(e) =>
-                                            setPaymentMethod((prev) => ({
-                                                ...prev,
-                                                account_number: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-
-                                <div className="col-12 md:col-6 field">
-                                    <label htmlFor="sheba_number" className="font-bold">
-                                        {t('PAYMENTMETHOD.FORM.INPUT.SHEBANUMBER')}
-                                    </label>
-                                    <InputText
-                                        id="sheba_number"
-                                        value={paymentMethod?.sheba_number || ''}
-                                        onChange={(e) =>
-                                            setPaymentMethod((prev) => ({
-                                                ...prev,
-                                                sheba_number: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-
-                                {/* Full width textareas */}
-                                <div className="col-12 field">
-                                    <label htmlFor="account_details" className="font-bold">
-                                        {t('PAYMENTMETHOD.FORM.INPUT.ACCOUNTDETAILS')}
-                                    </label>
-                                    <InputTextarea
-                                        id="account_details"
-                                        value={paymentMethod.account_details || ''}
-                                        onChange={(e) =>
-                                            setPaymentMethod((prev) => ({
-                                                ...prev,
-                                                account_details: e.target.value,
-                                            }))
-                                        }
-                                        rows={4}
-                                    />
-                                </div>
-
-                                <div className="col-12 field">
-                                    <label htmlFor="notes" className="font-bold">
-                                        {t('PAYMENTMETHOD.FORM.INPUT.NOTES')}
-                                    </label>
-                                    <InputTextarea
-                                        id="notes"
-                                        value={paymentMethod.notes || ''}
-                                        onChange={(e) =>
-                                            setPaymentMethod((prev) => ({
-                                                ...prev,
-                                                notes: e.target.value,
-                                            }))
-                                        }
-                                        rows={3}
-                                    />
-                                </div>
-
-                                <div className="col-12 md:col-6 field">
-                                    <label htmlFor="status" className="font-bold">
-                                        {t('PAYMENTMETHOD.FORM.INPUT.STATUS')} *
-                                    </label>
-                                    <Dropdown
-                                        id="status"
-                                        value={paymentMethod.status}
-                                        options={[
-                                            { label: 'Active', value: 1 },
-                                            { label: 'Inactive', value: 0 },
-                                        ]}
-                                        onChange={(e) =>
-                                            setPaymentMethod((prev) => ({
-                                                ...prev,
-                                                status: e.value,
-                                            }))
-                                        }
-                                        placeholder="Choose a status"
-                                        className={classNames({
-                                            'p-invalid': submitted && !paymentMethod.status,
-                                        })}
-                                    />
-                                    {submitted && !paymentMethod.status && (
-                                        <small className="p-invalid text-red-500">
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </Dialog>
+                            }}
+                            onBlur={() => {
+                                const value = customMethodType.trim();
+                                if (value) {
+                                    const normalized = normalizeToSnakeCase(value);
+                                    setPaymentMethod((prev) => ({ ...prev, method_type: normalized as any }));
+                                    setCustomMethodType('');
+                                }
+                            }}
+                            placeholder={t('PAYMENTMETHOD.FORM.PLACEHOLDER.METHODTYPE')}
+                        />
+                        {paymentMethod.method_type && !PAYMENT_METHOD_TYPES.some((o) => o.value === paymentMethod.method_type) ? (
+                            <p className="mt-1 text-xs text-blue-500">
+                                Custom type: <strong>{paymentMethod.method_type}</strong>
+                            </p>
+                        ) : null}
+                    </FormField>
+                    <FormField label={t('PAYMENTMETHOD.FORM.INPUT.BANKNAME')}>
+                        <Input
+                            id="bank_name"
+                            value={paymentMethod?.bank_name || ''}
+                            onChange={(e) =>
+                                setPaymentMethod((prev) => ({
+                                    ...prev,
+                                    bank_name: e.target.value
+                                }))
+                            }
+                            className="w-full"
+                        />
+                    </FormField>
+                    <FormField label={t('PAYMENTMETHOD.FORM.INPUT.ACCOUNTHOLDER')}>
+                        <Input
+                            id="account_holder_name"
+                            value={paymentMethod?.account_holder_name || ''}
+                            onChange={(e) =>
+                                setPaymentMethod((prev) => ({
+                                    ...prev,
+                                    account_holder_name: e.target.value
+                                }))
+                            }
+                            className="w-full"
+                        />
+                    </FormField>
+                    <FormField label={t('PAYMENTMETHOD.FORM.INPUT.CARDNUMBER')}>
+                        <Input
+                            id="card_number"
+                            value={paymentMethod?.card_number || ''}
+                            onChange={(e) =>
+                                setPaymentMethod((prev) => ({
+                                    ...prev,
+                                    card_number: e.target.value
+                                }))
+                            }
+                            className="w-full"
+                        />
+                    </FormField>
+                    <FormField label={t('PAYMENTMETHOD.FORM.INPUT.ACCOUNTNUMBER')}>
+                        <Input
+                            id="account_number"
+                            value={paymentMethod?.account_number || ''}
+                            onChange={(e) =>
+                                setPaymentMethod((prev) => ({
+                                    ...prev,
+                                    account_number: e.target.value
+                                }))
+                            }
+                            className="w-full"
+                        />
+                    </FormField>
+                    <FormField label={t('PAYMENTMETHOD.FORM.INPUT.SHEBANUMBER')}>
+                        <Input
+                            id="sheba_number"
+                            value={paymentMethod?.sheba_number || ''}
+                            onChange={(e) =>
+                                setPaymentMethod((prev) => ({
+                                    ...prev,
+                                    sheba_number: e.target.value
+                                }))
+                            }
+                            className="w-full"
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('PAYMENTMETHOD.FORM.INPUT.STATUS')}
+                        required
+                        error={submitted && !paymentMethod.status ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Select
+                            value={paymentMethod.status != null ? String(paymentMethod.status) : undefined}
+                            onValueChange={(v) =>
+                                setPaymentMethod((prev) => ({
+                                    ...prev,
+                                    status: Number(v)
+                                }))
+                            }
+                        >
+                            <SelectTrigger className={cn(submitted && !paymentMethod.status && 'border-rose-300')}>
+                                <SelectValue placeholder="Choose a status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="1">Active</SelectItem>
+                                <SelectItem value="0">Inactive</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField label={t('PAYMENTMETHOD.FORM.INPUT.ACCOUNTDETAILS')} fullWidth>
+                        <Textarea
+                            id="account_details"
+                            value={paymentMethod.account_details || ''}
+                            onChange={(e) =>
+                                setPaymentMethod((prev) => ({
+                                    ...prev,
+                                    account_details: e.target.value
+                                }))
+                            }
+                            rows={4}
+                            className="w-full"
+                        />
+                    </FormField>
+                    <FormField label={t('PAYMENTMETHOD.FORM.INPUT.NOTES')} fullWidth>
+                        <Textarea
+                            id="notes"
+                            value={paymentMethod.notes || ''}
+                            onChange={(e) =>
+                                setPaymentMethod((prev) => ({
+                                    ...prev,
+                                    notes: e.target.value
+                                }))
+                            }
+                            rows={3}
+                            className="w-full"
+                        />
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
                     <Dialog visible={deleteMethodDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteMethodDialogFooter} onHide={hideDeleteMethodDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -691,9 +658,7 @@ const PaymentMethodPage = () => {
                             {paymentMethod && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>
-                </div>
-            </div>
-        </div>
+        </>
     );
 };
 

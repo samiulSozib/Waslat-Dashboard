@@ -20,6 +20,40 @@ const getAuthToken = () => {
   return localStorage.getItem("api_token") || "";
 };
 
+export type HawalaBranchStats = {
+  orders_count?: {
+    all?: number;
+    pending?: number;
+    confirmed?: number;
+    rejected?: number;
+    cancelled?: number;
+    under_process?: number;
+  };
+  sent_by_currency?: Array<{
+    currency: string;
+    orders_count: number;
+    total_amount: number;
+    total_commission: number;
+  }>;
+  debited_by_wallet_currency?: Array<{
+    currency: string;
+    total_debited: number;
+  }>;
+  total_branch_commission_share?: number;
+};
+
+/** Fetch single branch + stats (confirmed totals by currency). */
+export const _fetchHawalaBranchById = (id: number | string) => async () => {
+  const token = getAuthToken();
+  const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/hawala-branches/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return {
+    branch: response.data?.data?.branch ?? null,
+    stats: (response.data?.data?.stats ?? null) as HawalaBranchStats | null,
+  };
+};
+
 // Fetch Hawala Branch List
 export const _fetchHawalaBranchList = (page: number = 1, search: string = '') => async (dispatch: Dispatch) => {
   dispatch({ type: FETCH_HAWALA_BRANCH_LIST_REQUEST });

@@ -3,26 +3,30 @@
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import { addWithdrawPolicy, deleteWithdrawPolicy, editWithdrawPolicy, fetchWithdrawPolicies } from '@/app/redux/actions/withdrawPolicyActions';
 import { AppDispatch } from '@/app/redux/store';
-import i18n from '@/i18n';
 import { Currency, WithdrawalPolicy } from '@/types/interface';
-import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { InputNumber } from 'primereact/inputnumber';
-import { InputText } from 'primereact/inputtext';
-import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
-import { customCellStyle } from '../../utilities/customRow';
 import { isRTL } from '../../utilities/rtlUtil';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { FilterField, FILTER_SHEET_BODY_CLASS } from '@/components/admin/filter-field';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { RowActions } from '@/components/admin/row-actions';
+import { Button as UiButton } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { NumberInput } from '@/components/ui/number-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 
 const WithdrawalPolicyPage = () => {
     let emptyWithdrawalPolicy: WithdrawalPolicy = {
@@ -41,10 +45,12 @@ const WithdrawalPolicyPage = () => {
     const [withdrawalPolicy, setWithdrawalPolicy] = useState<WithdrawalPolicy>(emptyWithdrawalPolicy);
     const [selectedWithdrawalPolicies, setSelectedWithdrawalPolicies] = useState(null);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const searchTag = useDebouncedValue(searchInput, 350);
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [draftCurrencyFilter, setDraftCurrencyFilter] = useState<string>('');
     const [currencyFilter, setCurrencyFilter] = useState<number | undefined>(undefined);
     const toast = useRef<Toast>(null);
-    const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { withdrawPolicies, loading, pagination } = useSelector((state: any) => state.withdrawPoliciesReducer);
     const { currencies } = useSelector((state: any) => state.currenciesReducer);
@@ -218,187 +224,48 @@ const WithdrawalPolicyPage = () => {
         setDeleteWithdrawalPoliciesDialog(false);
     };
 
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('CREATE_WITHDRAWAL_POLICY')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedWithdrawalPolicies || !(selectedWithdrawalPolicies as any).length}
-                    />
-                </div>
-            </React.Fragment>
+    const filteredPolicies = useMemo(() => {
+        const search = searchTag.trim().toLocaleLowerCase();
+        const list: WithdrawalPolicy[] = Array.isArray(withdrawPolicies) ? withdrawPolicies : [];
+        if (!search) return list;
+        return list.filter((row) =>
+            [row.currency?.code, row.currency?.name, row.commission_type, row.commission_value]
+                .filter((v) => v !== null && v !== undefined)
+                .join(' ')
+                .toLocaleLowerCase()
+                .includes(search)
         );
+    }, [withdrawPolicies, searchTag]);
+
+    const chips = useMemo(() => {
+        if (!currencyFilter) return [];
+        const currency = currencies.find((c: Currency) => c.id === currencyFilter);
+        return [{ key: 'currency', label: `${t('MENU.CURRENCY')}: ${currency?.code || currencyFilter}` }];
+    }, [currencyFilter, currencies, t]);
+
+    const applyCurrencyFilter = () => {
+        setCurrencyFilter(draftCurrencyFilter ? Number(draftCurrencyFilter) : undefined);
+        setFilterOpen(false);
     };
 
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <div className="flex items-center">
-    //             <span className="block mt-2 md:mt-0 p-inputicon-left w-full md:w-auto mr-4">
-    //                 <i className="pi pi-search" />
-    //                 <InputText
-    //                     type="search"
-    //                     onInput={(e) => setGlobalFilter(e.currentTarget.value)}
-    //                     placeholder={t('SEARCH')}
-    //                     className="w-full md:w-auto"
-    //                 />
-    //             </span>
-    //         </div>
-    //     );
-    // };
-
-    const [localSearchTerm, setLocalSearchTerm] = useState('');
-
-    const leftToolbarTemplate = () => {
-
-        const handleSearch = () => {
-            setGlobalFilter(localSearchTerm);
-        };
-
-        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        };
-
-        return (
-            <React.Fragment>
-                <div className="flex align-items-center gap-2">
-                    <span className="p-input-icon-left">
-                        <i className="pi pi-search" />
-                        <InputText
-                            type="search"
-                            value={localSearchTerm}
-                            onChange={(e) => setLocalSearchTerm(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        />
-                    </span>
-                    <Button
-                        label={t('SEARCH')}
-                        onClick={handleSearch}
-                        className="p-button-sm"
-                    />
-                    {localSearchTerm && (
-                        <Button
-                            icon="pi pi-times"
-                            onClick={() => {
-                                setLocalSearchTerm('');
-                                setGlobalFilter('');
-                            }}
-                            className="p-button-sm p-button-secondary p-button-text"
-
-                        />
-                    )}
-                </div>
-            </React.Fragment>
-        );
+    const clearCurrencyFilter = () => {
+        setDraftCurrencyFilter('');
+        setCurrencyFilter(undefined);
+        setFilterOpen(false);
     };
 
-    const currencyBodyTemplate = (rowData: WithdrawalPolicy) => {
-        return (
-            <>
-                <span className="p-column-title">{t('CURRENCY')}</span>
-                <div className="flex align-items-center gap-2">
-                    <span className={`fi fi-${rowData.currency?.code?.toLowerCase()?.substring(0, 2) || 'us'} fis`}></span>
-                    <span>{rowData.currency?.code} - {rowData.currency?.name}</span>
-                </div>
-            </>
-        );
+    const removeChip = () => clearCurrencyFilter();
+
+    const totalPages = Math.max(1, Math.ceil((pagination?.total || filteredPolicies.length) / (pagination?.items_per_page || 10)));
+
+    const onPageChange = (page: number) => {
+        dispatch(fetchWithdrawPolicies(page, currencyFilter));
     };
 
-    const commissionTypeBodyTemplate = (rowData: WithdrawalPolicy) => {
-        return (
-            <>
-                <span className="p-column-title">{t('COMMISSION_TYPE')}</span>
-                <Badge
-                    value={rowData.commission_type === 'percentage' ? t('PERCENTAGE') : t('FIXED')}
-                    severity={rowData.commission_type === 'percentage' ? 'info' : 'warning'}
-                />
-            </>
-        );
-    };
-
-    const commissionValueBodyTemplate = (rowData: WithdrawalPolicy) => {
-        const currencySymbol = rowData.currency?.symbol || '';
-        return (
-            <>
-                <span className="p-column-title">{t('COMMISSION_VALUE')}</span>
-                <span>
-                    {Number(rowData.commission_value).toFixed(2)}
-                    {rowData.commission_type === 'percentage' ? '%' : ` ${currencySymbol}`}
-                </span>
-            </>
-        );
-    };
-
-    const minAmountBodyTemplate = (rowData: WithdrawalPolicy) => {
-        return (
-            <>
-                <span className="p-column-title">{t('MIN_WITHDRAW_AMOUNT')}</span>
-                <span>
-                    {Number(rowData.min_withdraw_amount).toFixed(2)} {rowData.currency?.symbol || ''}
-                </span>
-            </>
-        );
-    };
-
-    const maxAmountBodyTemplate = (rowData: WithdrawalPolicy) => {
-        return (
-            <>
-                <span className="p-column-title">{t('MAX_WITHDRAW_AMOUNT')}</span>
-                <span>
-                    {Number(rowData.max_withdraw_amount).toFixed(2)} {rowData.currency?.symbol || ''}
-                </span>
-            </>
-        );
-    };
-
-    const statusBodyTemplate = (rowData: WithdrawalPolicy) => {
-        const isActive = rowData.status === true;
-        return (
-            <>
-                <span className="p-column-title">{t('STATUS')}</span>
-                <Badge
-                    value={isActive ? t('ACTIVE') : t('INACTIVE')}
-                    severity={isActive ? 'success' : 'danger'}
-                />
-            </>
-        );
-    };
-
-    const actionBodyTemplate = (rowData: WithdrawalPolicy) => {
-        return (
-            <>
-                <Button
-                    icon="pi pi-pencil"
-                    rounded
-                    severity="success"
-                    className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                    onClick={() => editWithdrawalPolicy(rowData)}
-                />
-                <Button
-                    icon="pi pi-trash"
-                    rounded
-                    severity="warning"
-                    onClick={() => confirmDeleteWithdrawalPolicy(rowData)}
-                />
-            </>
-        );
-    };
+    const getPolicyRowActions = (row: WithdrawalPolicy) => [
+        { label: t('EDIT', { defaultValue: 'ویرایش' }), icon: <Pencil className="h-4 w-4" />, onClick: () => editWithdrawalPolicy(row) },
+        { label: t('DELETE', { defaultValue: 'حذف' }), icon: <Trash2 className="h-4 w-4" />, onClick: () => confirmDeleteWithdrawalPolicy(row), danger: true }
+    ];
 
     const withdrawalPolicyDialogFooter = (
         <>
@@ -435,278 +302,365 @@ const WithdrawalPolicyPage = () => {
     const availableCurrencies = currencies.filter((currency: Currency) => currency.deleted_at === null);
 
     return (
-        <div className="grid -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={withdrawPolicies}
-                        selection={selectedWithdrawalPolicies}
-                        onSelectionChange={(e) => setSelectedWithdrawalPolicies(e.value as any)}
-                        dataKey="id"
-                        paginator
-                        rows={10}
-                        rowsPerPageOptions={[5, 10, 25]}
-                        className="datatable-responsive"
-                        paginatorTemplate={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `Showing {first} to {last} of {totalRecords} entries`
-                                : `Showing {first} to {last} of {totalRecords} entries`
-                        }
-                        emptyMessage={t('NO_DATA_AVAILABLE')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        globalFilter={globalFilter}
-                        responsiveLayout="scroll"
-                    >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="currency.code"
-                            header={t('MENU.CURRENCY')}
-                            body={currencyBodyTemplate}
-                            sortable
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('COMMISSION_TYPE')}
-                            body={commissionTypeBodyTemplate}
-                            sortable
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('COMMISSION_VALUE')}
-                            body={commissionValueBodyTemplate}
-                            sortable
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('MIN_WITHDRAW_AMOUNT')}
-                            body={minAmountBodyTemplate}
-                            sortable
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('MAX_WITHDRAW_AMOUNT')}
-                            body={maxAmountBodyTemplate}
-                            sortable
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('STATUS')}
-                            body={statusBodyTemplate}
-                            sortable
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            body={actionBodyTemplate}
-                            headerStyle={{ minWidth: '10rem' }}
-                            header={t('COMMON.ACTIONS')}
-                        ></Column>
-                    </DataTable>
-
-                    <Dialog
-                        visible={withdrawalPolicyDialog}
-                        style={{ width: '700px', padding: '5px' }}
-                        header={withdrawalPolicy.id ? t('EDIT_WITHDRAWAL_POLICY') : t('CREATE_WITHDRAWAL_POLICY')}
-                        modal
-                        className="p-fluid"
-                        footer={withdrawalPolicyDialogFooter}
-                        onHide={hideDialog}
-                    >
-                        <div className="card" style={{ padding: '40px' }}>
-                            {/* Currency Field */}
-                            <div className="field mb-4">
-                                <label htmlFor="currency_id" style={{ fontWeight: 'bold' }}>
-                                    {t('MENU.CURRENCY')} *
-                                </label>
-                                <Dropdown
-                                    id="currency_id"
-                                    value={Number(withdrawalPolicy.currency_id)} // Ensure it's a number
-                                    options={availableCurrencies}
-                                    onChange={(e) =>
-                                        setWithdrawalPolicy((prev) => ({
-                                            ...prev,
-                                            currency_id: Number(e.value) // Convert to number
-                                        }))
-                                    }
-                                    optionLabel="code"
-                                    optionValue="id"
-                                    placeholder={t('SELECT_CURRENCY')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !withdrawalPolicy.currency_id
-                                    })}
-
-                                />
-                                {submitted && !withdrawalPolicy.currency_id && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            {/* Commission Type and Status */}
-                            <div className="formgrid grid mb-4">
-                                <div className="field col">
-                                    <label htmlFor="commission_type" style={{ fontWeight: 'bold' }}>
-                                        {t('COMMISSION_TYPE')} *
-                                    </label>
-                                    <Dropdown
-                                        id="commission_type"
-                                        value={withdrawalPolicy.commission_type}
-                                        options={commissionTypeOptions}
-                                        onChange={(e) =>
-                                            setWithdrawalPolicy((prev) => ({
-                                                ...prev,
-                                                commission_type: e.value
-                                            }))
-                                        }
-                                        placeholder={t('SELECT_COMMISSION_TYPE')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !withdrawalPolicy.commission_type
-                                        })}
-                                    />
-                                    {submitted && !withdrawalPolicy.commission_type && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                                <div className="field col">
-                                    <label htmlFor="status" style={{ fontWeight: 'bold' }}>
-                                        {t('STATUS')}
-                                    </label>
-                                    <Dropdown
-                                        id="status"
-                                        value={Boolean(withdrawalPolicy.status)} // Ensure boolean
-                                        options={statusOptions}
-                                        onChange={(e) =>
-                                            setWithdrawalPolicy((prev) => ({
-                                                ...prev,
-                                                status: Boolean(e.value)
-                                            }))
-                                        }
-                                        placeholder={t('SELECT_STATUS')}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Commission Value */}
-                            <div className="field mb-4">
-                                <label htmlFor="commission_value" style={{ fontWeight: 'bold' }}>
-                                    {t('COMMISSION_VALUE')} *
-                                    {withdrawalPolicy.commission_type === 'percentage' &&
-                                        ` (0-100%)`}
-                                </label>
-                                <div className="p-inputgroup">
-                                    <InputNumber
-                                        id="commission_value"
-                                        value={Number(withdrawalPolicy.commission_value)} // Ensure number
-                                        onValueChange={(e) =>
-                                            setWithdrawalPolicy((prev) => ({
-                                                ...prev,
-                                                commission_value: Number(e.value) || 0
-                                            }))
-                                        }
-                                        mode="decimal"
-                                        min={0}
-                                        max={withdrawalPolicy.commission_type === 'percentage' ? 100 : undefined}
-                                        minFractionDigits={2}
-                                        maxFractionDigits={2}
-                                        className={classNames('w-full', {
-                                            'p-invalid': submitted && withdrawalPolicy.commission_value === undefined
-                                        })}
-                                        placeholder={withdrawalPolicy.commission_type === 'percentage' ?
-                                            t('ENTER_PERCENTAGE') : t('ENTER_FIXED_AMOUNT')}
-                                    />
-                                    <span className="p-inputgroup-addon">
-                                        {withdrawalPolicy.commission_type === 'percentage' ?
-                                            '%' :
-                                            (availableCurrencies.find((c: Currency) => Number(c.id) === Number(withdrawalPolicy.currency_id))?.symbol || '$')}
-                                    </span>
-                                </div>
-                                {submitted && withdrawalPolicy.commission_value === undefined && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            {/* Min and Max Withdraw Amounts */}
-                            <div className="formgrid grid mb-4">
-                                <div className="field col">
-                                    <label htmlFor="min_withdraw_amount" style={{ fontWeight: 'bold' }}>
-                                        {t('MIN_WITHDRAW_AMOUNT')} *
-                                    </label>
-                                    <InputNumber
-                                        id="min_withdraw_amount"
-                                        value={Number(withdrawalPolicy.min_withdraw_amount)} // Ensure number
-                                        onValueChange={(e) =>
-                                            setWithdrawalPolicy((prev) => ({
-                                                ...prev,
-                                                min_withdraw_amount: Number(e.value) || 0
-                                            }))
-                                        }
-                                        mode="decimal"
-                                        min={0}
-                                        className={classNames('w-full', {
-                                            'p-invalid': submitted && withdrawalPolicy.min_withdraw_amount === undefined
-                                        })}
-                                        placeholder={t('ENTER_MIN_AMOUNT')}
-                                    />
-                                    {submitted && withdrawalPolicy.min_withdraw_amount === undefined && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                                <div className="field col">
-                                    <label htmlFor="max_withdraw_amount" style={{ fontWeight: 'bold' }}>
-                                        {t('MAX_WITHDRAW_AMOUNT')} *
-                                    </label>
-                                    <InputNumber
-                                        id="max_withdraw_amount"
-                                        value={Number(withdrawalPolicy.max_withdraw_amount)} // Ensure number
-                                        onValueChange={(e) =>
-                                            setWithdrawalPolicy((prev) => ({
-                                                ...prev,
-                                                max_withdraw_amount: Number(e.value) || 0
-                                            }))
-                                        }
-                                        mode="decimal"
-                                        min={0}
-                                        className={classNames('w-full', {
-                                            'p-invalid': submitted && withdrawalPolicy.max_withdraw_amount === undefined
-                                        })}
-                                        placeholder={t('ENTER_MAX_AMOUNT')}
-                                    />
-                                    {submitted && withdrawalPolicy.max_withdraw_amount === undefined && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Validation Note */}
-                            {withdrawalPolicy.min_withdraw_amount >= withdrawalPolicy.max_withdraw_amount &&
-                                withdrawalPolicy.min_withdraw_amount > 0 && withdrawalPolicy.max_withdraw_amount > 0 && (
-                                    <div className="field mb-4">
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('MIN_AMOUNT_MUST_BE_LESS_THAN_MAX_AMOUNT')}
-                                        </small>
-                                    </div>
-                                )}
+        <div className="space-y-4">
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.WITHDRAWAL_POLICY', { defaultValue: 'سیاست برداشت' })}
+                description={t('WITHDRAWAL_POLICY.PAGE.DESCRIPTION', { defaultValue: 'تعیین کارمزد و محدودیت برداشت به تفکیک ارز' })}
+                loading={loading}
+                actions={
+                    <>
+                        <UiButton size="sm" onClick={openNew}>
+                            <Plus className="h-4 w-4" />
+                            {t('CREATE_WITHDRAWAL_POLICY', { defaultValue: 'سیاست جدید' })}
+                        </UiButton>
+                        <UiButton
+                            size="sm"
+                            variant="destructive"
+                            onClick={confirmDeleteSelected}
+                            disabled={!selectedWithdrawalPolicies || !(selectedWithdrawalPolicies as WithdrawalPolicy[]).length}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            {t('DELETE', { defaultValue: 'حذف' })}
+                        </UiButton>
+                    </>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو...' })}
+                        chips={chips}
+                        onRemoveChip={removeChip}
+                        onClearAll={chips.length ? clearCurrencyFilter : undefined}
+                        onOpenFilters={() => {
+                            setDraftCurrencyFilter(currencyFilter ? String(currencyFilter) : '');
+                            setFilterOpen(true);
+                        }}
+                    />
+                }
+                footer={
+                    <div className="flex flex-col gap-2 border-t border-emerald-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-xs text-muted-foreground">
+                            {t('DATA_TABLE.TABLE.PAGINATOR.SHOWING', { defaultValue: 'صفحه' })}{' '}
+                            {pagination?.page || 1} / {totalPages} · {pagination?.total ?? filteredPolicies.length}
                         </div>
-                    </Dialog>
+                        <div className="flex items-center gap-2">
+                            <UiButton variant="outline" size="sm" disabled={(pagination?.page || 1) <= 1} onClick={() => onPageChange((pagination?.page || 1) - 1)}>
+                                قبلی
+                            </UiButton>
+                            <UiButton variant="outline" size="sm" disabled={(pagination?.page || 1) >= totalPages} onClick={() => onPageChange((pagination?.page || 1) + 1)}>
+                                بعدی
+                            </UiButton>
+                        </div>
+                    </div>
+                }
+            >
+                <table className="w-full min-w-[1100px] border-collapse text-xs">
+                    <thead>
+                        <tr className="border-b border-emerald-100 bg-emerald-50/70 text-start">
+                            <th className="px-2 py-2 w-10">
+                                <input
+                                    type="checkbox"
+                                    aria-label={t('SELECT_ALL', { defaultValue: 'انتخاب همه' })}
+                                    checked={
+                                        filteredPolicies.length > 0 &&
+                                        ((selectedWithdrawalPolicies as WithdrawalPolicy[] | null) ?? []).length === filteredPolicies.length &&
+                                        filteredPolicies.length > 0
+                                    }
+                                    onChange={(e) => {
+                                        if (e.target.checked) setSelectedWithdrawalPolicies(filteredPolicies as any);
+                                        else setSelectedWithdrawalPolicies(null);
+                                    }}
+                                />
+                            </th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">{t('COMMON.ACTIONS', { defaultValue: 'عملیات' })}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('MENU.CURRENCY')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('COMMISSION_TYPE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('COMMISSION_VALUE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('MIN_WITHDRAW_AMOUNT')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('MAX_WITHDRAW_AMOUNT')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('STATUS')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredPolicies.length === 0 ? (
+                            <tr>
+                                <td colSpan={8} className="px-2 py-12 text-center text-muted-foreground">
+                                    {t('NO_DATA_AVAILABLE', { defaultValue: 'داده‌ای یافت نشد' })}
+                                </td>
+                            </tr>
+                        ) : (
+                            filteredPolicies.map((row) => {
+                                const selected = (selectedWithdrawalPolicies as WithdrawalPolicy[] | null)?.some((p) => p.id === row.id);
+                                const sym = row.currency?.symbol || '';
+                                return (
+                                    <tr key={row.id} className="border-b border-emerald-50 transition hover:bg-emerald-50/50">
+                                        <td className="px-2 py-1.5">
+                                            <input
+                                                type="checkbox"
+                                                checked={!!selected}
+                                                onChange={(e) => {
+                                                    const current = [...((selectedWithdrawalPolicies as WithdrawalPolicy[] | null) ?? [])];
+                                                    if (e.target.checked) setSelectedWithdrawalPolicies([...current, row] as any);
+                                                    else setSelectedWithdrawalPolicies(current.filter((p) => p.id !== row.id).length ? (current.filter((p) => p.id !== row.id) as any) : null);
+                                                }}
+                                            />
+                                        </td>
+                                        <td className="px-2 py-1.5 align-middle">
+                                            <RowActions items={getPolicyRowActions(row)} />
+                                        </td>
+                                        <td className="px-2 py-1.5 text-start">
+                                            <span className={`fi fi-${row.currency?.code?.toLowerCase()?.substring(0, 2) || 'us'} fis me-1`} />
+                                            {row.currency?.code} — {row.currency?.name}
+                                        </td>
+                                        <td className="px-2 py-1.5">
+                                            <Badge variant="secondary" className="text-[10px]">
+                                                {row.commission_type === 'percentage' ? t('PERCENTAGE') : t('FIXED')}
+                                            </Badge>
+                                        </td>
+                                        <td className="px-2 py-1.5 tabular-nums">
+                                            {Number(row.commission_value).toFixed(2)}
+                                            {row.commission_type === 'percentage' ? '%' : ` ${sym}`}
+                                        </td>
+                                        <td className="px-2 py-1.5 tabular-nums">
+                                            {Number(row.min_withdraw_amount).toFixed(2)} {sym}
+                                        </td>
+                                        <td className="px-2 py-1.5 tabular-nums">
+                                            {Number(row.max_withdraw_amount).toFixed(2)} {sym}
+                                        </td>
+                                        <td className="px-2 py-1.5">
+                                            <Badge variant={row.status === true ? 'success' : 'danger'} className="text-[10px]">
+                                                {row.status === true ? t('ACTIVE') : t('INACTIVE')}
+                                            </Badge>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
+                    </tbody>
+                </table>
+            </ListPage>
+
+            <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                <SheetContent side="left" className="w-full sm:max-w-md">
+                    <SheetHeader>
+                        <SheetTitle>{t('FILTER', { defaultValue: 'فیلتر' })}</SheetTitle>
+                        <SheetDescription>{t('WITHDRAWAL_POLICY.FILTER.HINT', { defaultValue: 'فیلتر ارز روی نتایج سرور اعمال می‌شود.' })}</SheetDescription>
+                    </SheetHeader>
+                    <div className={FILTER_SHEET_BODY_CLASS}>
+                        <FilterField label={t('MENU.CURRENCY')}>
+                            <Select value={draftCurrencyFilter || undefined} onValueChange={setDraftCurrencyFilter}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_CURRENCY', { defaultValue: 'انتخاب ارز' })} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableCurrencies.map((c: Currency) => (
+                                        <SelectItem key={c.id} value={String(c.id)}>
+                                            {c.code} — {c.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+                        <div className="flex gap-2 pt-2">
+                            <UiButton className="flex-1" onClick={applyCurrencyFilter}>
+                                {t('APPLY', { defaultValue: 'اعمال' })}
+                            </UiButton>
+                            <UiButton className="flex-1" variant="secondary" onClick={clearCurrencyFilter}>
+                                {t('RESET', { defaultValue: 'بازنشانی' })}
+                            </UiButton>
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            <FormSheet
+                open={withdrawalPolicyDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                size="xl"
+                side="left"
+                title={withdrawalPolicy.id ? t('EDIT_WITHDRAWAL_POLICY') : t('CREATE_WITHDRAWAL_POLICY')}
+                description={t('WITHDRAWAL_POLICY.FORM.SHEET_HINT', { defaultValue: 'کارمزد و محدودیت برداشت را برای ارز انتخاب‌شده تنظیم کنید.' })}
+                footer={
+                    <FormActions onCancel={hideDialog} onSubmit={saveWithdrawalPolicy} cancelLabel={t('CANCEL')} submitLabel={t('SAVE')} />
+                }
+            >
+                <FormSection title={t('WITHDRAWAL_POLICY.FORM.SECTION.CURRENCY', { defaultValue: 'ارز و وضعیت' })}>
+                    <FormField
+                        label={t('MENU.CURRENCY')}
+                        required
+                        fullWidth
+                        error={submitted && !withdrawalPolicy.currency_id ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Select
+                            value={
+                                withdrawalPolicy.currency_id
+                                    ? String(withdrawalPolicy.currency_id)
+                                    : undefined
+                            }
+                            onValueChange={(v) =>
+                                setWithdrawalPolicy((prev) => ({
+                                    ...prev,
+                                    currency_id: Number(v)
+                                }))
+                            }
+                        >
+                            <SelectTrigger className={classNames(submitted && !withdrawalPolicy.currency_id && 'border-rose-300')}>
+                                <SelectValue placeholder={t('SELECT_CURRENCY')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableCurrencies.map((c: Currency) => (
+                                    <SelectItem key={c.id} value={String(c.id)}>
+                                        {c.code} — {c.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField
+                        label={t('COMMISSION_TYPE')}
+                        required
+                        error={submitted && !withdrawalPolicy.commission_type ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Select
+                            value={withdrawalPolicy.commission_type || undefined}
+                            onValueChange={(v) =>
+                                setWithdrawalPolicy((prev) => ({
+                                    ...prev,
+                                    commission_type: v as WithdrawalPolicy['commission_type']
+                                }))
+                            }
+                        >
+                            <SelectTrigger className={classNames(submitted && !withdrawalPolicy.commission_type && 'border-rose-300')}>
+                                <SelectValue placeholder={t('SELECT_COMMISSION_TYPE')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {commissionTypeOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField label={t('STATUS')}>
+                        <Select
+                            value={String(Boolean(withdrawalPolicy.status))}
+                            onValueChange={(v) =>
+                                setWithdrawalPolicy((prev) => ({
+                                    ...prev,
+                                    status: v === 'true'
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('SELECT_STATUS')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {statusOptions.map((opt) => (
+                                    <SelectItem key={String(opt.value)} value={String(opt.value)}>
+                                        {opt.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                </FormSection>
+                <FormSection title={t('WITHDRAWAL_POLICY.FORM.SECTION.LIMITS', { defaultValue: 'کارمزد و محدودیت' })}>
+                    <FormField
+                        label={
+                            withdrawalPolicy.commission_type === 'percentage'
+                                ? `${t('COMMISSION_VALUE')} (0-100%)`
+                                : t('COMMISSION_VALUE')
+                        }
+                        required
+                        fullWidth
+                        error={submitted && withdrawalPolicy.commission_value === undefined ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <div className="flex w-full items-center gap-2">
+                            <NumberInput
+                                id="commission_value"
+                                value={Number(withdrawalPolicy.commission_value)}
+                                onValueChange={(v) =>
+                                    setWithdrawalPolicy((prev) => ({
+                                        ...prev,
+                                        commission_value: v ?? 0
+                                    }))
+                                }
+                                min={0}
+                                max={withdrawalPolicy.commission_type === 'percentage' ? 100 : undefined}
+                                step={0.01}
+                                allowNull={false}
+                                className={classNames('w-full flex-1', {
+                                    'border-rose-300': submitted && withdrawalPolicy.commission_value === undefined
+                                })}
+                                placeholder={
+                                    withdrawalPolicy.commission_type === 'percentage' ? t('ENTER_PERCENTAGE') : t('ENTER_FIXED_AMOUNT')
+                                }
+                            />
+                            <span className="shrink-0 rounded-md border border-emerald-100 bg-emerald-50 px-2 py-2 text-sm text-muted-foreground">
+                                {withdrawalPolicy.commission_type === 'percentage'
+                                    ? '%'
+                                    : availableCurrencies.find((c: Currency) => Number(c.id) === Number(withdrawalPolicy.currency_id))?.symbol || '$'}
+                            </span>
+                        </div>
+                    </FormField>
+                    <FormField
+                        label={t('MIN_WITHDRAW_AMOUNT')}
+                        required
+                        error={submitted && withdrawalPolicy.min_withdraw_amount === undefined ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <NumberInput
+                            id="min_withdraw_amount"
+                            value={Number(withdrawalPolicy.min_withdraw_amount)}
+                            onValueChange={(v) =>
+                                setWithdrawalPolicy((prev) => ({
+                                    ...prev,
+                                    min_withdraw_amount: v ?? 0
+                                }))
+                            }
+                            min={0}
+                            step={0.01}
+                            allowNull={false}
+                            className={classNames('w-full', {
+                                'border-rose-300': submitted && withdrawalPolicy.min_withdraw_amount === undefined
+                            })}
+                            placeholder={t('ENTER_MIN_AMOUNT')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('MAX_WITHDRAW_AMOUNT')}
+                        required
+                        error={submitted && withdrawalPolicy.max_withdraw_amount === undefined ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <NumberInput
+                            id="max_withdraw_amount"
+                            value={Number(withdrawalPolicy.max_withdraw_amount)}
+                            onValueChange={(v) =>
+                                setWithdrawalPolicy((prev) => ({
+                                    ...prev,
+                                    max_withdraw_amount: v ?? 0
+                                }))
+                            }
+                            min={0}
+                            step={0.01}
+                            allowNull={false}
+                            className={classNames('w-full', {
+                                'border-rose-300': submitted && withdrawalPolicy.max_withdraw_amount === undefined
+                            })}
+                            placeholder={t('ENTER_MAX_AMOUNT')}
+                        />
+                    </FormField>
+                    {withdrawalPolicy.min_withdraw_amount >= withdrawalPolicy.max_withdraw_amount &&
+                        withdrawalPolicy.min_withdraw_amount > 0 &&
+                        withdrawalPolicy.max_withdraw_amount > 0 && (
+                            <p className="sm:col-span-2 text-xs font-medium text-rose-600">{t('MIN_AMOUNT_MUST_BE_LESS_THAN_MAX_AMOUNT')}</p>
+                        )}
+                </FormSection>
+            </FormSheet>
 
                     <Dialog
                         visible={deleteWithdrawalPolicyDialog}
@@ -746,10 +700,9 @@ const WithdrawalPolicyPage = () => {
                             )}
                         </div>
                     </Dialog>
-                </div>
-            </div>
         </div>
     );
 };
+
 
 export default withAuth(WithdrawalPolicyPage);

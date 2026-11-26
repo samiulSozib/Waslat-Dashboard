@@ -1,35 +1,34 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 import { Button } from 'primereact/button';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
+import { SearchSelect } from '@/components/admin/search-select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { _fetchCountries } from '@/app/redux/actions/countriesActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { PurchasedProduct } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import { _fetchResellers } from '@/app/redux/actions/resellerActions';
-import { InputTextarea } from 'primereact/inputtextarea';
 import { _addPurchasedProduct, _deletePurchasedProduct, _editPurchasedProduct, _fetchPurchasedProducts } from '@/app/redux/actions/purchasedProductsActions';
-import { purchasedProductsReducer } from '../../../redux/reducers/purchasedProductsReducer';
 import { _fetchSuppliers } from '@/app/redux/actions/supplierActions';
 import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
-import { suppliersReducer } from '../../../redux/reducers/supplierReducer';
-import serviceReducer from '../../../redux/reducers/serviceReducer';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
-import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
+import { DateField } from '@/components/ui/date-field';
+import { cn } from '@/lib/utils';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { RowActions } from '@/components/admin/row-actions';
+import { Button as UiButton } from '@/components/ui/button';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 
 const PurchasedProductPage = () => {
     let emptyPurchasedProduct: PurchasedProduct = {
@@ -51,11 +50,10 @@ const PurchasedProductPage = () => {
     const [deletePurchasedProductDialog, setDeletePurchasedProductDialog] = useState(false);
     const [deletePurchasedProductsDialog, setDeletePurchasedProductsDialog] = useState(false);
     const [purchasedProduct, setPurchasedProduct] = useState<PurchasedProduct>(emptyPurchasedProduct);
-    const [selectedCompanies, setSelectedPurchasedProduct] = useState(null);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const searchTag = useDebouncedValue(searchInput, 350);
     const toast = useRef<Toast>(null);
-    const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { purchasedProducts, loading } = useSelector((state: any) => state.purchasedProductsReducer);
     const { suppliers } = useSelector((state: any) => state.suppliersReducer);
@@ -129,152 +127,33 @@ const PurchasedProductPage = () => {
         setDeletePurchasedProductDialog(false);
     };
 
-    const confirmDeleteSelected = () => {
-        setDeletePurchasedProductsDialog(true);
-    };
-
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('PURCHASEDPRODUCT.TABLE.CREATEPURCHASEDPRODUCT')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                    {/* <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    /> */}
-                </div>
-            </React.Fragment>
+    const filteredProducts = useMemo(() => {
+        const search = searchTag.trim().toLocaleLowerCase();
+        const list: PurchasedProduct[] = Array.isArray(purchasedProducts) ? purchasedProducts : [];
+        if (!search) return list;
+        return list.filter((row) =>
+            [row.product_name, row.supplier?.supplier_name, row.service?.company?.company_name, row.purchase_price, row.quantity]
+                .filter((v) => v !== null && v !== undefined)
+                .join(' ')
+                .toLocaleLowerCase()
+                .includes(search)
         );
+    }, [purchasedProducts, searchTag]);
+
+    const formatPurchaseDate = (dateString: string) => {
+        if (!dateString) return '—';
+        try {
+            return new Date(dateString).toLocaleString('fa-IR', { dateStyle: 'short', timeStyle: 'short' });
+        } catch {
+            return dateString;
+        }
     };
 
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <div className="flex items-center">
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-    //                 <i className="pi pi-search" />
-    //                 <InputText
-    //                     type="search"
-    //                     onInput={(e) => setGlobalFilter(e.currentTarget.value)}
-    //                     placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-    //                     className="w-full md:w-auto"
-    //                 />
-    //             </span>
-    //         </div>
-    //     );
-    // };
+    const getPurchasedProductRowActions = (row: PurchasedProduct) => [
+        { label: t('EDIT', { defaultValue: 'ویرایش' }), icon: <Pencil className="h-4 w-4" />, onClick: () => editPurchasedProduct(row) },
+        { label: t('APP.GENERAL.DELETE', { defaultValue: 'حذف' }), icon: <Trash2 className="h-4 w-4" />, onClick: () => confirmDeletePurchasedProduct(row), danger: true }
+    ];
 
-    const supplierNameBodyTemplate = (rowData: PurchasedProduct) => {
-        return (
-            <>
-                <span className="p-column-title">Supplier</span>
-                {rowData.supplier?.supplier_name}
-            </>
-        );
-    };
-
-    const productNameBodyTemplate = (rowData: PurchasedProduct) => {
-        return (
-            <>
-                <span className="p-column-title">Product Name</span>
-                {rowData.product_name}
-            </>
-        );
-    };
-
-    const quantityBodyTemplate = (rowData: PurchasedProduct) => {
-        return (
-            <>
-                <span className="p-column-title">Quantity</span>
-                {rowData.quantity}
-            </>
-        );
-    };
-
-    const purchasePriceBodyTemplate = (rowData: PurchasedProduct) => {
-        return (
-            <>
-                <span className="p-column-title">Purchase Price</span>
-                {rowData.purchase_price}
-            </>
-        );
-    };
-
-    const serviceBodyTemplate = (rowData: PurchasedProduct) => {
-        return (
-            <>
-                <span className="p-column-title">Service</span>
-                {rowData.service?.company?.company_name}
-            </>
-        );
-    };
-
-    const purchasedProductDateBodyTemplate = (rowData: PurchasedProduct) => {
-        const formatDate = (dateString: string) => {
-            const date = new Date(dateString);
-            const optionsDate: Intl.DateTimeFormatOptions = {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            };
-            const optionsTime: Intl.DateTimeFormatOptions = {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            };
-            const formattedDate = date.toLocaleDateString('en-US', optionsDate);
-            const formattedTime = date.toLocaleTimeString('en-US', optionsTime);
-
-            return { formattedDate, formattedTime };
-        };
-
-        const { formattedDate, formattedTime } = formatDate(rowData.purchase_date);
-
-        return (
-            <>
-                <span className="p-column-title">Created At</span>
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedDate}</span>
-                <br />
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedTime}</span>
-            </>
-        );
-    };
-
-    const actionBodyTemplate = (rowData: PurchasedProduct) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editPurchasedProduct(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeletePurchasedProduct(rowData)} />
-            </>
-        );
-    };
-
-    // const header = (
-    //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-    //         <h5 className="m-0">Manage Products</h5>
-    //         <span className="block mt-2 md:mt-0 p-input-icon-left">
-    //             <i className="pi pi-search" />
-    //             <InputText type="search" onInput={(e) => setGlobalFilter(e.currentTarget.value)} placeholder="Search..." />
-    //         </span>
-    //     </div>
-    // );
-
-    const purchasedProductDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={savePurchasedProduct} />
-        </>
-    );
     const deletePurchasedProductDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeletePurchasedProductDialog} />
@@ -289,253 +168,240 @@ const PurchasedProductPage = () => {
     );
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" right={rightToolbarTemplate}></Toolbar>
+        <div className="space-y-4">
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.PURCHASEDPRODUCTS', { defaultValue: 'محصولات خریداری‌شده' })}
+                description={t('PURCHASEDPRODUCT.PAGE.DESCRIPTION', { defaultValue: 'ثبت و مدیریت خرید محصول از تأمین‌کنندگان' })}
+                loading={loading}
+                actions={
+                    <UiButton size="sm" onClick={openNew}>
+                        <Plus className="h-4 w-4" />
+                        {t('PURCHASEDPRODUCT.TABLE.CREATEPURCHASEDPRODUCT', { defaultValue: 'افزودن خرید' })}
+                    </UiButton>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو...' })}
+                    />
+                }
+                footer={
+                    <div className="border-t border-emerald-100 px-3 py-2 text-xs text-muted-foreground">
+                        {t('TOTAL', { defaultValue: 'مجموع' })}: {filteredProducts.length}
+                    </div>
+                }
+            >
+                <table className="w-full min-w-[960px] border-collapse text-xs">
+                    <thead>
+                        <tr className="border-b border-emerald-100 bg-emerald-50/70 text-start">
+                            <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">
+                                {t('TABLE.GENERAL.ACTIONS', { defaultValue: 'عملیات' })}
+                            </th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PURCHASEDPRODUCT.TABLE.COLUMN.SUPPLIER')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PURCHASEDPRODUCT.TABLE.COLUMN.PRODUCTNAME')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PURCHASEDPRODUCT.TABLE.COLUMN.QUANTITY')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PURCHASEDPRODUCT.TABLE.COLUMN.PURCHASEPRICE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">{t('PURCHASEDPRODUCT.TABLE.COLUMN.PURCHASEDATE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PURCHASEDPRODUCT.TABLE.COLUMN.SERVICE')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredProducts.length === 0 ? (
+                            <tr>
+                                <td colSpan={7} className="px-2 py-12 text-center text-muted-foreground">
+                                    {t('DATA_TABLE.TABLE.NO_DATA', { defaultValue: 'داده‌ای یافت نشد' })}
+                                </td>
+                            </tr>
+                        ) : (
+                            filteredProducts.map((row) => (
+                                <tr key={row.id} className="border-b border-emerald-50 transition hover:bg-emerald-50/50">
+                                    <td className="px-2 py-1.5 align-middle">
+                                        <RowActions items={getPurchasedProductRowActions(row)} />
+                                    </td>
+                                    <td className="px-2 py-1.5 text-start">{row.supplier?.supplier_name || '—'}</td>
+                                    <td className="px-2 py-1.5 text-start">{row.product_name || '—'}</td>
+                                    <td className="px-2 py-1.5 tabular-nums">{row.quantity ?? '—'}</td>
+                                    <td className="px-2 py-1.5 tabular-nums">{row.purchase_price ?? '—'}</td>
+                                    <td className="px-2 py-1.5 whitespace-nowrap tabular-nums text-muted-foreground">{formatPurchaseDate(row.purchase_date)}</td>
+                                    <td className="px-2 py-1.5 text-start">{row.service?.company?.company_name || '—'}</td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </ListPage>
 
-                    <DataTable
-                        ref={dt}
-                        value={purchasedProducts}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedPurchasedProduct(e.value as any)}
-                        dataKey="id"
-                        paginator
-                        rows={10}
-                        rowsPerPageOptions={[5, 10, 25]}
-                        className="datatable-responsive"
-                        paginatorTemplate={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        globalFilter={globalFilter}
-                        // header={header}
-                        responsiveLayout="scroll"
+            <FormSheet
+                open={purchasedProductDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                title={t('PURCHASEDPRODUCTS.DETAILS')}
+                description={purchasedProduct.id ? 'ویرایش خرید' : 'ثبت خرید جدید'}
+                size="xl"
+                side="left"
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={savePurchasedProduct}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection title="اطلاعات خرید" description="تأمین‌کننده، محصول و قیمت">
+                    <FormField
+                        label={t('PURCHASEDPRODUCT.FORM.INPUT.SUPPLIER')}
+                        required
+                        error={submitted && !purchasedProduct.supplier ? t('THIS_FIELD_IS_REQUIRED') : null}
                     >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PURCHASEDPRODUCT.TABLE.COLUMN.SUPPLIER')} body={supplierNameBodyTemplate} ></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PURCHASEDPRODUCT.TABLE.COLUMN.PRODUCTNAME')} body={productNameBodyTemplate} ></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PURCHASEDPRODUCT.TABLE.COLUMN.QUANTITY')} body={quantityBodyTemplate} ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('PURCHASEDPRODUCT.TABLE.COLUMN.PURCHASEPRICE')}
-                            body={purchasePriceBodyTemplate}
-                            
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            header={t('PURCHASEDPRODUCT.TABLE.COLUMN.PURCHASEDATE')}
-                            body={purchasedProductDateBodyTemplate}
-                            
-                        ></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PURCHASEDPRODUCT.TABLE.COLUMN.SERVICE')} body={serviceBodyTemplate} ></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate}></Column>
-                    </DataTable>
-
-                    <Dialog visible={purchasedProductDialog} style={{ width: '900px', padding: '5px' }} header={t('PURCHASEDPRODUCTS.DETAILS')} modal className="p-fluid" footer={purchasedProductDialogFooter} onHide={hideDialog}>
-                        <div className="card flex flex-wrap p-fluid mt-3 gap-4">
-                            <div className=" flex-1 col-12 lg:col-6">
-                                <div className="field">
-                                    <label htmlFor="supplier" style={{ fontWeight: 'bold' }}>
-                                        {t('PURCHASEDPRODUCT.FORM.INPUT.SUPPLIER')}
-                                    </label>
-                                    <Dropdown
-                                        id="supplier"
-                                        value={purchasedProduct.supplier}
-                                        options={suppliers}
-                                        onChange={(e) =>
-                                            setPurchasedProduct((prev) => ({
-                                                ...prev,
-                                                supplier: e.value
-                                            }))
-                                        }
-                                        optionLabel="supplier_name"
-                                        // optionValue='id'
-                                        placeholder={t('PURCHASEDPRODUCTS.FORM.PLACEHOLDER.CHOOSE.A.SUPPLIER')}
-                                        className="w-full"
-                                    />
-                                    {submitted && !purchasedProduct.supplier && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                           {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
+                        <SearchSelect
+                            value={purchasedProduct.supplier}
+                            options={suppliers || []}
+                            onChange={(selected) =>
+                                setPurchasedProduct((prev) => ({
+                                    ...prev,
+                                    supplier: selected
+                                }))
+                            }
+                            optionLabel="supplier_name"
+                            placeholder={t('PURCHASEDPRODUCTS.FORM.PLACEHOLDER.CHOOSE.A.SUPPLIER')}
+                            error={submitted && !purchasedProduct.supplier}
+                            returnFullObject
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('PURCHASEDPRODUCT.FORM.INPUT.SERVICE')}
+                        required
+                        error={submitted && !purchasedProduct.service ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <SearchSelect
+                            value={purchasedProduct.service}
+                            options={services || []}
+                            onChange={(selected) =>
+                                setPurchasedProduct((prev) => ({
+                                    ...prev,
+                                    service: selected
+                                }))
+                            }
+                            optionLabel="company_name"
+                            placeholder={t('PURCHASEDPRODUCTS.FORM.PLACEHOLDER.CHOOSE.A.SERVICE')}
+                            error={submitted && !purchasedProduct.service}
+                            returnFullObject
+                            itemTemplate={(option) => (
+                                <div className="flex gap-2">
+                                    <div>{option.service_category?.category_name}</div>
+                                    <div>{option.company?.company_name}</div>
                                 </div>
-
-                                <div className="field">
-                                    <label htmlFor="product_name" style={{ fontWeight: 'bold' }}>
-                                        {t('PURCHASEDPRODUCT.FORM.INPUT.PRODUCTNAME')}
-                                    </label>
-                                    <InputText
-                                        id="product_name"
-                                        value={purchasedProduct.product_name}
-                                        onChange={(e) =>
-                                            setPurchasedProduct((prev) => ({
-                                                ...prev,
-                                                product_name: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        placeholder={t('PURCHASEDPRODUCTS.FORM.PLACEHOLDER.PRODUCT.NAME')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !purchasedProduct.product_name
-                                        })}
-                                    />
-                                    {submitted && !purchasedProduct.product_name && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
+                            )}
+                            valueTemplate={(option) => (
+                                <div className="flex gap-2 text-sm">
+                                    <span>{option.service_category?.category_name}</span>
+                                    <span>{option.company?.company_name}</span>
                                 </div>
-                                <div className="field">
-                                    <label htmlFor="purchase_price" style={{ fontWeight: 'bold' }}>
-                                        {t('PURCHASEDPRODUCT.FORM.INPUT.PURCHASEPRICE')}
-                                    </label>
-                                    <InputText
-                                        id="purchase_price"
-                                        value={purchasedProduct.purchase_price}
-                                        onChange={(e) =>
-                                            setPurchasedProduct((prev) => ({
-                                                ...prev,
-                                                purchase_price: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        placeholder={t('PURCHASEDPRODUCTS.FORM.PLACEHOLDER.PURCHASE.PRICE')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !purchasedProduct.purchase_price
-                                        })}
-                                    />
-                                    {submitted && !purchasedProduct.purchase_price && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                                <div className="field">
-                                    <label htmlFor="status" style={{ fontWeight: 'bold' }}>
-                                        {t('PURCHASEDPRODUCT.FORM.INPUT.STATUS')}
-                                    </label>
-                                    <Dropdown
-                                        id="status"
-                                        value={purchasedProduct.status}
-                                        options={[
-                                            { label: 'Active', value: 1 },
-                                            { label: 'Inactive', value: 0 }
-                                        ]}
-                                        onChange={(e) =>
-                                            setPurchasedProduct((prev) => ({
-                                                ...prev,
-                                                status: e.value
-                                            }))
-                                        }
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        placeholder="Choose a status"
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
-                            <br />
-                            <div className=" flex-1 col-12 lg:col-6">
-                                <div className="field">
-                                    <label htmlFor="service" style={{ fontWeight: 'bold' }}>
-                                        {t('PURCHASEDPRODUCT.FORM.INPUT.SERVICE')}
-                                    </label>
-                                    <Dropdown
-                                        id="service"
-                                        value={purchasedProduct.service}
-                                        options={services}
-                                        onChange={(e) =>
-                                            setPurchasedProduct((prev) => ({
-                                                ...prev,
-                                                service: e.value
-                                            }))
-                                        }
-                                        optionLabel="company.company_name"
-                                        // optionValue='id'
-                                        placeholder={t('PURCHASEDPRODUCTS.FORM.PLACEHOLDER.CHOOSE.A.SERVICE')}
-                                        className="w-full"
-                                        itemTemplate={(option) => (
-                                            <div style={{ display: 'flex', gap: '5px' }}>
-                                                <div>{option.service_category?.category_name}</div>
-                                                <div>{option.company?.company_name}</div>
-                                            </div>
-                                        )}
-                                    />
-                                    {submitted && !purchasedProduct.service && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="purchasedProduct_date" style={{ fontWeight: 'bold' }}>
-                                        {t('PURCHASEDPRODUCT.FORM.INPUT.QUANTITY')}
-                                    </label>
-                                    <InputText
-                                        id="quantity"
-                                        value={purchasedProduct.quantity.toString()}
-                                        onChange={(e) =>
-                                            setPurchasedProduct((prev) => ({
-                                                ...prev,
-                                                quantity: parseInt(e.target.value)
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        className={classNames({
-                                            'p-invalid': submitted && !purchasedProduct.quantity
-                                        })}
-                                    />
-                                    {submitted && !purchasedProduct.quantity && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="purchase_date" style={{ fontWeight: 'bold' }}>
-                                        {t('PURCHASEDPRODUCT.FORM.INPUT.PURCHASEDATE')}
-                                    </label>
-                                    <InputText
-                                        id="purchase_date"
-                                        value={purchasedProduct.purchase_date}
-                                        onChange={(e) =>
-                                            setPurchasedProduct((prev) => ({
-                                                ...prev,
-                                                purchase_date: e.target.value
-                                            }))
-                                        }
-                                        type="date"
-                                        required
-                                        autoFocus
-                                        placeholder={t('PURCHASEDPRODUCTS.FORM.PLACEHOLDER.PURCHASE.DATE')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !purchasedProduct.purchase_date
-                                        })}
-                                    />
-                                    {submitted && !purchasedProduct.purchase_date && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </Dialog>
+                            )}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('PURCHASEDPRODUCT.FORM.INPUT.PRODUCTNAME')}
+                        required
+                        error={submitted && !purchasedProduct.product_name ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="product_name"
+                            value={purchasedProduct.product_name}
+                            onChange={(e) =>
+                                setPurchasedProduct((prev) => ({
+                                    ...prev,
+                                    product_name: e.target.value
+                                }))
+                            }
+                            required
+                            autoFocus
+                            placeholder={t('PURCHASEDPRODUCTS.FORM.PLACEHOLDER.PRODUCT.NAME')}
+                            className={cn('w-full', submitted && !purchasedProduct.product_name && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('PURCHASEDPRODUCT.FORM.INPUT.QUANTITY')}
+                        required
+                        error={submitted && !purchasedProduct.quantity ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <NumberInput
+                            id="quantity"
+                            value={purchasedProduct.quantity || null}
+                            onValueChange={(v) =>
+                                setPurchasedProduct((prev) => ({
+                                    ...prev,
+                                    quantity: v ?? 0
+                                }))
+                            }
+                            min={0}
+                            step={1}
+                            allowNull={false}
+                            className={cn('w-full', submitted && !purchasedProduct.quantity && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('PURCHASEDPRODUCT.FORM.INPUT.PURCHASEPRICE')}
+                        required
+                        error={submitted && !purchasedProduct.purchase_price ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="purchase_price"
+                            value={purchasedProduct.purchase_price}
+                            onChange={(e) =>
+                                setPurchasedProduct((prev) => ({
+                                    ...prev,
+                                    purchase_price: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('PURCHASEDPRODUCTS.FORM.PLACEHOLDER.PURCHASE.PRICE')}
+                            className={cn('w-full', submitted && !purchasedProduct.purchase_price && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('PURCHASEDPRODUCT.FORM.INPUT.PURCHASEDATE')}
+                        required
+                        error={submitted && !purchasedProduct.purchase_date ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <DateField
+                            id="purchase_date"
+                            value={purchasedProduct.purchase_date || ''}
+                            onValueChange={(v) =>
+                                setPurchasedProduct((prev) => ({
+                                    ...prev,
+                                    purchase_date: v
+                                }))
+                            }
+                            required
+                            className={cn('w-full', submitted && !purchasedProduct.purchase_date && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField label={t('PURCHASEDPRODUCT.FORM.INPUT.STATUS')}>
+                        <Select
+                            value={purchasedProduct.status != null ? String(purchasedProduct.status) : undefined}
+                            onValueChange={(v) =>
+                                setPurchasedProduct((prev) => ({
+                                    ...prev,
+                                    status: Number(v)
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Choose a status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="1">Active</SelectItem>
+                                <SelectItem value="0">Inactive</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
                     <Dialog visible={deletePurchasedProductDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deletePurchasedProductDialogFooter} onHide={hideDeletePurchasedProductDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -554,8 +420,6 @@ const PurchasedProductPage = () => {
                             {purchasedProduct && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>
-                </div>
-            </div>
         </div>
     );
 };

@@ -17,6 +17,8 @@ export interface Currency {
     name: string;
     code: string;
     symbol: string;
+    flag_image_url?: string | File | null;
+    country?: { country_flag_image_url?: string | null } | null;
     ignore_digits_count: string;
     exchange_rate_per_usd: string;
     deleted_at: string | null;
@@ -176,6 +178,7 @@ export interface Currency {
     name: string;
     code: string;
     symbol: string;
+    flag_image_url?: string | File | null;
     ignore_digits_count: string;
     exchange_rate_per_usd: string;
     deleted_at: string | null;
@@ -245,8 +248,9 @@ export interface Reseller {
     total_earning_balance?: number | string,
     parent_reseller_id?: number | null | string,
     parent_reseller_name?: string | null,
+    parent?: { id?: number; reseller_name?: string } | null,
     parent_reseller_profile_image_url?: string | null,
-    parent_reseller_phone?: string | null
+    parent_reseller_phone?: string | null,
     reseller_identity_attachment?: File | string | null,
     extra_optional_proof?: File | string | null,
     can_set_commission_group?: boolean,
@@ -585,7 +589,8 @@ export interface HawalaCurrency {
     amount: number,
     amount_in_letter:string,
     buy_rate: string | null;
-    sell_rate: string | null
+    sell_rate: string | null;
+    description?: string | null;
     deleted_at: string | null;
     created_at: string;
     updated_at: string;

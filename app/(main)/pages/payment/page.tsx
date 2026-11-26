@@ -1,45 +1,87 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 import { Button } from 'primereact/button';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { _fetchCountries } from '@/app/redux/actions/countriesActions';
-import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Payment, Currency } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
-import { _addPayment, _deletePayment, _editPayment, _fetchPayments, _invalidatePayment, _rollbackedPayment, _verifyAndSendPayment, _verifyPayment } from '@/app/redux/actions/paymentActions';
-import { paymentReducer } from '../../../redux/reducers/paymentReducer';
-import { resellerReducer } from '../../../redux/reducers/resellerReducer';
+import {
+    _addPayment,
+    _deletePayment,
+    _editPayment,
+    _fetchPayments,
+    _invalidatePayment,
+    _rollbackedPayment,
+    _verifyAndSendPayment,
+    _verifyPayment
+} from '@/app/redux/actions/paymentActions';
 import { _fetchResellers } from '@/app/redux/actions/resellerActions';
-import { InputTextarea } from 'primereact/inputtextarea';
-import { paymentMethodsReducer } from '../../../redux/reducers/paymentMethodReducer';
-import { currenciesReducer } from '../../../redux/reducers/currenciesReducer';
 import { _fetchPaymentMethods } from '@/app/redux/actions/paymentMethodActions';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
-import { Calendar } from 'primereact/calendar';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
-import { Reseller } from '../../../../types/interface';
-import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
-import { Paginator } from 'primereact/paginator';
 import { generatePaymentExcelFile } from '../../utilities/generateExcel';
-import { SplitButton } from 'primereact/splitbutton';
-import { Checkbox } from 'primereact/checkbox';
 import { useRouter, useSearchParams } from 'next/navigation';
-import CustomDropdown from '@/app/(main)/components/customDropDownWithSearch';
 import CustomDropdownWithSearch from '@/app/(main)/components/customDropDownWithSearch';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { FilterField, FILTER_SHEET_BODY_CLASS } from '@/components/admin/filter-field';
+import { RowActions } from '@/components/admin/row-actions';
+import { FormSheet, FormSection, FormField, FormActions } from '@/components/admin/form-sheet';
+import { Button as UiButton } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { DateField } from '@/components/ui/date-field';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { cn } from '@/lib/utils';
+import { CheckCircle, CheckSquare, Download, Pencil, Plus, RefreshCw, RotateCcw, XCircle } from 'lucide-react';
+
+type PaymentFilters = {
+    filter_status: string | null;
+    filter_payment_method: number | null;
+    filter_startdate: string | null;
+    filter_enddate: string | null;
+};
+
+const emptyPaymentFilters: PaymentFilters = {
+    filter_status: null,
+    filter_payment_method: null,
+    filter_startdate: null,
+    filter_enddate: null
+};
+
+function compactFilters(filters: PaymentFilters) {
+    const out: Record<string, string | number> = {};
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') out[key] = value as string | number;
+    });
+    return out;
+}
+
+function paymentStatusVariant(status?: string): 'success' | 'warning' | 'danger' | 'muted' {
+    const s = status?.toLowerCase();
+    if (s === 'completed') return 'success';
+    if (s === 'pending' || s === 'rollback' || s === 'rollbacked') return 'warning';
+    if (s === 'failed' || s === 'rejected') return 'danger';
+    return 'muted';
+}
+
+function formatPaymentDate(value?: string) {
+    if (!value) return '—';
+    try {
+        return new Date(value).toLocaleString('fa-IR', { dateStyle: 'short', timeStyle: 'short' });
+    } catch {
+        return value;
+    }
+}
 
 const PaymentPage = () => {
     let emptyPayment: Payment = {
@@ -67,26 +109,19 @@ const PaymentPage = () => {
     const [payment, setPayment] = useState<Payment>(emptyPayment);
     const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
-    const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { payments, loading, pagination } = useSelector((state: any) => state.paymentReducer);
     const { resellers } = useSelector((state: any) => state.resellerReducer);
     const { paymentMethods } = useSelector((state: any) => state.paymentMethodsReducer);
     const { currencies } = useSelector((state: any) => state.currenciesReducer);
     const { t } = useTranslation();
-    const [searchTag, setSearchTag] = useState('');
-    const [filterDialogVisible, setFilterDialogVisible] = useState(false);
-    const [filters, setFilters] = useState({
-        filter_status: null as string | null,
-        filter_payment_method: null as number | null,
-        filter_startdate: null as string | null,
-        filter_enddate: null as string | null
-    });
-    const [activeFilters, setActiveFilters] = useState({});
+    const [searchInput, setSearchInput] = useState('');
+    const searchTag = useDebouncedValue(searchInput, 350);
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [draftFilters, setDraftFilters] = useState<PaymentFilters>(emptyPaymentFilters);
+    const [activeFilters, setActiveFilters] = useState<PaymentFilters>(emptyPaymentFilters);
     const [refreshing, setRefreshing] = useState(false);
-    const filterRef = useRef<HTMLDivElement>(null);
     const [resellerSearchTerm, setResellerSearchTerm] = useState('');
     const [rollbackDialog, setRollbackDialog] = useState(false);
     const [invalidateDialog, setInvalidateDialog] = useState(false);
@@ -98,8 +133,7 @@ const PaymentPage = () => {
     const [showVerifyAndSendNotes, setShowVerifyAndSendNotes] = useState(false);
     const [viewPaymentDialog, setViewPaymentDialog] = useState(false);
     const [rollbackType, setRollbackType] = useState<'rollback' | 'rollback_full'>('rollback');
-
-
+    const isEditPayment = Boolean(payment.id && payment.id !== 0);
 
     // useEffect(() => {
     //     dispatch(_fetchPayments(1, searchTag, activeFilters));
@@ -112,7 +146,7 @@ const PaymentPage = () => {
 
     // 1. Always fetch payments when search or filters change
     useEffect(() => {
-        dispatch(_fetchPayments(1, searchTag, activeFilters));
+        dispatch(_fetchPayments(1, searchTag, compactFilters(activeFilters)));
     }, [dispatch, searchTag, activeFilters]);
 
     // 2. Fetch dropdown data when add/edit dialog opens
@@ -131,18 +165,11 @@ const PaymentPage = () => {
         }
     }, [paymentDialog, dispatch, resellers.length, paymentMethods.length, currencies.length]);
 
-    // 3. Fetch filter dropdown data when filter dialog opens
     useEffect(() => {
-        if (filterDialogVisible) {
-            // Only need payment methods for filter dropdown
-            if (paymentMethods.length === 0) {
-                dispatch(_fetchPaymentMethods());
-            }
-            if (currencies.length === 0) {
-                dispatch(_fetchCurrencies());
-            }
-        }
-    }, [filterDialogVisible, dispatch, paymentMethods.length, currencies.length]);
+        if (!filterOpen) return;
+        if (paymentMethods.length === 0) dispatch(_fetchPaymentMethods());
+        if (currencies.length === 0) dispatch(_fetchCurrencies());
+    }, [filterOpen, dispatch, paymentMethods.length, currencies.length]);
 
     // Keep the existing reseller search debounce
     useEffect(() => {
@@ -157,46 +184,6 @@ const PaymentPage = () => {
 
         return () => clearTimeout(timer);
     }, [resellerSearchTerm, dispatch, paymentDialog]);
-
-    // Keep the click outside detection
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            if (target.closest('.p-dropdown-panel')) return;
-            if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
-                setFilterDialogVisible(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [filterDialogVisible]);
-
-    // useEffect(() => {
-    //     const timer = setTimeout(() => {
-    //         if (resellerSearchTerm) {
-    //             dispatch(_fetchResellers(1, resellerSearchTerm));
-    //         } else {
-    //             dispatch(_fetchResellers(1, ''));
-    //         }
-    //     }, 300); // Debounce for 300ms
-
-    //     return () => clearTimeout(timer);
-    // }, [resellerSearchTerm, dispatch]);
-
-    // Add this useEffect for click outside detection
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            if (target.closest('.p-dropdown-panel')) return;
-            if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
-                setFilterDialogVisible(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [filterDialogVisible]);
 
     // Add this useEffect to handle auto-opening the dialog
     const searchParams = useSearchParams(); // Add this
@@ -399,405 +386,108 @@ const PaymentPage = () => {
         setVerifyAndSendDialog(true);
     };
 
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center gap-2">
-                    <Button label={t('ADD_PAYMENT')} icon="pi pi-plus" severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={openNew} />
-                    {' '}
-                    {/* Added gap-2 here */}
-                    <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
-                        <Button className="p-button-info" label={t('FILTER')} style={{ gap: '8px' }} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
-                        {filterDialogVisible && (
-                            <div
-                                className="p-card p-fluid"
-                                style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    left: isRTL() ? 0 : '',
-                                    right: isRTL() ? '' : 0,
-                                    width: '300px',
-                                    zIndex: 1000,
-                                    marginTop: '0.5rem',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                }}
-                            >
-                                <div className="p-card-body" style={{ padding: '1rem' }}>
-                                    <div className="grid">
-                                        {/* Status Filter */}
-                                        <div className="col-12">
-                                            <label htmlFor="statusFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('PAYMENT.TABLE.COLUMN.STATUS')}
-                                            </label>
-                                            <Dropdown
-                                                id="statusFilter"
-                                                options={[
-                                                    { label: t('COMPLETED'), value: 'completed' },
-                                                    { label: t('PENDING'), value: 'pending' },
-                                                    { label: t('FAILED'), value: 'failed' }
-                                                ]}
-                                                value={filters.filter_status}
-                                                onChange={(e) => setFilters({ ...filters, filter_status: e.value })}
-                                                placeholder={t('SELECT_STATUS')}
-                                                style={{ width: '100%' }}
-                                            />
-                                        </div>
-
-                                        {/* Payment Method Filter */}
-                                        <div className="col-12">
-                                            <label htmlFor="paymentMethodFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('PAYMENT.TABLE.COLUMN.PAYMENTMETHOD')}
-                                            </label>
-                                            <Dropdown
-                                                id="paymentMethodFilter"
-                                                options={paymentMethods}
-                                                value={filters.filter_payment_method}
-                                                onChange={(e) => setFilters({ ...filters, filter_payment_method: e.value })}
-                                                optionLabel="method_name"
-                                                optionValue="id"
-                                                placeholder={t('SELECT_PAYMENT_METHOD')}
-                                                style={{ width: '100%' }}
-                                            />
-                                        </div>
-
-                                        {/* Date Range Filters */}
-                                        <div className="col-12">
-                                            <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('START_DATE')}
-                                            </label>
-                                            <InputText type="date" id="startDateFilter" value={filters.filter_startdate || ''} onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })} style={{ width: '100%' }} />
-                                        </div>
-
-                                        <div className="col-12">
-                                            <label htmlFor="endDateFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('END_DATE')}
-                                            </label>
-                                            <InputText type="date" id="endDateFilter" value={filters.filter_enddate || ''} onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })} style={{ width: '100%' }} />
-                                        </div>
-
-                                        {/* Action Buttons */}
-                                        <div className="col-12 mt-3 flex justify-content-between gap-2">
-                                            <Button
-                                                label={t('RESET')}
-                                                icon="pi pi-times"
-                                                className="p-button-secondary p-button-sm"
-                                                onClick={() => {
-                                                    setFilters({
-                                                        filter_status: null,
-                                                        filter_payment_method: null,
-                                                        filter_startdate: null,
-                                                        filter_enddate: null
-                                                    });
-                                                }}
-                                            />
-                                            <Button
-                                                label={t('APPLY')}
-                                                icon="pi pi-check"
-                                                className="p-button-sm"
-                                                onClick={() => {
-                                                    handleSubmitFilter(filters);
-                                                    setFilterDialogVisible(false);
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{ gap: '8px' }} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
-                </div>
-            </React.Fragment>
-        );
+    const statusLabel = (status?: string) => {
+        const s = status?.toLowerCase();
+        if (s === 'completed') return t('COMPLETED');
+        if (s === 'pending') return t('PENDING');
+        if (s === 'failed') return t('FAILED');
+        if (s === 'rollbacked') return t('ROLLBACKED', { defaultValue: 'برگشت‌خورده' });
+        return status || '—';
     };
 
-    const [searchValue, setSearchValue] = useState('');
-
-    const leftToolbarTemplate = () => {
-
-        const handleSearch = () => {
-            setSearchTag(searchValue);
-        };
-
-        const handleKeyPress = (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        };
-
-        return (
-            <React.Fragment>
-                <div className="flex align-items-center gap-2">
-                    <span className="p-input-icon-left">
-                        <i className="pi pi-search" />
-                        <InputText
-                            type="search"
-                            value={searchValue}
-                            onChange={(e) => setSearchValue(e.currentTarget.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        />
-                    </span>
-                    <Button
-                        severity="info"
-                        onClick={handleSearch}
-                        label={t('ECOMMERCE.COMMON.SEARCH')}
-                        className="p-button-sm"
-                    />
-                    {searchTag && (
-                        <Button
-                            severity="secondary"
-                            onClick={() => {
-                                setSearchTag('');
-                                setSearchValue('');
-                            }}
-                            className="p-button-sm p-button-outlined"
-                            label={t('CLEAR_FILTERS')}
-                        />
-                    )}
-                </div>
-            </React.Fragment>
-        );
+    const operationTypeLabel = (type?: string | null) => {
+        const v = type?.toLowerCase();
+        if (v === 'credit') return 'Credit';
+        if (v === 'debit') return 'Debit';
+        if (v === 'credit_full') return 'Credit Full';
+        if (v === 'debit_full') return 'Debit Full';
+        return type || '—';
     };
 
-    const resellerNameBodyTemplate = (rowData: Payment) => {
-        return (
-            <>
-                <span className="p-column-title">Reseller</span>
-                {rowData.reseller?.reseller_name}
-            </>
-        );
+    const chips = useMemo(() => {
+        const list: { key: string; label: string }[] = [];
+        if (activeFilters.filter_status) {
+            list.push({
+                key: 'filter_status',
+                label: `${t('PAYMENT.TABLE.COLUMN.STATUS', { defaultValue: 'وضعیت' })}: ${statusLabel(activeFilters.filter_status)}`
+            });
+        }
+        if (activeFilters.filter_payment_method) {
+            const method = paymentMethods.find((m: { id: number }) => m.id === activeFilters.filter_payment_method);
+            list.push({
+                key: 'filter_payment_method',
+                label: `${t('PAYMENT.TABLE.COLUMN.PAYMENTMETHOD', { defaultValue: 'روش پرداخت' })}: ${method?.method_name || activeFilters.filter_payment_method}`
+            });
+        }
+        if (activeFilters.filter_startdate) {
+            list.push({ key: 'filter_startdate', label: `${t('START_DATE', { defaultValue: 'از تاریخ' })}: ${activeFilters.filter_startdate}` });
+        }
+        if (activeFilters.filter_enddate) {
+            list.push({ key: 'filter_enddate', label: `${t('END_DATE', { defaultValue: 'تا تاریخ' })}: ${activeFilters.filter_enddate}` });
+        }
+        return list;
+    }, [activeFilters, paymentMethods, t]);
+
+    const applyFilters = () => {
+        setActiveFilters(draftFilters);
+        setFilterOpen(false);
     };
 
-    const paymentMethodBodyTemplate = (rowData: Payment) => {
-        return (
-            <>
-                <span className="p-column-title">Payment Method</span>
-                {rowData.payment_method?.method_name}
-            </>
-        );
+    const clearFilters = () => {
+        setDraftFilters(emptyPaymentFilters);
+        setActiveFilters(emptyPaymentFilters);
+        setFilterOpen(false);
     };
 
-    const amountBodyTemplate = (rowData: Payment) => {
-        return (
-            <>
-                <span className="p-column-title">Amount</span>
-                {rowData.amount}
-            </>
-        );
+    const removeChip = (key: string) => {
+        const next = { ...activeFilters, [key]: null } as PaymentFilters;
+        setActiveFilters(next);
+        setDraftFilters(next);
     };
 
-    const currencyBodyTemplate = (rowData: Payment) => {
-        return (
-            <>
-                <span className="p-column-title">Currency</span>
-                {rowData.currency?.code}
-            </>
-        );
-    };
-
-    const remainingPaymentBodyTemplate = (rowData: Payment) => {
-        return (
-            <>
-                <span className="p-column-title">Remaining Payment</span>
-                {rowData.remaining_payment_amount}
-            </>
-        );
-    };
-
-    const statusBodyTemplate = (rowData: Payment) => {
-        const status = rowData.status?.toLowerCase() || 'unknown';
-
-        const getStatusClass = (status: string) => {
-            switch (status.toLowerCase()) {
-                case 'rollback':
-                    return 'bg-yellow-100 text-yellow-800';
-                case 'completed':
-                    return 'bg-green-100 text-green-800';
-                case 'rejected':
-                    return 'bg-red-100 text-red-800';
-                case 'failed':
-                    return 'bg-red-100 text-red-800';
-                case 'pending':
-                    return 'bg-yellow-100 text-red-800';
-                default:
-                    return 'bg-gray-100 text-gray-800';
-            }
-        };
-
-        const displayStatus = status !== 'unknown' ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
-
-        return (
-            <>
-                <span className="p-column-title">Status</span>
-                <span className={`px-2 py-1 border-round-xl text-xs font-semibold ${getStatusClass(rowData.status)} w-5rem inline-block text-center`}>{displayStatus}</span>
-            </>
-        );
-    };
-
-    const noteBodyTemplate = (rowData: Payment) => {
-        return (
-            <>
-                <span className="p-column-title">Note</span>
-                {rowData.notes}
-            </>
-        );
-    };
-
-    const operationTypeBodyTemplate = (rowData: Payment) => {
-        const type = rowData.operation_type?.toLowerCase() || 'unknown';
-
-        const getTypeClass = (type: string) => {
-            switch (type) {
-                case 'debit':
-                    return 'bg-red-100 text-red-800';
-                case 'debit_full':
-                    return 'bg-red-200 text-red-800';
-                case 'credit':
-                    return 'bg-blue-100 text-blue-800';
-                case 'credit_full':
-                    return 'bg-blue-200 text-blue-800';
-                default:
-
-                    return 'bg-gray-100 text-gray-800';
-            }
-        };
-
-        const displayType = type !== 'unknown' ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown';
-
-        return (
-            <>
-                <span className="p-column-title">Type</span>
-                <span className={`px-2 py-1 text-xs font-semibold border-round-xl ${getTypeClass(type)} w-5rem inline-block text-center`}>{displayType}</span>
-            </>
-        );
-    };
-
-
-
-    const performedByBodyTemplate = (rowData: Payment) => {
-        return (
-            <>
-                <span className="p-column-title">Performed By</span>
-                {rowData.performed_by_name}
-            </>
-        );
-    };
-
-    const paymentDateBodyTemplate = (rowData: Payment) => {
-        const formatDate = (dateString: string) => {
-            const date = new Date(dateString);
-            const optionsDate: Intl.DateTimeFormatOptions = {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            };
-            const optionsTime: Intl.DateTimeFormatOptions = {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            };
-            const formattedDate = date.toLocaleDateString('en-US', optionsDate);
-            const formattedTime = date.toLocaleTimeString('en-US', optionsTime);
-
-            return { formattedDate, formattedTime };
-        };
-
-        const { formattedDate, formattedTime } = formatDate(rowData.payment_date);
-
-        return (
-            <>
-                <span className="p-column-title">Created At</span>
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedDate}</span>
-                <br />
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedTime}</span>
-            </>
-        );
-    };
-
-    // const actionBodyTemplate = (rowData: Payment) => {
-    //     return (
-    //         <>
-    //             <div className="flex flex-row">
-    //                 <Button icon="pi pi-pencil" rounded severity="success" className="mr-2" onClick={() => editPayment(rowData)} />
-    //                 <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeletePayment(rowData)} />
-    //             </div>
-    //         </>
-    //     );
-    // };
-
-    const actionBodyTemplate = (rowData: Payment) => {
+    const getPaymentRowActions = (rowData: Payment) => {
         const isRollbacked = rowData.status === 'rollbacked';
         const isCompleted = rowData.status === 'completed';
         const isPending = rowData.status === 'pending';
 
-        const items: any = [];
-
-        // Always include Delete
-        // items.push({
-        //     label: t('DELETE'),
-        //     icon: 'pi pi-trash',
-        //     command: () => confirmDeletePayment(rowData),
-        //     disabled: isRollbacked // Disabled only if rollbacked
-        // });
-
-        if (isRollbacked) {
-            // All other actions are disabled (only Delete is shown but disabled above)
-            return <SplitButton label="" model={items} className="p-button-rounded" severity="info" dir="ltr" icon="pi pi-cog" />;
-        }
+        if (isRollbacked) return [];
 
         if (isCompleted) {
-            items.push({
-                label: t('ROLLBACK'),
-                icon: 'pi pi-replay',
-                command: () => confirmRollbackPayment(rowData)
-            });
-        } else if (isPending) {
-            // Only show full set if not done/rollbacked/confirmed
-            items.push(
+            return [
+                {
+                    label: t('ROLLBACK'),
+                    icon: <RotateCcw className="h-4 w-4" />,
+                    onClick: () => confirmRollbackPayment(rowData)
+                }
+            ];
+        }
+
+        if (isPending) {
+            return [
                 {
                     label: t('Invalidate'),
-                    icon: 'pi pi-times-circle',
-                    command: () => confirmInvalidatePayment(rowData)
+                    icon: <XCircle className="h-4 w-4" />,
+                    onClick: () => confirmInvalidatePayment(rowData)
                 },
                 {
                     label: t('Verify'),
-                    icon: 'pi pi-check-circle',
-                    command: () => confirmVerifyPayment(rowData)
+                    icon: <CheckCircle className="h-4 w-4" />,
+                    onClick: () => confirmVerifyPayment(rowData)
                 },
                 {
                     label: t('Verify_and_send'),
-                    icon: 'pi pi-check-square',
-                    command: () => confirmVerifyAndSendPayment(rowData)
+                    icon: <CheckSquare className="h-4 w-4" />,
+                    onClick: () => confirmVerifyAndSendPayment(rowData)
                 },
-                {
-                    label: t('ROLLBACK'),
-                    icon: 'pi pi-replay',
-                    command: () => confirmRollbackPayment(rowData)
-                },
-                {
-                    label: t('EDIT'),
-                    icon: 'pi pi-pencil',
-                    command: () => editPayment(rowData)
-                }
-            );
-        } else {
-            return <SplitButton label="" model={items} className="p-button-rounded" severity="info" dir="ltr" icon="pi pi-cog" />;
+                { label: t('ROLLBACK'), icon: <RotateCcw className="h-4 w-4" />, onClick: () => confirmRollbackPayment(rowData), separatorBefore: true },
+                { label: t('EDIT'), icon: <Pencil className="h-4 w-4" />, onClick: () => editPayment(rowData) }
+            ];
         }
 
-        return <SplitButton label="" model={items} className="p-button-rounded" severity="info" dir="ltr" icon="pi pi-cog" />;
+        return [];
     };
 
-    // const header = (
-    //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-    //         <h5 className="m-0">Manage Products</h5>
-    //         <span className="block mt-2 md:mt-0 p-input-icon-left">
-    //             <i className="pi pi-search" />
-    //             <InputText type="search" onInput={(e) => setGlobalFilter(e.currentTarget.value)} placeholder="Search..." />
-    //         </span>
-    //     </div>
-    // );
+    const totalPages = Math.max(1, Math.ceil((pagination?.total || 0) / (pagination?.items_per_page || 20)));
 
     const paymentDialogFooter = (
         <>
@@ -838,21 +528,13 @@ const PaymentPage = () => {
         }
     }, [payment?.reseller?.code, currencies]);
 
-    const onPageChange = (event: any) => {
-        const page = event.page + 1;
-        dispatch(_fetchPayments(page, searchTag));
-    };
-
-    // Add these helper functions
-    const handleSubmitFilter = (filters: any) => {
-        const cleanedFilters = Object.fromEntries(Object.entries(filters).filter(([_, value]) => value !== null && value !== ''));
-        setActiveFilters(cleanedFilters);
+    const onPageChange = (page: number) => {
+        dispatch(_fetchPayments(page, searchTag, compactFilters(activeFilters)));
     };
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        await new Promise((res) => setTimeout(res, 1000));
-        dispatch(_fetchPayments(1, searchTag, activeFilters));
+        await dispatch(_fetchPayments(pagination?.page || 1, searchTag, compactFilters(activeFilters)) as any);
         setRefreshing(false);
     };
 
@@ -890,400 +572,438 @@ const PaymentPage = () => {
     }, [payment.reseller, payment.currency?.code]);
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={payments}
-                        selection={selectedPayment}
-                        onSelectionChange={(e) => setSelectedPayment(e.value as any)}
-                        dataKey="id"
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        className="datatable-responsive"
-                        paginatorTemplate={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        globalFilter={globalFilter}
-                        // header={header}
-                        responsiveLayout="scroll"
-                        onRowClick={(e) => viewPayment(e.data as Payment)}
-                        rowClassName={() => 'cursor-pointer select-none'}
-                    >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.RESELLER')} body={resellerNameBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.PAYMENTMETHOD')} body={paymentMethodBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.AMOUNT')} body={amountBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.CURRENCY')} body={currencyBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.FORM.INPUT.OPRATIONTYPE')} body={operationTypeBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.REMAININGPAYMENTAMOUNT')} body={remainingPaymentBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.STATUS')} body={statusBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.NOTES')} body={noteBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PERFORMED_BY')} body={performedByBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.PAYMENTDATE')} body={paymentDateBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate}></Column>
-                    </DataTable>
-
-                    <Paginator
-                        first={(pagination?.page - 1) * pagination?.items_per_page}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        onPageChange={(e) => onPageChange(e)}
-                        template={
-                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        firstPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-right"
-                                : "pi pi-angle-double-left"
-                        }
-                        lastPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-left"
-                                : "pi pi-angle-double-right"
-                        }
+        <div className="space-y-4">
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.PAYMENTS', { defaultValue: 'پرداخت‌ها' })}
+                description={t('PAYMENT.PAGE.DESCRIPTION', { defaultValue: 'مدیریت، تایید و ثبت پرداخت‌های نمایندگان' })}
+                loading={loading}
+                actions={
+                    <>
+                        <UiButton variant="default" size="sm" onClick={openNew}>
+                            <Plus className="h-4 w-4" />
+                            {t('ADD_PAYMENT', { defaultValue: 'افزودن پرداخت' })}
+                        </UiButton>
+                        <UiButton variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-4 w-4', (refreshing || loading) && 'animate-spin')} />
+                            {t('REFRESH', { defaultValue: 'بروزرسانی' })}
+                        </UiButton>
+                        <UiButton variant="outline" size="sm" onClick={exportToExcel}>
+                            <Download className="h-4 w-4" />
+                            {t('EXPORT.EXPORT', { defaultValue: 'خروجی اکسل' })}
+                        </UiButton>
+                    </>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو در پرداخت‌ها...' })}
+                        chips={chips}
+                        onRemoveChip={removeChip}
+                        onClearAll={clearFilters}
+                        onOpenFilters={() => {
+                            setDraftFilters(activeFilters);
+                            setFilterOpen(true);
+                        }}
                     />
-
-                    <Dialog visible={paymentDialog} style={{ width: '900px', padding: '5px' }} header={t('PAYMENT.DETAILS.TITLE')} modal className="p-fluid" footer={paymentDialogFooter} onHide={hideDialog}>
-
-                        {resellerBalance !== null && resellerPayment !== null && (
-                            <div
-                                className="flex flex-wrap justify-between items-center"
-                                style={{
-                                    borderRadius: '10px',
-                                    background: '#ffffff',
-                                    border: '1px solid #e5e7eb', // Tailwind gray-200
-                                    boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
-                                }}
+                }
+                footer={
+                    <div className="flex flex-col gap-2 border-t border-emerald-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-xs text-muted-foreground">
+                            {t('DATA_TABLE.TABLE.PAGINATOR.SHOWING', { defaultValue: 'صفحه' })}{' '}
+                            {pagination?.page || 1} / {totalPages} · {pagination?.total || 0}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <UiButton
+                                variant="outline"
+                                size="sm"
+                                disabled={(pagination?.page || 1) <= 1}
+                                onClick={() => onPageChange((pagination?.page || 1) - 1)}
                             >
-                                {/* Reseller Balance */}
-                                <div className="flex-1 col-12 lg:col-4 text-center p-4 bg-green-50 rounded-xl shadow-sm">
-                                    <p className="text-gray-600 font-medium">{t('BALANCE.FORM.RESELLER.BALANCE')}</p>
-                                    <p className="text-xl font-bold text-green-600 mt-2">{resellerBalance}</p>
-                                </div>
-
-                                {/* Reseller Payment */}
-                                <div className="flex-1 col-12 lg:col-4 text-center p-4 bg-red-50 rounded-xl shadow-sm">
-                                    <p className="text-gray-600 font-medium">{t('RESELLER.TABLE.COLUMN.AVAILABLEPAYMENT')}</p>
-                                    <p className="text-xl font-bold text-red-600 mt-2">{resellerPayment}</p>
-                                </div>
-
-                                {/* Reseller Loan */}
-                                <div className="flex-1 col-12 lg:col-4 text-center p-4 bg-purple-50 rounded-xl shadow-sm">
-                                    <p className="text-gray-600 font-medium">{t('BALANCE.FORM.RESELLER.LOAN')}</p>
-                                    <p className="text-xl font-bold text-purple-600 mt-2">{resellerLoan}</p>
-                                </div>
-                            </div>
+                                قبلی
+                            </UiButton>
+                            <UiButton
+                                variant="outline"
+                                size="sm"
+                                disabled={(pagination?.page || 1) >= totalPages}
+                                onClick={() => onPageChange((pagination?.page || 1) + 1)}
+                            >
+                                بعدی
+                            </UiButton>
+                        </div>
+                    </div>
+                }
+            >
+                <table className="w-full min-w-[1280px] border-collapse text-xs">
+                    <thead>
+                        <tr className="border-b border-emerald-100 bg-emerald-50/70 text-start">
+                            <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">
+                                {t('TABLE.GENERAL.ACTIONS', { defaultValue: 'عملیات' })}
+                            </th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PAYMENT.TABLE.COLUMN.RESELLER')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PAYMENT.TABLE.COLUMN.PAYMENTMETHOD')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PAYMENT.TABLE.COLUMN.AMOUNT')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PAYMENT.TABLE.COLUMN.CURRENCY')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PAYMENT.FORM.INPUT.OPRATIONTYPE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PAYMENT.TABLE.COLUMN.REMAININGPAYMENTAMOUNT')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PAYMENT.TABLE.COLUMN.STATUS')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950 max-w-[12rem]">{t('PAYMENT.TABLE.COLUMN.NOTES')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('PERFORMED_BY')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">{t('PAYMENT.TABLE.COLUMN.PAYMENTDATE')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {(payments || []).length === 0 ? (
+                            <tr>
+                                <td colSpan={11} className="px-2 py-12 text-center text-muted-foreground">
+                                    {t('DATA_TABLE.TABLE.NO_DATA', { defaultValue: 'داده‌ای یافت نشد' })}
+                                </td>
+                            </tr>
+                        ) : (
+                            (payments || []).map((row: Payment) => (
+                                <tr
+                                    key={row.id}
+                                    className="cursor-pointer border-b border-emerald-50 transition hover:bg-emerald-50/50"
+                                    onClick={() => viewPayment(row)}
+                                >
+                                    <td className="px-2 py-1.5 align-middle" onClick={(e) => e.stopPropagation()}>
+                                        <RowActions items={getPaymentRowActions(row)} />
+                                    </td>
+                                    <td className="px-2 py-1.5 text-start">{row.reseller?.reseller_name || '—'}</td>
+                                    <td className="px-2 py-1.5 text-start">{row.payment_method?.method_name || '—'}</td>
+                                    <td className="px-2 py-1.5 tabular-nums">{row.amount ?? '—'}</td>
+                                    <td className="px-2 py-1.5">{row.currency?.code || '—'}</td>
+                                    <td className="px-2 py-1.5">
+                                        <Badge variant="secondary" className="text-[10px] font-medium">
+                                            {operationTypeLabel(row.operation_type)}
+                                        </Badge>
+                                    </td>
+                                    <td className="px-2 py-1.5 tabular-nums">{row.remaining_payment_amount ?? '—'}</td>
+                                    <td className="px-2 py-1.5">
+                                        <Badge variant={paymentStatusVariant(row.status)} className="text-[10px]">
+                                            {statusLabel(row.status)}
+                                        </Badge>
+                                    </td>
+                                    <td className="max-w-[12rem] truncate px-2 py-1.5 text-start text-muted-foreground" title={row.notes || ''}>
+                                        {row.notes || '—'}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-start">{row.performed_by_name || '—'}</td>
+                                    <td className="px-2 py-1.5 whitespace-nowrap tabular-nums text-muted-foreground">{formatPaymentDate(row.payment_date)}</td>
+                                </tr>
+                            ))
                         )}
+                    </tbody>
+                </table>
+            </ListPage>
 
-                        <div className="card flex  flex-wrap p-fluid mt-3 gap-4">
-                            <div className=" flex-1 col-12 lg:col-6">
-                                {/* <div className="field">
-                                    <label htmlFor="reseller" style={{ fontWeight: 'bold' }}>
-                                        {t('PAYMENT.FORM.INPUT.RESELLER')}
-                                    </label>
-                                    <Dropdown
-                                        id="reseller"
-                                        value={payment.reseller}
-                                        options={resellers}
-                                        onChange={(e) => {
-                                            setPayment((prev) => ({
-                                                ...prev,
-                                                reseller: e.value
-                                            }));
-                                        }}
-                                        optionLabel="reseller_name"
-                                        filter
-                                        filterBy="reseller_name,contact_name,phone" // Add multiple fields for searching
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        showFilterClear
-                                        placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
-                                        className="w-full"
-                                        panelClassName="min-w-[20rem]"
-                                        onFilter={(e) => {
-                                            setResellerSearchTerm(e.filter);
-                                        }}
-                                        filterIcon
-                                        // Add custom item template to show contact name and phone
-                                        itemTemplate={(option) => {
-                                            if (!option) return null;
-                                            return (
-                                                <div className="flex flex-column p-2 gap-1">
-                                                    <div className="font-semibold">{option.contact_name} || {option.reseller_name}</div>
-                                                    <div className="text-sm text-gray-600">
-                                                        {option.phone && (
-                                                            <span className="ml-2 text-gray-500">{option.phone}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        }}
-                                        // Custom value template to show selected value with contact info
-                                        valueTemplate={(option) => {
-                                            if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
-                                            return (
-                                                <div className="flex flex-column">
-                                                    <small className="text-gray-500 text-xs">
-                                                        {option.contact_name} {option.phone && `${option.phone}`}
-                                                    </small>
-                                                </div>
-                                            );
-                                        }}
-                                    />
+            <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                <SheetContent side="left" className="w-full sm:max-w-md">
+                    <SheetHeader>
+                        <SheetTitle>{t('FILTER', { defaultValue: 'فیلتر پرداخت‌ها' })}</SheetTitle>
+                        <SheetDescription>{t('PAYMENT.FILTER.HINT', { defaultValue: 'فیلترها روی نتایج سرور اعمال می‌شوند.' })}</SheetDescription>
+                    </SheetHeader>
+                    <div className={FILTER_SHEET_BODY_CLASS}>
+                        <FilterField label={t('PAYMENT.TABLE.COLUMN.STATUS')}>
+                            <Select
+                                value={draftFilters.filter_status || undefined}
+                                onValueChange={(v) => setDraftFilters((p) => ({ ...p, filter_status: v }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_STATUS', { defaultValue: 'انتخاب وضعیت' })} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="completed">{t('COMPLETED')}</SelectItem>
+                                    <SelectItem value="pending">{t('PENDING')}</SelectItem>
+                                    <SelectItem value="failed">{t('FAILED')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
 
-                                    {submitted && !payment.reseller && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div> */}
+                        <FilterField label={t('PAYMENT.TABLE.COLUMN.PAYMENTMETHOD')}>
+                            <Select
+                                value={draftFilters.filter_payment_method ? String(draftFilters.filter_payment_method) : undefined}
+                                onValueChange={(v) => setDraftFilters((p) => ({ ...p, filter_payment_method: Number(v) }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_PAYMENT_METHOD', { defaultValue: 'روش پرداخت' })} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {(paymentMethods || []).map((m: { id: number; method_name: string }) => (
+                                        <SelectItem key={m.id} value={String(m.id)}>
+                                            {m.method_name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
 
+                        <FilterField label={t('START_DATE', { defaultValue: 'از تاریخ' })}>
+                            <Input
+                                type="date"
+                                value={draftFilters.filter_startdate || ''}
+                                onChange={(e) => setDraftFilters((p) => ({ ...p, filter_startdate: e.target.value || null }))}
+                            />
+                        </FilterField>
+                        <FilterField label={t('END_DATE', { defaultValue: 'تا تاریخ' })}>
+                            <Input
+                                type="date"
+                                value={draftFilters.filter_enddate || ''}
+                                onChange={(e) => setDraftFilters((p) => ({ ...p, filter_enddate: e.target.value || null }))}
+                            />
+                        </FilterField>
 
-                                <div className="field">
-                                    <label htmlFor="reseller" style={{ fontWeight: 'bold' }}>
-                                        {t('PAYMENT.FORM.INPUT.RESELLER')}
-                                    </label>
-                                    <CustomDropdownWithSearch
-                                        id="reseller"
-                                        value={payment.reseller}
-                                        options={resellers}
-                                        onChange={(selectedOption) => {
-                                            setPayment((prev) => ({
-                                                ...prev,
-                                                reseller: selectedOption // This will be the full object
-                                            }));
-                                        }}
-                                        optionLabel="reseller_name"
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
-                                        className="w-full"
-                                        panelClassName="min-w-[20rem]"
-                                        searchButtonText={t('ECOMMERCE.COMMON.SEARCH')}
-                                        error={submitted && !payment.reseller}
-                                        errorMessage={t('THIS_FIELD_IS_REQUIRED')}
-                                        showClear={true}
-                                        emptyMessage={t('NO_RESULTS_FOUND')}
-                                        noResultsMessage={t('TRY_DIFFERENT_SEARCH_TERM')}
-                                        returnFullObject={true} // This ensures we get the full object
-                                        itemTemplate={(option) => {
-                                            if (!option) return null;
-                                            return (
-                                                <div className="flex flex-column p-2 gap-1">
-                                                    <div className="font-semibold">
-                                                        {option.contact_name} || {option.reseller_name}
-                                                    </div>
-                                                    <div className="text-sm text-gray-600">
-                                                        {option.phone && (
-                                                            <span className="ml-2 text-gray-500">{option.phone}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        }}
-                                        valueTemplate={(option) => {
-                                            if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
-                                            return (
-                                                <div className="flex flex-column">
-                                                    <span style={{ fontWeight: 'bold' }}>
-                                                        {option.reseller_name}
-                                                    </span>
-                                                    <small className="text-gray-500 text-xs">
-                                                        {option.contact_name} {option.phone && `${option.phone}`}
-                                                    </small>
-                                                </div>
-                                            );
-                                        }}
-                                        onSearch={(searchTerm) => {
-                                            setResellerSearchTerm(searchTerm);
-                                        }}
-                                    />
-                                </div>
+                        <div className="flex gap-2 pt-2">
+                            <UiButton className="flex-1" onClick={applyFilters}>
+                                {t('APPLY', { defaultValue: 'اعمال' })}
+                            </UiButton>
+                            <UiButton className="flex-1" variant="secondary" onClick={clearFilters}>
+                                {t('RESET', { defaultValue: 'بازنشانی' })}
+                            </UiButton>
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
 
-                                <div className="field">
-                                    <label htmlFor="email" style={{ fontWeight: 'bold' }}>
-                                        {t('PAYMENT.FORM.INPUT.AMOUNT')}
-                                    </label>
-                                    <InputText
-                                        id="amount"
-                                        value={payment.amount}
-                                        onChange={(e) =>
-                                            setPayment((prev) => ({
-                                                ...prev,
-                                                amount: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        placeholder={t('PAYMENT.FORM.INPUT.AMOUNT')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !payment.amount
-                                        })}
-                                    />
-                                    {submitted && !payment.amount && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-
-                                {/* operation type type */}
-                                <div className="field">
-                                    <label htmlFor="operation_type" style={{ fontWeight: 'bold' }}>{t('PAYMENT.FORM.INPUT.OPRATIONTYPE')} *</label>
-                                    <Dropdown
-                                        id="operation_type"
-                                        value={payment.operation_type}
-                                        options={[
-                                            { label: 'Credit', value: 'credit' },
-                                            { label: 'Debit', value: 'debit' },
-                                            { label: 'Credit Full', value: 'credit_full' },
-                                            { label: 'Debit Full', value: 'debit_full' }
-
-                                        ]}
-                                        onChange={(e) =>
-                                            setPayment((prev) => ({
-                                                ...prev,
-                                                operation_type: e.value
-                                            }))
-                                        }
-                                        placeholder={t('PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER')}
-                                        className="w-full"
-                                    />
-                                    {submitted && !payment.operation_type && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                                {/* operation type type */}
-
-                                <div className="field">
-                                    <label htmlFor="notes" style={{ fontWeight: 'bold' }}>
-                                        {t('PAYMENT.FORM.INPUT.NOTES')}
-                                    </label>
-                                    <InputTextarea
-                                        value={payment.notes}
-                                        onChange={(e) =>
-                                            setPayment((prev) => ({
-                                                ...prev,
-                                                notes: e.target.value
-                                            }))
-                                        }
-                                        rows={3}
-                                        cols={30}
-                                        placeholder={t('PAYMENT.FORM.INPUT.NOTES')}
-                                    />
-                                    {/* {submitted && !payment.notes && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )} */}
-                                </div>
-
-
+            <FormSheet
+                open={paymentDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                size="xl"
+                side="left"
+                title={
+                    isEditPayment
+                        ? t('PAYMENT.FORM.EDIT_TITLE', { defaultValue: 'ویرایش پرداخت' })
+                        : t('PAYMENT.FORM.CREATE_TITLE', { defaultValue: 'افزودن پرداخت' })
+                }
+                description={t('PAYMENT.FORM.SHEET_HINT', {
+                    defaultValue: 'اطلاعات پرداخت را تکمیل کنید. فیلدهای ستاره‌دار الزامی هستند.'
+                })}
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={savePayment}
+                        cancelLabel={t('APP.GENERAL.CANCEL', { defaultValue: 'انصراف' })}
+                        submitLabel={t('FORM.GENERAL.SUBMIT', { defaultValue: 'ذخیره' })}
+                    />
+                }
+            >
+                {resellerBalance !== null && resellerPayment !== null && (
+                    <FormSection
+                        title={t('PAYMENT.FORM.SECTION.RESELLER_SUMMARY', { defaultValue: 'خلاصه نماینده' })}
+                        description={t('PAYMENT.FORM.SECTION.RESELLER_SUMMARY_HINT', {
+                            defaultValue: 'پس از انتخاب نماینده، وضعیت مالی او نمایش داده می‌شود.'
+                        })}
+                    >
+                        <div className="sm:col-span-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <div className="rounded-xl bg-emerald-50 p-4 text-center shadow-sm ring-1 ring-emerald-100">
+                                <p className="text-sm font-medium text-muted-foreground">{t('BALANCE.FORM.RESELLER.BALANCE')}</p>
+                                <p className="mt-2 text-xl font-bold text-emerald-700">{resellerBalance}</p>
                             </div>
-
-                            <div className=" flex-1 col-12 lg:col-6">
-                                <div className="field">
-                                    <label htmlFor="payment_method" style={{ fontWeight: 'bold' }}>
-                                        {t('PAYMENT.FORM.INPUT.PAYMENTMETHOD')}
-                                    </label>
-                                    <Dropdown
-                                        id="payment_method"
-                                        value={payment.payment_method}
-                                        options={paymentMethods}
-                                        onChange={(e) =>
-                                            setPayment((prev) => ({
-                                                ...prev,
-                                                payment_method: e.value
-                                            }))
-                                        }
-                                        optionLabel="method_name"
-                                        // optionValue='id'
-                                        placeholder={t('PAYMENT.FORM.INPUT.PAYMENTMETHOD')}
-                                        className="w-full"
-                                    />
-                                    {submitted && !payment.payment_method && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="currency" style={{ fontWeight: 'bold' }}>
-                                        {t('PAYMENT.FORM.INPUT.CURRENCY')}
-                                    </label>
-                                    <Dropdown
-                                        disabled
-                                        id="currency"
-                                        value={payment.currency}
-                                        options={currencies}
-                                        onChange={(e) =>
-                                            setPayment((prev) => ({
-                                                ...prev,
-                                                currency: e.value
-                                            }))
-                                        }
-                                        optionLabel="name"
-                                        // optionValue='id'
-                                        placeholder={t('PAYMENT.FORM.INPUT.CURRENCY')}
-                                        className="w-full"
-                                    />
-                                    {submitted && !payment.currency && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                                <div className="field">
-                                    <label htmlFor="payment_date" style={{ fontWeight: 'bold' }}>
-                                        {t('PAYMENT.FORM.INPUT.PAYMENTDATE')}
-                                    </label>
-                                    <InputText
-                                        id="payment_date"
-                                        value={payment.payment_date}
-                                        onChange={(e) =>
-                                            setPayment((prev) => ({
-                                                ...prev,
-                                                payment_date: e.target.value
-                                            }))
-                                        }
-                                        type="date"
-                                        required
-                                        autoFocus
-                                        placeholder={t('PAYMENT.FORM.INPUT.PAYMENTDATE')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !payment.payment_date
-                                        })}
-                                    />
-
-                                    {submitted && !payment.payment_date && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
+                            <div className="rounded-xl bg-rose-50 p-4 text-center shadow-sm ring-1 ring-rose-100">
+                                <p className="text-sm font-medium text-muted-foreground">{t('RESELLER.TABLE.COLUMN.AVAILABLEPAYMENT')}</p>
+                                <p className="mt-2 text-xl font-bold text-rose-700">{resellerPayment}</p>
+                            </div>
+                            <div className="rounded-xl bg-violet-50 p-4 text-center shadow-sm ring-1 ring-violet-100">
+                                <p className="text-sm font-medium text-muted-foreground">{t('BALANCE.FORM.RESELLER.LOAN')}</p>
+                                <p className="mt-2 text-xl font-bold text-violet-700">{resellerLoan}</p>
                             </div>
                         </div>
-                    </Dialog>
+                    </FormSection>
+                )}
+
+                <FormSection
+                    title={t('PAYMENT.FORM.SECTION.MAIN', { defaultValue: 'اطلاعات اصلی' })}
+                >
+                    <FormField
+                        label={t('PAYMENT.FORM.INPUT.RESELLER')}
+                        required
+                        fullWidth
+                        error={submitted && !payment.reseller ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <CustomDropdownWithSearch
+                            id="reseller"
+                            value={payment.reseller}
+                            options={resellers}
+                            onChange={(selectedOption) => {
+                                setPayment((prev) => ({
+                                    ...prev,
+                                    reseller: selectedOption
+                                }));
+                            }}
+                            optionLabel="reseller_name"
+                            filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                            placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
+                            className="w-full"
+                            panelClassName="min-w-[20rem]"
+                            searchButtonText={t('ECOMMERCE.COMMON.SEARCH')}
+                            error={submitted && !payment.reseller}
+                            showClear={true}
+                            emptyMessage={t('NO_RESULTS_FOUND')}
+                            noResultsMessage={t('TRY_DIFFERENT_SEARCH_TERM')}
+                            returnFullObject={true}
+                            itemTemplate={(option) => {
+                                if (!option) return null;
+                                return (
+                                    <div className="flex flex-column gap-1 p-2">
+                                        <div className="font-semibold">
+                                            {option.contact_name} || {option.reseller_name}
+                                        </div>
+                                        <div className="text-sm text-gray-600">
+                                            {option.phone && <span className="ms-2 text-gray-500">{option.phone}</span>}
+                                        </div>
+                                    </div>
+                                );
+                            }}
+                            valueTemplate={(option) => {
+                                if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
+                                return (
+                                    <div className="flex flex-column">
+                                        <span className="font-bold">{option.reseller_name}</span>
+                                        <small className="text-xs text-gray-500">
+                                            {option.contact_name} {option.phone && `${option.phone}`}
+                                        </small>
+                                    </div>
+                                );
+                            }}
+                            onSearch={(searchTerm) => {
+                                setResellerSearchTerm(searchTerm);
+                            }}
+                        />
+                    </FormField>
+
+                    <FormField
+                        label={t('PAYMENT.FORM.INPUT.AMOUNT')}
+                        required
+                        error={submitted && !payment.amount ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="amount"
+                            value={payment.amount || ''}
+                            onChange={(e) =>
+                                setPayment((prev) => ({
+                                    ...prev,
+                                    amount: e.target.value
+                                }))
+                            }
+                            required
+                            autoFocus={!isEditPayment}
+                            placeholder={t('PAYMENT.FORM.INPUT.AMOUNT')}
+                            className={cn(submitted && !payment.amount && 'border-rose-400 ring-rose-200')}
+                        />
+                    </FormField>
+
+                    <FormField
+                        label={t('PAYMENT.FORM.INPUT.OPRATIONTYPE')}
+                        required
+                        error={submitted && !payment.operation_type ? t('REQUIRED') : null}
+                    >
+                        <Select
+                            value={payment.operation_type || undefined}
+                            onValueChange={(v) =>
+                                setPayment((prev) => ({
+                                    ...prev,
+                                    operation_type: v
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('PAYMENT.FORM.OPRATIONTYPE.PLACEHOLDER')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="credit">{t('CREDIT', { defaultValue: 'بستانکار' })}</SelectItem>
+                                <SelectItem value="debit">{t('DEBIT', { defaultValue: 'بدهکار' })}</SelectItem>
+                                <SelectItem value="credit_full">{t('CREDIT_FULL', { defaultValue: 'بستانکار کامل' })}</SelectItem>
+                                <SelectItem value="debit_full">{t('DEBIT_FULL', { defaultValue: 'بدهکار کامل' })}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                </FormSection>
+
+                <FormSection
+                    title={t('PAYMENT.FORM.SECTION.DETAILS', { defaultValue: 'جزئیات پرداخت' })}
+                >
+                    <FormField
+                        label={t('PAYMENT.FORM.INPUT.PAYMENTMETHOD')}
+                        required
+                        error={submitted && !payment.payment_method ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <CustomDropdownWithSearch
+                            value={payment.payment_method}
+                            options={paymentMethods || []}
+                            onChange={(selected) =>
+                                setPayment((prev) => ({
+                                    ...prev,
+                                    payment_method: selected
+                                }))
+                            }
+                            optionLabel="method_name"
+                            placeholder={t('PAYMENT.FORM.INPUT.PAYMENTMETHOD')}
+                            returnFullObject
+                            error={submitted && !payment.payment_method}
+                        />
+                    </FormField>
+
+                    <FormField
+                        label={t('PAYMENT.FORM.INPUT.CURRENCY')}
+                        required
+                        error={submitted && !payment.currency ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <CustomDropdownWithSearch
+                            value={payment.currency}
+                            options={currencies || []}
+                            onChange={(selected) =>
+                                setPayment((prev) => ({
+                                    ...prev,
+                                    currency: selected
+                                }))
+                            }
+                            optionLabel="name"
+                            placeholder={t('PAYMENT.FORM.INPUT.CURRENCY')}
+                            returnFullObject
+                            disabled
+                            error={submitted && !payment.currency}
+                        />
+                    </FormField>
+
+                    <FormField
+                        label={t('PAYMENT.FORM.INPUT.PAYMENTDATE')}
+                        required
+                        error={submitted && !payment.payment_date ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <DateField
+                            id="payment_date"
+                            value={payment.payment_date || ''}
+                            onValueChange={(v) =>
+                                setPayment((prev) => ({
+                                    ...prev,
+                                    payment_date: v
+                                }))
+                            }
+                            required
+                            className={cn(submitted && !payment.payment_date && 'border-rose-400 ring-rose-200')}
+                        />
+                    </FormField>
+                </FormSection>
+
+                <FormSection title={t('PAYMENT.FORM.SECTION.NOTES', { defaultValue: 'یادداشت' })}>
+                    <FormField label={t('PAYMENT.FORM.INPUT.NOTES')} fullWidth>
+                        <Textarea
+                            id="notes"
+                            value={payment.notes || ''}
+                            onChange={(e) =>
+                                setPayment((prev) => ({
+                                    ...prev,
+                                    notes: e.target.value
+                                }))
+                            }
+                            rows={4}
+                            placeholder={t('PAYMENT.FORM.INPUT.NOTES')}
+                        />
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
                     <Dialog visible={deletePaymentDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deletePaymentDialogFooter} onHide={hideDeletePaymentDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -1311,11 +1031,11 @@ const PaymentPage = () => {
                             {(payment?.operation_type === 'credit_full' || payment?.operation_type === 'debit_full') && (
                                 <div className="field-checkbox w-full">
                                     <Checkbox
-                                        inputId="rollbackFull"
+                                        id="rollbackFull"
                                         checked={rollbackType === 'rollback_full'}
-                                        onChange={(e) => setRollbackType(e.checked ? 'rollback_full' : 'rollback')}
+                                        onCheckedChange={(checked) => setRollbackType(checked ? 'rollback_full' : 'rollback')}
                                     />
-                                    <label htmlFor="rollbackFull" className="ml-2">
+                                    <label htmlFor="rollbackFull" className="ms-2">
                                         {t('ROLLBACK_FULL')}
                                     </label>
                                 </div>
@@ -1340,7 +1060,7 @@ const PaymentPage = () => {
                         <div className="p-fluid">
                             <div className="field">
                                 <label htmlFor="invalidateNotes">{t('NOTES')}</label>
-                                <InputTextarea id="invalidateNotes" value={invalidateNotes} onChange={(e) => setInvalidateNotes(e.target.value)} rows={3} placeholder={t('ENTER_INVALIDATION_REASON')} autoFocus />
+                                <Textarea id="invalidateNotes" value={invalidateNotes} onChange={(e) => setInvalidateNotes(e.target.value)} rows={3} placeholder={t('ENTER_INVALIDATION_REASON')} autoFocus />
                             </div>
                         </div>
                     </Dialog>
@@ -1360,14 +1080,14 @@ const PaymentPage = () => {
                     >
                         <div className="p-fluid">
                             <div className="field-checkbox mb-3">
-                                <Checkbox inputId="showVerifyNotes" checked={showVerifyNotes} onChange={(e) => setShowVerifyNotes(e.checked ?? false)} />
+                                <Checkbox id="showVerifyNotes" checked={showVerifyNotes} onCheckedChange={(checked) => setShowVerifyNotes(!!checked)} />
                                 <label htmlFor="showVerifyNotes">{t('ADD_NOTES')}</label>
                             </div>
 
                             {showVerifyNotes && (
                                 <div className="field">
                                     <label htmlFor="verificationNotes">{t('NOTES')}</label>
-                                    <InputTextarea id="verificationNotes" value={verificationNotes} onChange={(e) => setVerificationNotes(e.target.value)} rows={3} placeholder={t('ENTER_VERIFICATION_NOTES')} />
+                                    <Textarea id="verificationNotes" value={verificationNotes} onChange={(e) => setVerificationNotes(e.target.value)} rows={3} placeholder={t('ENTER_VERIFICATION_NOTES')} />
                                 </div>
                             )}
                         </div>
@@ -1389,14 +1109,14 @@ const PaymentPage = () => {
                     >
                         <div className="p-fluid">
                             <div className="field-checkbox mb-3">
-                                <Checkbox inputId="showVerifyAndSendNotes" checked={showVerifyAndSendNotes} onChange={(e) => setShowVerifyAndSendNotes(e.checked ?? false)} />
+                                <Checkbox id="showVerifyAndSendNotes" checked={showVerifyAndSendNotes} onCheckedChange={(checked) => setShowVerifyAndSendNotes(!!checked)} />
                                 <label htmlFor="showVerifyAndSendNotes">{t('ADD_NOTES')}</label>
                             </div>
 
                             {showVerifyAndSendNotes && (
                                 <div className="field">
                                     <label htmlFor="verificationNotes">{t('NOTES')}</label>
-                                    <InputTextarea id="verificationNotes" value={verificationNotes} onChange={(e) => setVerificationNotes(e.target.value)} rows={3} placeholder={t('ENTER_VERIFICATION_NOTES')} />
+                                    <Textarea id="verificationNotes" value={verificationNotes} onChange={(e) => setVerificationNotes(e.target.value)} rows={3} placeholder={t('ENTER_VERIFICATION_NOTES')} />
                                 </div>
                             )}
                         </div>
@@ -1763,11 +1483,9 @@ const PaymentPage = () => {
                             )}
                         </div>
                     </Dialog>
-
-                </div>
-            </div>
         </div>
     );
 };
+
 
 export default withAuth(PaymentPage);

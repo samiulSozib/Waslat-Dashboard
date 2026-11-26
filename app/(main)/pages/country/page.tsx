@@ -1,25 +1,29 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
-import { Button } from 'primereact/button';
+import { Button as PrimeButton } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { RowActions } from '@/components/admin/row-actions';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { FileDrop } from '@/components/ui/file-drop';
+import { SearchSelect } from '@/components/admin/search-select';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Country, Currency } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
 import { _addCountry, _deleteCountry, _editCountry, _fetchCountries } from '@/app/redux/actions/countriesActions';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import { _fetchLanguages } from '@/app/redux/actions/languageActions';
-import { FileUpload } from 'primereact/fileupload';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
 import { customCellStyleImage } from '../../utilities/customRow';
@@ -131,26 +135,6 @@ const CountryPage = () => {
         setDeleteCountrysDialog(true);
     };
 
-    const rightToolbarTemplate = () => {
-        const hasSelectedCountries = selectedCountries && (selectedCountries as any).length > 0;
-
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                        <Button
-                            style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                            label={t('COUNTRY.TABLE.CREATECOUNTRY')}
-                            icon="pi pi-plus"
-                            severity="success"
-                            className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                            onClick={openNew}
-                        />
-
-                </div>
-            </React.Fragment>
-        );
-    };
-
     // const leftToolbarTemplate = () => {
     //     return (
     //         <div className="flex items-center">
@@ -212,14 +196,24 @@ const CountryPage = () => {
         );
     };
 
-    const actionBodyTemplate = (rowData: Country) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editCountry(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteCountry(rowData)} />
-            </>
-        );
-    };
+    const actionBodyTemplate = (rowData: Country) => (
+        <RowActions
+            items={[
+                {
+                    label: t('TABLE.GENERAL.EDIT'),
+                    icon: <Pencil className="h-4 w-4" />,
+                    onClick: () => editCountry(rowData)
+                },
+                {
+                    label: t('TABLE.GENERAL.DELETE'),
+                    icon: <Trash2 className="h-4 w-4" />,
+                    danger: true,
+                    separatorBefore: true,
+                    onClick: () => confirmDeleteCountry(rowData)
+                }
+            ]}
+        />
+    );
 
     // const header = (
     //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
@@ -231,22 +225,16 @@ const CountryPage = () => {
     //     </div>
     // );
 
-    const countryDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveCountry} />
-        </>
-    );
     const deleteCountryDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCountryDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteCountry} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCountryDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteCountry} />
         </>
     );
     const deleteCompaniesDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCountrysDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCountrysDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
         </>
     );
 
@@ -264,39 +252,53 @@ const CountryPage = () => {
     }, [country.currency_id, currencies]);
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={countries}
-                        selection={selectedCountries}
-                        onSelectionChange={(e) => setSelectedCountry(e.value as any)}
-                        dataKey="id"
-                        paginator
-                        rows={10}
-                        rowsPerPageOptions={[5, 10, 25]}
-                        className="datatable-responsive"
-                        paginatorTemplate={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        globalFilter={globalFilter}
-                        // header={header}
-                        responsiveLayout="scroll"
-                    >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
+        <>
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.COUNTRY', { defaultValue: 'کشور' })}
+                description="مدیریت کشورها، ارز و زبان پیش‌فرض"
+                loading={loading}
+                actions={
+                    <Button type="button" size="sm" onClick={openNew}>
+                        <Plus className="h-4 w-4" />
+                        {t('COUNTRY.TABLE.CREATECOUNTRY')}
+                    </Button>
+                }
+                toolbar={
+                    <FilterBar
+                        search={globalFilter}
+                        onSearchChange={setGlobalFilter}
+                        searchPlaceholder={t('TABLE.GENERAL.SEARCH', { defaultValue: 'جستجو...' })}
+                    />
+                }
+            >
+                <DataTable
+                    ref={dt}
+                    value={countries}
+                    selection={selectedCountries}
+                    onSelectionChange={(e) => setSelectedCountry(e.value as any)}
+                    dataKey="id"
+                    paginator
+                    rows={10}
+                    rowsPerPageOptions={[5, 10, 25]}
+                    size="small"
+                    className="datatable-responsive p-datatable-sm"
+                    paginatorTemplate={
+                        isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                    }
+                    currentPageReportTemplate={t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}
+                    emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
+                    dir={isRTL() ? 'rtl' : 'ltr'}
+                    style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                    globalFilter={globalFilter}
+                    responsiveLayout="scroll"
+                >
+                        <Column
+                            header={t('TABLE.GENERAL.ACTION')}
+                            body={actionBodyTemplate}
+                            headerStyle={{ width: '4.5rem' }}
+                            style={{ ...customCellStyleImage, textAlign: 'start' }}
+                        />
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header=""  body={imageBodyTemplate}></Column>
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
@@ -326,170 +328,147 @@ const CountryPage = () => {
                             body={languageBodyTemplate}
                             
                         ></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
+            </ListPage>
 
-                    <Dialog visible={countryDialog} style={{ width: '700px', padding: '5px' }} header={t('COUNTRY.DETAILS')} modal className="p-fluid" footer={countryDialogFooter} onHide={hideDialog}>
-                        <div className="card" style={{ padding: '40px' }}>
-                            {country.country_flag_image_url && (
-                                <img
-                                    src={
-                                        country.country_flag_image_url instanceof File
-                                            ? URL.createObjectURL(country.country_flag_image_url) // Temporary preview for file
-                                            : country.country_flag_image_url // Direct URL for existing logo
-                                    }
-                                    alt="Uploaded Preview"
-                                    width="150"
-                                    className="mt-0 mx-auto mb-5 block shadow-2"
-                                />
-                            )}
-                            <FileUpload
-                                mode="basic"
-                                name="company_logo"
-                                accept="image/*"
-                                customUpload
-                                onSelect={(e) =>
-                                    setCountry((prev) => ({
-                                        ...prev,
-                                        country_flag_image_url: e.files[0]
-                                    }))
-                                }
-                                style={{ textAlign: 'center', marginBottom: '10px' }}
-                            />
-                            <div className="field">
-                                <label htmlFor="country_name" style={{ fontWeight: 'bold' }}>
-                                    {t('COUNTRY.FORM.INPUT.COUNTRYNAME')}
-                                </label>
-                                <InputText
-                                    id="country_name"
-                                    value={country.country_name}
-                                    onChange={(e) =>
-                                        setCountry((prevCountry) => ({
-                                            ...prevCountry,
-                                            country_name: e.target.value
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('COUNTRY.FORM.PLACEHOLDER.COUNTRYNAME')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !country.country_name
-                                    })}
-                                />
-                                {submitted && !country.country_name && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            <div className="field">
-                                <label htmlFor="country_telecom_code" style={{ fontWeight: 'bold' }}>
-                                    {t('COUNTRY.FORM.INPUT.COUNTRYTELECOMCODE')}
-                                </label>
-                                <InputText
-                                    id="country_telecom_code"
-                                    value={country.country_telecom_code}
-                                    onChange={(e) =>
-                                        setCountry((prevCountry) => ({
-                                            ...prevCountry,
-                                            country_telecom_code: e.target.value
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('COUNTRY.FORM.PLACEHOLDER.COUNTRYTELECOMCODE')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !country.country_telecom_code
-                                    })}
-                                />
-                                {submitted && !country.country_telecom_code && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            <div className="field">
-                                <label htmlFor="phone_number_length" style={{ fontWeight: 'bold' }}>
-                                    {t('COUNTRY.FORM.INPUT.PHONENUMBERLENGTH')}
-                                </label>
-                                <InputText
-                                    id="phone_number_length"
-                                    value={country.phone_number_length}
-                                    onChange={(e) =>
-                                        setCountry((prevCountry) => ({
-                                            ...prevCountry,
-                                            phone_number_length: e.target.value
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('COUNTRY.FORM.PLACEHOLDER.PHONENUMBERLENGTH')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !country.phone_number_length
-                                    })}
-                                />
-                                {submitted && !country.phone_number_length && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            <div className="field col">
-                                <label htmlFor="currency" style={{ fontWeight: 'bold' }}>
-                                    {t('COUNTRY.FORM.INPUT.CURRENCY')}
-                                </label>
-                                <Dropdown
-                                    id="currency"
-                                    value={country.currency}
-                                    options={currencies}
-                                    onChange={(e) =>
-                                        setCountry((perv) => ({
-                                            ...perv,
-                                            currency: e.value
-                                        }))
-                                    }
-                                    optionLabel="name"
-                                    // optionValue='id'
-                                    placeholder={t('COUNTRY.FORM.INPUT.CURRENCY')}
-                                    className="w-full"
-                                />
-                                {submitted && !country.currency && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            <div className="field col">
-                                <label htmlFor="language" style={{ fontWeight: 'bold' }}>
-                                    {t('COUNTRY.FORM.INPUT.LANGUAGE')}
-                                </label>
-                                <Dropdown
-                                    id="language"
-                                    value={country.language}
-                                    options={languages}
-                                    onChange={(e) =>
-                                        setCountry((perv) => ({
-                                            ...perv,
-                                            language: e.value
-                                        }))
-                                    }
-                                    optionLabel="language_name"
-                                    // optionValue='id'
-                                    placeholder={t('COUNTRY.FORM.INPUT.LANGUAGE')}
-                                    className="w-full"
-                                />
-                                {submitted && !country.language && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-                        </div>
-                    </Dialog>
+            <FormSheet
+                open={countryDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                title={t('COUNTRY.DETAILS')}
+                description={country.id && country.id !== 0 ? 'ویرایش کشور' : 'ثبت کشور جدید'}
+                size="lg"
+                side="left"
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveCountry}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection title={t('COUNTRY.DETAILS')} description="پرچم و مشخصات کشور">
+                    <FormField label="پرچم کشور" fullWidth>
+                        <FileDrop
+                            value={country.country_flag_image_url instanceof File ? country.country_flag_image_url : null}
+                            previewUrl={
+                                typeof country.country_flag_image_url === 'string' && country.country_flag_image_url
+                                    ? country.country_flag_image_url
+                                    : null
+                            }
+                            onChange={(file) =>
+                                setCountry((prev) => ({
+                                    ...prev,
+                                    country_flag_image_url:
+                                        file ??
+                                        (prev.country_flag_image_url instanceof File ? '' : prev.country_flag_image_url)
+                                }))
+                            }
+                            label={t('COUNTRY.FORM.FLAG_UPLOAD', { defaultValue: 'آپلود پرچم' })}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('COUNTRY.FORM.INPUT.COUNTRYNAME')}
+                        required
+                        error={submitted && !country.country_name ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="country_name"
+                            value={country.country_name}
+                            onChange={(e) =>
+                                setCountry((prevCountry) => ({
+                                    ...prevCountry,
+                                    country_name: e.target.value
+                                }))
+                            }
+                            required
+                            autoFocus
+                            placeholder={t('COUNTRY.FORM.PLACEHOLDER.COUNTRYNAME')}
+                            className={cn('w-full', submitted && !country.country_name && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('COUNTRY.FORM.INPUT.COUNTRYTELECOMCODE')}
+                        required
+                        error={submitted && !country.country_telecom_code ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="country_telecom_code"
+                            value={country.country_telecom_code}
+                            onChange={(e) =>
+                                setCountry((prevCountry) => ({
+                                    ...prevCountry,
+                                    country_telecom_code: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('COUNTRY.FORM.PLACEHOLDER.COUNTRYTELECOMCODE')}
+                            className={cn('w-full', submitted && !country.country_telecom_code && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('COUNTRY.FORM.INPUT.PHONENUMBERLENGTH')}
+                        required
+                        error={submitted && !country.phone_number_length ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="phone_number_length"
+                            value={country.phone_number_length}
+                            onChange={(e) =>
+                                setCountry((prevCountry) => ({
+                                    ...prevCountry,
+                                    phone_number_length: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('COUNTRY.FORM.PLACEHOLDER.PHONENUMBERLENGTH')}
+                            className={cn('w-full', submitted && !country.phone_number_length && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('COUNTRY.FORM.INPUT.CURRENCY')}
+                        required
+                        error={submitted && !country.currency ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <SearchSelect
+                            value={country.currency}
+                            options={currencies || []}
+                            onChange={(selected) =>
+                                setCountry((perv) => ({
+                                    ...perv,
+                                    currency: selected
+                                }))
+                            }
+                            optionLabel="name"
+                            placeholder={t('COUNTRY.FORM.INPUT.CURRENCY')}
+                            error={submitted && !country.currency}
+                            returnFullObject
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('COUNTRY.FORM.INPUT.LANGUAGE')}
+                        required
+                        error={submitted && !country.language ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <SearchSelect
+                            value={country.language}
+                            options={languages || []}
+                            onChange={(selected) =>
+                                setCountry((perv) => ({
+                                    ...perv,
+                                    language: selected
+                                }))
+                            }
+                            optionLabel="language_name"
+                            placeholder={t('COUNTRY.FORM.INPUT.LANGUAGE')}
+                            error={submitted && !country.language}
+                            returnFullObject
+                        />
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
                     <Dialog visible={deleteCountryDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCountryDialogFooter} onHide={hideDeleteCountryDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -508,9 +487,7 @@ const CountryPage = () => {
                             {country && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected countries?</span>}
                         </div>
                     </Dialog>
-                </div>
-            </div>
-        </div>
+        </>
     );
 };
 

@@ -4,29 +4,34 @@ import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { SearchSelect } from '@/components/admin/search-select';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { NumberInput } from '@/components/ui/number-input';
+import { Switch } from '@/components/ui/switch';
+import { FileDrop } from '@/components/ui/file-drop';
+import { TagInput } from '@/components/ui/tag-input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { PageHeader } from '@/components/admin/page-header';
+import { Button as UiButton } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Menu, Settings2 } from 'lucide-react';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
 import { AppDispatch } from '@/app/redux/store';
-import { ProgressBar } from 'primereact/progressbar';
-import { FileUpload } from 'primereact/fileupload';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
 import { customCellStyleImage } from '../../utilities/customRow';
 import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
-import { InputSwitch } from 'primereact/inputswitch';
-import { InputNumber } from 'primereact/inputnumber';
-import { ColorPicker } from 'primereact/colorpicker';
 import { fetchAppSettings, updateAppSettings } from '@/app/redux/actions/appSettingsActions';
 import { AppSettings, Currency, Provider, SupportContacts, TelegramChat } from '@/types/interface';
-import { TabView, TabPanel } from 'primereact/tabview';
-import { Sidebar } from 'primereact/sidebar';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import {
     _fetchSupportContacts,
@@ -36,8 +41,6 @@ import {
 } from '@/app/redux/actions/supportContactActions';
 import { _fetchProviders } from '@/app/redux/actions/providerActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
-import { Chips } from 'primereact/chips';
-import { MultiSelect } from 'primereact/multiselect';
 
 type AppSettingsWithInquiry = AppSettings & {
     default_package_inquiry_provider_id?: number | null;
@@ -322,12 +325,7 @@ const AppSettingsPage = () => {
         setSelectedSupportContact(emptySupportContact);
     };
 
-    const supportContactDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideSupportContactDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={saveSupportContact} />
-        </>
-    );
+    const settingsTabKeys = ['general', 'contact', 'branding', 'limits', 'integration', 'recharge', 'package-inquiry', 'telegram', 'support-contacts'] as const;
 
     const deleteSupportContactDialogFooter = (
         <>
@@ -370,17 +368,14 @@ const AppSettingsPage = () => {
             <div className="grid">
                 <div className="col-12">
                     <div className="card">
-                        <Toolbar className="mb-4"
-                            left={
-                                <Button
-                                    label={t('SUPPORT_CONTACT.ADD_NEW')}
-                                    icon="pi pi-plus"
-                                    severity="success"
-                                    className="mr-2"
-                                    onClick={openNewSupportContact}
-                                />
-                            }
-                        />
+                        <div className="mb-4 flex justify-end">
+                            <Button
+                                label={t('SUPPORT_CONTACT.ADD_NEW')}
+                                icon="pi pi-plus"
+                                severity="success"
+                                onClick={openNewSupportContact}
+                            />
+                        </div>
 
                         <DataTable
                             value={supportContacts}
@@ -405,29 +400,41 @@ const AppSettingsPage = () => {
         );
     };
 
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP_SETTINGS.EDIT_SETTINGS')}
-                        icon="pi pi-cog"
-                        severity="info"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openSettings}
-                    />
-                </div>
-            </React.Fragment>
-        );
+    const getChatIds = (value: string[] | null | undefined): string[] => {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+        return [];
     };
 
-    const settingsDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveSettings} />
-        </>
-    );
+    const renderTelegramChatCheckboxes = (
+        field: 'telegram_payment_chat_ids' | 'telegram_balance_chat_ids' | 'telegram_transaction_chat_ids' | 'telegram_voucher_chat_ids',
+        inputId: string
+    ) => {
+        const selected = getChatIds(settings[field]);
+        return (
+            <div id={inputId} className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-emerald-100 p-2 text-start">
+                {(telegramChatIds || []).map((chat: TelegramChat) => {
+                    const chatId = String(chat.chat_id);
+                    const checked = selected.includes(chatId);
+                    return (
+                        <div key={chatId} className="flex items-center gap-2">
+                            <Checkbox
+                                id={`${inputId}-${chatId}`}
+                                checked={checked}
+                                onCheckedChange={(c) => {
+                                    const next = c === true ? [...selected, chatId] : selected.filter((id) => id !== chatId);
+                                    setSettings({ ...settings, [field]: next });
+                                }}
+                            />
+                            <label htmlFor={`${inputId}-${chatId}`} className="text-sm">
+                                {chat.group_name} ({chat.chat_id})
+                            </label>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -439,12 +446,12 @@ const AppSettingsPage = () => {
                                 <label htmlFor="app_name" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_NAME')} *
                                 </label>
-                                <InputText
+                                <Input
                                     id="app_name"
                                     value={settings.app_name}
                                     onChange={(e) => setSettings({ ...settings, app_name: e.target.value })}
                                     required
-                                    className={classNames({
+                                    className={classNames('w-full', {
                                         'p-invalid': submitted && !settings.app_name
                                     })}
                                 />
@@ -454,7 +461,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="app_slogan" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_SLOGAN')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="app_slogan"
                                     value={settings.app_slogan}
                                     onChange={(e) => setSettings({ ...settings, app_slogan: e.target.value })}
@@ -465,37 +472,21 @@ const AppSettingsPage = () => {
                                 <label htmlFor="default_currency" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.DEFAULT_CURRENCY')}
                                 </label>
-                                <Dropdown
-                                    id="default_currency"
-                                    value={settings.default_currency}
+                                <SearchSelect
+                                    value={(currencies || []).find((c: Currency) => c.code === settings.default_currency) || null}
                                     options={currencies || []}
-                                    onChange={(e) => setSettings({
-                                        ...settings,
-                                        default_currency: e.value
-                                    })}
+                                    onChange={(selected: Currency | null) =>
+                                        setSettings({ ...settings, default_currency: selected?.code ?? '' })
+                                    }
                                     optionLabel="code"
-                                    optionValue="code"
                                     placeholder={t('CURRENCY.GENERAL.SELECTCURRENCY')}
-                                    className="w-full"
+                                    returnFullObject
                                     itemTemplate={(option: Currency) => (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                        <div className="flex w-full items-center justify-between gap-2">
                                             <span>{option.code}</span>
-                                            <span style={{ color: '#666', fontSize: '0.9rem' }}>
-                                                {option.name}
-                                            </span>
+                                            <span className="text-xs text-muted-foreground">{option.name}</span>
                                         </div>
                                     )}
-                                    valueTemplate={(option: Currency) => {
-                                        if (!option) return t('CURRENCY.GENERAL.SELECTCURRENCY');
-                                        return (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                                                <span>{option.code}</span>
-                                                <span style={{ color: '#666', fontSize: '0.9rem' }}>
-                                                    {option.name}
-                                                </span>
-                                            </div>
-                                        );
-                                    }}
                                 />
                             </div>
 
@@ -503,12 +494,10 @@ const AppSettingsPage = () => {
                                 <label htmlFor="exchange_rate" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.EXCHANGE_RATE')}
                                 </label>
-                                <InputNumber
+                                <NumberInput
                                     id="exchange_rate"
                                     value={settings.exchange_rate_usd_afn}
-                                    onValueChange={(e) => setSettings({ ...settings, exchange_rate_usd_afn: e.value || 0 })}
-                                    mode="decimal"
-                                    minFractionDigits={4}
+                                    onValueChange={(v) => setSettings({ ...settings, exchange_rate_usd_afn: v ?? 0 })}
                                     disabled={!settings.default_currency}
                                 />
                                 {selectedCurrency && (
@@ -522,7 +511,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="website_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.WEBSITE_URL')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="website_url"
                                     value={settings.website_url}
                                     onChange={(e) => setSettings({ ...settings, website_url: e.target.value })}
@@ -535,23 +524,23 @@ const AppSettingsPage = () => {
                                 <label className="font-bold text-sm md:text-base">{t('APP_SETTINGS.FEATURES')}</label>
                                 <div className="flex flex-column gap-3">
                                     <div className="flex align-items-center">
-                                        <InputSwitch
+                                        <Switch
                                             checked={settings.is_instant_confirm}
-                                            onChange={(e) => setSettings({ ...settings, is_instant_confirm: e.value })}
+                                            onCheckedChange={(v) => setSettings({ ...settings, is_instant_confirm: v })}
                                         />
                                         <label className="ml-2 text-sm md:text-base">{t('APP_SETTINGS.INSTANT_CONFIRM')}</label>
                                     </div>
                                     <div className="flex align-items-center">
-                                        <InputSwitch
+                                        <Switch
                                             checked={settings.maintenance_mode}
-                                            onChange={(e) => setSettings({ ...settings, maintenance_mode: e.value })}
+                                            onCheckedChange={(v) => setSettings({ ...settings, maintenance_mode: v })}
                                         />
                                         <label className="ml-2 text-sm md:text-base">{t('APP_SETTINGS.MAINTENANCE_MODE')}</label>
                                     </div>
                                     <div className="flex align-items-center">
-                                        <InputSwitch
+                                        <Switch
                                             checked={settings.allow_new_registrations}
-                                            onChange={(e) => setSettings({ ...settings, allow_new_registrations: e.value })}
+                                            onCheckedChange={(v) => setSettings({ ...settings, allow_new_registrations: v })}
                                         />
                                         <label className="ml-2 text-sm md:text-base">{t('APP_SETTINGS.ALLOW_REGISTRATIONS')}</label>
                                     </div>
@@ -562,7 +551,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="app_name_en" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_NAME_EN')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="app_name_en"
                                     value={settings.app_name_i18n?.en}
                                     onChange={(e) => setSettings({
@@ -576,7 +565,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="app_name_fa" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_NAME_FA')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="app_name_fa"
                                     value={settings.app_name_i18n?.fa}
                                     onChange={(e) => setSettings({
@@ -590,7 +579,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="app_name_ps" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_NAME_PS')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="app_name_ps"
                                     value={settings.app_name_i18n?.ps}
                                     onChange={(e) => setSettings({
@@ -606,7 +595,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="app_slogan_en" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_SLOGAN_EN')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="app_slogan_en"
                                     value={settings.app_slogan_i18n?.en}
                                     onChange={(e) => setSettings({
@@ -620,7 +609,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="app_slogan_fa" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_SLOGAN_FA')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="app_slogan_fa"
                                     value={settings.app_slogan_i18n?.fa}
                                     onChange={(e) => setSettings({
@@ -634,7 +623,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="app_slogan_ps" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.APP_SLOGAN_PS')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="app_slogan_ps"
                                     value={settings.app_slogan_i18n?.ps}
                                     onChange={(e) => setSettings({
@@ -655,7 +644,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="support_phone" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SUPPORT_PHONE')} *
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="support_phone"
                                     value={settings.support_phone}
                                     onChange={(e) => setSettings({ ...settings, support_phone: e.target.value })}
@@ -667,7 +656,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="support_email" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SUPPORT_EMAIL')} *
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="support_email"
                                     value={settings.support_email}
                                     onChange={(e) => setSettings({ ...settings, support_email: e.target.value })}
@@ -679,7 +668,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="support_whatsapp" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SUPPORT_WHATSAPP')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="support_whatsapp"
                                     value={settings.support_whatsapp}
                                     onChange={(e) => setSettings({ ...settings, support_whatsapp: e.target.value })}
@@ -690,7 +679,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="alternative_phone" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.ALTERNATIVE_PHONE')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="alternative_phone"
                                     value={settings.alternative_contact_phone}
                                     onChange={(e) => setSettings({ ...settings, alternative_contact_phone: e.target.value })}
@@ -701,7 +690,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="alternative_whatsapp" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.ALTERNATIVE_WHATSAPP')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="alternative_whatsapp"
                                     value={settings.alternative_whatsapp}
                                     onChange={(e) => setSettings({ ...settings, alternative_whatsapp: e.target.value })}
@@ -714,7 +703,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="telegram_username" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.TELEGRAM_USERNAME')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="telegram_username"
                                     value={settings.telegram_username}
                                     onChange={(e) => setSettings({ ...settings, telegram_username: e.target.value })}
@@ -725,7 +714,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="telegram_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.TELEGRAM_URL')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="telegram_url"
                                     value={settings.telegram_url}
                                     onChange={(e) => setSettings({ ...settings, telegram_url: e.target.value })}
@@ -736,7 +725,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="facebook_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.FACEBOOK_URL')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="facebook_url"
                                     value={settings.facebook_page_url}
                                     onChange={(e) => setSettings({ ...settings, facebook_page_url: e.target.value })}
@@ -747,7 +736,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="instagram_handle" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.INSTAGRAM_HANDLE')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="instagram_handle"
                                     value={settings.instagram_handle}
                                     onChange={(e) => setSettings({ ...settings, instagram_handle: e.target.value })}
@@ -758,7 +747,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="instagram_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.INSTAGRAM_URL')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="instagram_url"
                                     value={settings.instagram_url}
                                     onChange={(e) => setSettings({ ...settings, instagram_url: e.target.value })}
@@ -771,7 +760,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="twitter_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.TWITTER_URL')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="twitter_url"
                                     value={settings.twitter_url}
                                     onChange={(e) => setSettings({ ...settings, twitter_url: e.target.value })}
@@ -782,7 +771,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="tiktok_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.TIKTOK_URL')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="tiktok_url"
                                     value={settings.tiktok_url}
                                     onChange={(e) => setSettings({ ...settings, tiktok_url: e.target.value })}
@@ -793,7 +782,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="youtube_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.YOUTUBE_URL')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="youtube_url"
                                     value={settings.youtube_url}
                                     onChange={(e) => setSettings({ ...settings, youtube_url: e.target.value })}
@@ -815,15 +804,10 @@ const AppSettingsPage = () => {
                                     className="mt-0 mx-auto mb-5 block shadow-2"
                                 />
                             )}
-                            <FileUpload
-                                mode="basic"
-                                name="logo"
+                            <FileDrop
                                 accept="image/*"
-                                customUpload
-                                onSelect={(e) => {
-                                    // Handle logo upload logic here
-                                }}
-                                style={{ textAlign: 'center', marginBottom: '20px' }}
+                                previewUrl={typeof settings.logo_url === 'string' ? settings.logo_url : null}
+                                onChange={() => {}}
                             />
                         </div>
 
@@ -832,11 +816,12 @@ const AppSettingsPage = () => {
                                 <label htmlFor="primary_color" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.PRIMARY_COLOR')}
                                 </label>
-                                <ColorPicker
+                                <Input
+                                    type="color"
                                     id="primary_color"
                                     value={settings.mobile_app_primary_color}
-                                    onChange={(e) => setSettings({ ...settings, mobile_app_primary_color: e.value as string })}
-                                    style={{ width: '100%' }}
+                                    onChange={(e) => setSettings({ ...settings, mobile_app_primary_color: e.target.value })}
+                                    className="h-10 w-full max-w-[12rem] cursor-pointer rounded-md border border-emerald-200 p-1"
                                 />
                             </div>
 
@@ -844,11 +829,12 @@ const AppSettingsPage = () => {
                                 <label htmlFor="primary_font_color" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.PRIMARY_FONT_COLOR')}
                                 </label>
-                                <ColorPicker
+                                <Input
+                                    type="color"
                                     id="primary_font_color"
                                     value={settings.primary_color_font_color}
-                                    onChange={(e) => setSettings({ ...settings, primary_color_font_color: e.value as string })}
-                                    style={{ width: '100%' }}
+                                    onChange={(e) => setSettings({ ...settings, primary_color_font_color: e.target.value })}
+                                    className="h-10 w-full max-w-[12rem] cursor-pointer rounded-md border border-emerald-200 p-1"
                                 />
                             </div>
                         </div>
@@ -858,11 +844,12 @@ const AppSettingsPage = () => {
                                 <label htmlFor="secondary_color" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SECONDARY_COLOR')}
                                 </label>
-                                <ColorPicker
+                                <Input
+                                    type="color"
                                     id="secondary_color"
                                     value={settings.mobile_app_secondary_color}
-                                    onChange={(e) => setSettings({ ...settings, mobile_app_secondary_color: e.value as string })}
-                                    style={{ width: '100%' }}
+                                    onChange={(e) => setSettings({ ...settings, mobile_app_secondary_color: e.target.value })}
+                                    className="h-10 w-full max-w-[12rem] cursor-pointer rounded-md border border-emerald-200 p-1"
                                 />
                             </div>
 
@@ -870,11 +857,12 @@ const AppSettingsPage = () => {
                                 <label htmlFor="secondary_font_color" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SECONDARY_FONT_COLOR')}
                                 </label>
-                                <ColorPicker
+                                <Input
+                                    type="color"
                                     id="secondary_font_color"
                                     value={settings.secondary_color_font_color}
-                                    onChange={(e) => setSettings({ ...settings, secondary_color_font_color: e.value as string })}
-                                    style={{ width: '100%' }}
+                                    onChange={(e) => setSettings({ ...settings, secondary_color_font_color: e.target.value })}
+                                    className="h-10 w-full max-w-[12rem] cursor-pointer rounded-md border border-emerald-200 p-1"
                                 />
                             </div>
                         </div>
@@ -889,12 +877,12 @@ const AppSettingsPage = () => {
                                 <label htmlFor="max_orders" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.MAX_ORDERS_PER_DAY')}
                                 </label>
-                                <InputNumber
+                                <NumberInput
                                     id="max_orders"
                                     value={settings?.extra_settings?.max_order_per_day || 0}
-                                    onValueChange={(e) => setSettings({
+                                    onValueChange={(v) => setSettings({
                                         ...settings,
-                                        extra_settings: { ...settings.extra_settings, max_order_per_day: e.value || 0 }
+                                        extra_settings: { ...settings.extra_settings, max_order_per_day: v ?? 0 }
                                     })}
                                 />
                             </div>
@@ -905,12 +893,12 @@ const AppSettingsPage = () => {
                                 <label htmlFor="min_topup" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.MIN_TOPUP_AMOUNT')}
                                 </label>
-                                <InputNumber
+                                <NumberInput
                                     id="min_topup"
                                     value={settings?.extra_settings?.min_topup_amount}
-                                    onValueChange={(e) => setSettings({
+                                    onValueChange={(v) => setSettings({
                                         ...settings,
-                                        extra_settings: { ...settings.extra_settings, min_topup_amount: e.value || 0 }
+                                        extra_settings: { ...settings.extra_settings, min_topup_amount: v ?? 0 }
                                     })}
                                 />
                             </div>
@@ -921,12 +909,12 @@ const AppSettingsPage = () => {
                                 <label htmlFor="max_topup" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.MAX_TOPUP_AMOUNT')}
                                 </label>
-                                <InputNumber
+                                <NumberInput
                                     id="max_topup"
                                     value={settings?.extra_settings?.max_topup_amount}
-                                    onValueChange={(e) => setSettings({
+                                    onValueChange={(v) => setSettings({
                                         ...settings,
-                                        extra_settings: { ...settings.extra_settings, max_topup_amount: e.value || 0 }
+                                        extra_settings: { ...settings.extra_settings, max_topup_amount: v ?? 0 }
                                     })}
                                 />
                             </div>
@@ -942,7 +930,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="api_base_url" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.API_BASE_URL')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="api_base_url"
                                     value={settings.integration_settings.SETARAGAN_API_BASE_URL}
                                     onChange={(e) => setSettings({
@@ -959,7 +947,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="api_username" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.API_USERNAME')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="api_username"
                                     value={settings.integration_settings.SETARAGAN_API_USERNAME}
                                     onChange={(e) => setSettings({
@@ -976,7 +964,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="api_authkey" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.API_AUTHKEY')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="api_authkey"
                                     value={settings.integration_settings.SETARAGAN_API_AUTHKEY}
                                     onChange={(e) => setSettings({
@@ -995,7 +983,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="api_msisdn" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.API_MSISDN')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="api_msisdn"
                                     value={settings.integration_settings.SETARAGAN_MSISDN}
                                     onChange={(e) => setSettings({
@@ -1012,7 +1000,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="api_request_id" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.API_REQUEST_ID')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="api_request_id"
                                     value={settings.integration_settings.SETARAGAN_REQUEST_ID}
                                     onChange={(e) => setSettings({
@@ -1029,7 +1017,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="telegram_webhook" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.TELEGRAM_WEBHOOK')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="telegram_webhook"
                                     value={settings.integration_settings.TELEGRAM_WEBHOOK_URL}
                                     onChange={(e) => setSettings({
@@ -1046,7 +1034,7 @@ const AppSettingsPage = () => {
                                 <label htmlFor="telegram_bot_token" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.TELEGRAM_BOT_TOKEN')}
                                 </label>
-                                <InputText
+                                <Input className="w-full"
                                     id="telegram_bot_token"
                                     value={settings.integration_settings.TELEGRAM_BOT_TOKEN}
                                     onChange={(e) => setSettings({
@@ -1070,56 +1058,49 @@ const AppSettingsPage = () => {
                                 <label htmlFor="recharge_adjust_type" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.RECHARGE_ADJUST_TYPE')}
                                 </label>
-                                <Dropdown
-                                    id="recharge_adjust_type"
-                                    value={settings.afg_custom_recharge_adjust_type}
-                                    options={[
-                                        { label: t('APP_SETTINGS.DECREASE'), value: "decrease" },
-                                        { label: t('APP_SETTINGS.INCREASE'), value: "increase" }
-                                    ]}
-                                    onChange={(e) => setSettings({
-                                        ...settings,
-                                        afg_custom_recharge_adjust_type: e.value
-                                    })}
-                                    placeholder={t('APP_SETTINGS.SELECT_TYPE')}
-                                    className="w-full"
-                                />
+                                <Select
+                                    value={settings.afg_custom_recharge_adjust_type ?? undefined}
+                                    onValueChange={(v) => setSettings({ ...settings, afg_custom_recharge_adjust_type: v })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={t('APP_SETTINGS.SELECT_TYPE')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="decrease">{t('APP_SETTINGS.DECREASE')}</SelectItem>
+                                        <SelectItem value="increase">{t('APP_SETTINGS.INCREASE')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="field">
                                 <label htmlFor="recharge_adjust_mode" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.RECHARGE_ADJUST_MODE')}
                                 </label>
-                                <Dropdown
-                                    id="recharge_adjust_mode"
-                                    value={settings.afg_custom_recharge_adjust_mode}
-                                    options={[
-                                        { label: t('APP_SETTINGS.PERCENTAGE'), value: "percentage" },
-                                        { label: t('APP_SETTINGS.FIXED'), value: "fixed" }
-                                    ]}
-                                    onChange={(e) => setSettings({
-                                        ...settings,
-                                        afg_custom_recharge_adjust_mode: e.value
-                                    })}
-                                    placeholder={t('APP_SETTINGS.SELECT_MODE')}
-                                    className="w-full"
-                                />
+                                <Select
+                                    value={settings.afg_custom_recharge_adjust_mode ?? undefined}
+                                    onValueChange={(v) => setSettings({ ...settings, afg_custom_recharge_adjust_mode: v })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={t('APP_SETTINGS.SELECT_MODE')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="percentage">{t('APP_SETTINGS.PERCENTAGE')}</SelectItem>
+                                        <SelectItem value="fixed">{t('APP_SETTINGS.FIXED')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="field">
                                 <label htmlFor="recharge_adjust_value" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.RECHARGE_ADJUST_VALUE')}
                                 </label>
-                                <InputNumber
+                                <NumberInput
                                     id="recharge_adjust_value"
                                     value={settings.afg_custom_recharge_adjust_value}
-                                    onValueChange={(e) => setSettings({
+                                    onValueChange={(v) => setSettings({
                                         ...settings,
-                                        afg_custom_recharge_adjust_value: e.value || 0
+                                        afg_custom_recharge_adjust_value: v ?? 0
                                     })}
-                                    mode="decimal"
-                                    minFractionDigits={2}
-                                    maxFractionDigits={2}
                                     min={0}
                                 />
                                 {settings.afg_custom_recharge_adjust_mode === "percentage" && (
@@ -1133,20 +1114,18 @@ const AppSettingsPage = () => {
                                 <label htmlFor="selling_price_adjust_type" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SELLING_PRICE_ADJUST_TYPE')}
                                 </label>
-                                <Dropdown
-                                    id="selling_price_adjust_type"
-                                    value={settings.afg_custom_recharge_selling_price_adjust_type}
-                                    options={[
-                                        { label: t('APP_SETTINGS.DECREASE'), value: "decrease" },
-                                        { label: t('APP_SETTINGS.INCREASE'), value: "increase" }
-                                    ]}
-                                    onChange={(e) => setSettings({
-                                        ...settings,
-                                        afg_custom_recharge_selling_price_adjust_type: e.value
-                                    })}
-                                    placeholder={t('APP_SETTINGS.SELECT_TYPE')}
-                                    className="w-full"
-                                />
+                                <Select
+                                    value={settings.afg_custom_recharge_selling_price_adjust_type ?? undefined}
+                                    onValueChange={(v) => setSettings({ ...settings, afg_custom_recharge_selling_price_adjust_type: v })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={t('APP_SETTINGS.SELECT_TYPE')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="decrease">{t('APP_SETTINGS.DECREASE')}</SelectItem>
+                                        <SelectItem value="increase">{t('APP_SETTINGS.INCREASE')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
 
@@ -1155,36 +1134,31 @@ const AppSettingsPage = () => {
                                 <label htmlFor="selling_price_adjust_mode" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SELLING_PRICE_ADJUST_MODE')}
                                 </label>
-                                <Dropdown
-                                    id="selling_price_adjust_mode"
-                                    value={settings.afg_custom_recharge_selling_price_adjust_mode}
-                                    options={[
-                                        { label: t('APP_SETTINGS.PERCENTAGE'), value: "percentage" },
-                                        { label: t('APP_SETTINGS.FIXED'), value: "fixed" }
-                                    ]}
-                                    onChange={(e) => setSettings({
-                                        ...settings,
-                                        afg_custom_recharge_selling_price_adjust_mode: e.value
-                                    })}
-                                    placeholder={t('APP_SETTINGS.SELECT_MODE')}
-                                    className="w-full"
-                                />
+                                <Select
+                                    value={settings.afg_custom_recharge_selling_price_adjust_mode ?? undefined}
+                                    onValueChange={(v) => setSettings({ ...settings, afg_custom_recharge_selling_price_adjust_mode: v })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={t('APP_SETTINGS.SELECT_MODE')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="percentage">{t('APP_SETTINGS.PERCENTAGE')}</SelectItem>
+                                        <SelectItem value="fixed">{t('APP_SETTINGS.FIXED')}</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="field">
                                 <label htmlFor="selling_price_adjust_value" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SELLING_PRICE_ADJUST_VALUE')}
                                 </label>
-                                <InputNumber
+                                <NumberInput
                                     id="selling_price_adjust_value"
                                     value={settings.afg_custom_recharge_selling_price_adjust_value}
-                                    onValueChange={(e) => setSettings({
+                                    onValueChange={(v) => setSettings({
                                         ...settings,
-                                        afg_custom_recharge_selling_price_adjust_value: e.value || 0
+                                        afg_custom_recharge_selling_price_adjust_value: v ?? 0
                                     })}
-                                    mode="decimal"
-                                    minFractionDigits={2}
-                                    maxFractionDigits={2}
                                     min={0}
                                 />
                                 {settings.afg_custom_recharge_selling_price_adjust_mode === "percentage" && (
@@ -1198,19 +1172,15 @@ const AppSettingsPage = () => {
                                 <label htmlFor="setaragan_admin_buying_price_percentage" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.SETARAGAN_ADMIN_BUYING_PRICE_PERCENTAGE')}
                                 </label>
-                                <InputNumber
+                                <NumberInput
                                     id="setaragan_admin_buying_price_percentage"
                                     value={settings.setaragan_admin_buying_price_percentage}
-                                    onValueChange={(e) => setSettings({
+                                    onValueChange={(v) => setSettings({
                                         ...settings,
-                                        setaragan_admin_buying_price_percentage: e.value || 0
+                                        setaragan_admin_buying_price_percentage: v ?? 0
                                     })}
-                                    mode="decimal"
-                                    minFractionDigits={2}
-                                    maxFractionDigits={2}
                                     min={0}
                                     max={100}
-                                    suffix="%"
                                 />
                                 <small className="text-sm text-500">
                                     {t('APP_SETTINGS.SETARAGAN_ADMIN_BUYING_PRICE_NOTE')}
@@ -1221,20 +1191,18 @@ const AppSettingsPage = () => {
                                 <label htmlFor="custom_recharge_api_provider_id" className="font-bold text-sm md:text-base">
                                     {t('APP_SETTINGS.CUSTOM_RECHARGE_API_PROVIDER')}
                                 </label>
-                                <Dropdown
-                                    value={settings.custom_recharge_api_provider_id ?? null}
-                                    options={providers}
-                                    onChange={(e) => {
-                                        setSettings(prev => ({
+                                <SearchSelect
+                                    value={(providers || []).find((p: Provider) => p.id === settings.custom_recharge_api_provider_id) || null}
+                                    options={providers || []}
+                                    onChange={(selected: Provider | null) =>
+                                        setSettings((prev) => ({
                                             ...prev,
-                                            custom_recharge_api_provider_id: e.value ?? null
-                                        }));
-                                    }}
+                                            custom_recharge_api_provider_id: selected?.id ?? null
+                                        }))
+                                    }
                                     optionLabel="name"
-                                    optionValue="id"
                                     placeholder="Select Provider"
-                                    className="w-full"
-                                    filter
+                                    returnFullObject
                                     showClear
                                 />
                                 <small className="text-sm text-500">
@@ -1281,19 +1249,30 @@ case 'package-inquiry':
                                 <label htmlFor="default_package_inquiry_provider_id" className="font-bold text-sm md:text-base">
                                     Default Package Inquiry Provider
                                 </label>
-                                <Dropdown
-                                    inputId="default_package_inquiry_provider_id"
-                                    value={settings.default_package_inquiry_provider_id ?? null}
-                                    options={inquiryProviderOptions}
-                                    onChange={e => setSettings(prev => ({
-                                        ...prev,
-                                        default_package_inquiry_provider_id: e.value == null ? null : Number(e.value)
-                                    }))}
-                                    placeholder="Not configured — select a provider"
-                                    filter
-                                    showClear
-                                    className="w-full"
-                                />
+                                <Select
+                                    value={
+                                        settings.default_package_inquiry_provider_id != null
+                                            ? String(settings.default_package_inquiry_provider_id)
+                                            : undefined
+                                    }
+                                    onValueChange={(v) =>
+                                        setSettings((prev) => ({
+                                            ...prev,
+                                            default_package_inquiry_provider_id: v ? Number(v) : null
+                                        }))
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Not configured — select a provider" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {inquiryProviderOptions.map((opt) => (
+                                            <SelectItem key={opt.value} value={String(opt.value)}>
+                                                {opt.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <small className="text-500">
                                     Only services whose Package Inquiry Mode is Inherit use this default.
                                     Direct PayStore may be used on Waslat; downstream installations can use their
@@ -1317,44 +1296,56 @@ case 'package-inquiry':
                                 <div className="grid">
                                     <div className="col-12 md:col-6">
                                         <label htmlFor="dynamic_markup_mode" className="block font-bold mb-2">Markup Mode</label>
-                                        <Dropdown
-                                            inputId="dynamic_markup_mode"
+                                        <Select
                                             value={settings.paystore_dynamic_bundle_markup_mode ?? 'percentage'}
-                                            options={[
-                                                { label: 'Percentage (%)', value: 'percentage' },
-                                                { label: 'Fixed Amount (package currency)', value: 'fixed' },
-                                            ]}
-                                            onChange={e => setSettings(prev => ({
-                                                ...prev,
-                                                paystore_dynamic_bundle_markup_mode: e.value
-                                            }))}
-                                            className="w-full"
-                                        />
+                                            onValueChange={(v) =>
+                                                setSettings((prev) => ({
+                                                    ...prev,
+                                                    paystore_dynamic_bundle_markup_mode: v as 'percentage' | 'fixed'
+                                                }))
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="percentage">Percentage (%)</SelectItem>
+                                                <SelectItem value="fixed">Fixed Amount (package currency)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div className="col-12 md:col-6">
                                         {(settings.paystore_dynamic_bundle_markup_mode ?? 'percentage') === 'percentage' ? (
                                             <>
                                                 <label htmlFor="dynamic_markup_percent" className="block font-bold mb-2">Markup Percentage (%)</label>
-                                                <InputNumber
-                                                    inputId="dynamic_markup_percent"
+                                                <NumberInput
+                                                    id="dynamic_markup_percent"
                                                     value={Number(settings.paystore_dynamic_bundle_markup_percentage ?? 10)}
-                                                    onValueChange={e => setSettings(prev => ({
-                                                        ...prev, paystore_dynamic_bundle_markup_percentage: e.value ?? 0
-                                                    }))}
-                                                    min={0} max={100} minFractionDigits={0} maxFractionDigits={2}
-                                                    suffix=" %" className="w-full"
+                                                    onValueChange={(v) =>
+                                                        setSettings((prev) => ({
+                                                            ...prev,
+                                                            paystore_dynamic_bundle_markup_percentage: v ?? 0
+                                                        }))
+                                                    }
+                                                    min={0}
+                                                    max={100}
+                                                    className="w-full"
                                                 />
                                             </>
                                         ) : (
                                             <>
                                                 <label htmlFor="dynamic_markup_fixed" className="block font-bold mb-2">Fixed Markup Amount</label>
-                                                <InputNumber
-                                                    inputId="dynamic_markup_fixed"
+                                                <NumberInput
+                                                    id="dynamic_markup_fixed"
                                                     value={Number(settings.paystore_dynamic_bundle_markup_fixed_amount ?? 0)}
-                                                    onValueChange={e => setSettings(prev => ({
-                                                        ...prev, paystore_dynamic_bundle_markup_fixed_amount: e.value ?? 0
-                                                    }))}
-                                                    min={0} max={99999999} minFractionDigits={0} maxFractionDigits={5}
+                                                    onValueChange={(v) =>
+                                                        setSettings((prev) => ({
+                                                            ...prev,
+                                                            paystore_dynamic_bundle_markup_fixed_amount: v ?? 0
+                                                        }))
+                                                    }
+                                                    min={0}
+                                                    max={99999999}
                                                     className="w-full"
                                                 />
                                             </>
@@ -1362,12 +1353,15 @@ case 'package-inquiry':
                                     </div>
                                     <div className="col-12">
                                         <div className="flex align-items-center gap-3">
-                                            <InputSwitch
-                                                inputId="auto_bind_queried_packages"
+                                            <Switch
+                                                id="auto_bind_queried_packages"
                                                 checked={settings.auto_bind_queried_packages ?? true}
-                                                onChange={e => setSettings(prev => ({
-                                                    ...prev, auto_bind_queried_packages: e.value
-                                                }))}
+                                                onCheckedChange={(v) =>
+                                                    setSettings((prev) => ({
+                                                        ...prev,
+                                                        auto_bind_queried_packages: v
+                                                    }))
+                                                }
                                             />
                                             <label htmlFor="auto_bind_queried_packages" className="font-bold">
                                                 Automatically Bind Queried Packages
@@ -1404,22 +1398,7 @@ case 'package-inquiry':
                 );
 
             case 'telegram':
-    // Helper function to safely get chat IDs as array
-    const getChatIds = (value: string[] | null | undefined): string[] => {
-        if (!value) return [];
-        if (Array.isArray(value)) return value;
-        return [];
-    };
-
-    // Helper function to convert chat ID strings to objects for dropdown
-    const getChatObjects = (chatIds: string[] | null | undefined): TelegramChat[] => {
-        const ids = getChatIds(chatIds);
-        return ids
-            .map((id: string) => telegramChatIds.find((chat: TelegramChat) => String(chat.chat_id) === id))
-            .filter((chat): chat is TelegramChat => chat !== undefined);
-    };
-
-    return (
+                return (
         <div className="grid p-fluid">
             <div className="col-12">
                 <div className="field">
@@ -1428,9 +1407,9 @@ case 'package-inquiry':
                     </label>
                     <div className="flex flex-column gap-3 mt-2">
                         <div className="flex align-items-center">
-                            <InputSwitch
+                            <Switch
                                 checked={settings.telegram_enabled || false}
-                                onChange={(e) => setSettings({ ...settings, telegram_enabled: e.value })}
+                                onCheckedChange={(v) => setSettings({ ...settings, telegram_enabled: v })}
                             />
                             <label className="ml-2 text-sm md:text-base">{t('APP_SETTINGS.TELEGRAM_ENABLED')}</label>
                         </div>
@@ -1442,9 +1421,9 @@ case 'package-inquiry':
                     <div className="col-12 md:col-6">
                         <div className="field p-3 border-1 surface-border border-round">
                             <div className="flex align-items-center mb-2">
-                                <InputSwitch
+                                <Switch
                                     checked={settings.telegram_send_payments || false}
-                                    onChange={(e) => setSettings({ ...settings, telegram_send_payments: e.value })}
+                                    onCheckedChange={(v) => setSettings({ ...settings, telegram_send_payments: v })}
                                 />
                                 <label className="ml-2 font-bold">{t('APP_SETTINGS.TELEGRAM_SEND_PAYMENTS')}</label>
                             </div>
@@ -1452,51 +1431,7 @@ case 'package-inquiry':
                                 <label htmlFor="payment_chat_ids" className="text-sm font-bold">
                                     {t('APP_SETTINGS.TELEGRAM_PAYMENT_CHAT_IDS')}
                                 </label>
-                                <MultiSelect
-                                    id="payment_chat_ids"
-                                    value={getChatObjects(settings.telegram_payment_chat_ids)}
-                                    options={telegramChatIds}
-                                    onChange={(e) => {
-                                        const selectedChats = e.value || [];
-                                        const chatIds = selectedChats.map((chat: TelegramChat) => String(chat.chat_id));
-                                        setSettings({
-                                            ...settings,
-                                            telegram_payment_chat_ids: chatIds
-                                        });
-                                    }}
-                                    optionLabel="group_name"
-                                    placeholder={t('APP_SETTINGS.SELECT_CHAT_IDS')}
-                                    className="w-full"
-                                    filter
-                                    showClear
-                                    display="chip"
-                                    filterBy="group_name,chat_id"
-                                />
-                                {/* Show selected chats below multiselect (optional, since display="chip" shows them inside) */}
-                                {getChatIds(settings.telegram_payment_chat_ids).length > 0 && (
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        {getChatIds(settings.telegram_payment_chat_ids).map((chatId: string) => {
-                                            const chat = telegramChatIds.find((c: TelegramChat) => String(c.chat_id) === chatId);
-                                            return chat ? (
-                                                <span key={chatId} className="p-2 surface-100 border-round text-sm flex align-items-center gap-2">
-                                                    {chat.group_name} ({chat.chat_id})
-                                                    <i
-                                                        className="pi pi-times cursor-pointer text-red-500"
-                                                        style={{ fontSize: '12px' }}
-                                                        onClick={() => {
-                                                            setSettings({
-                                                                ...settings,
-                                                                telegram_payment_chat_ids: getChatIds(settings.telegram_payment_chat_ids).filter(
-                                                                    (id: string) => id !== chatId
-                                                                )
-                                                            });
-                                                        }}
-                                                    />
-                                                </span>
-                                            ) : null;
-                                        })}
-                                    </div>
-                                )}
+                                {renderTelegramChatCheckboxes('telegram_payment_chat_ids', 'payment_chat_ids')}
                             </div>
                         </div>
                     </div>
@@ -1505,9 +1440,9 @@ case 'package-inquiry':
                     <div className="col-12 md:col-6">
                         <div className="field p-3 border-1 surface-border border-round">
                             <div className="flex align-items-center mb-2">
-                                <InputSwitch
+                                <Switch
                                     checked={settings.telegram_send_balances || false}
-                                    onChange={(e) => setSettings({ ...settings, telegram_send_balances: e.value })}
+                                    onCheckedChange={(v) => setSettings({ ...settings, telegram_send_balances: v })}
                                 />
                                 <label className="ml-2 font-bold">{t('APP_SETTINGS.TELEGRAM_SEND_BALANCES')}</label>
                             </div>
@@ -1515,50 +1450,7 @@ case 'package-inquiry':
                                 <label htmlFor="balance_chat_ids" className="text-sm font-bold">
                                     {t('APP_SETTINGS.TELEGRAM_BALANCE_CHAT_IDS')}
                                 </label>
-                                <MultiSelect
-                                    id="balance_chat_ids"
-                                    value={getChatObjects(settings.telegram_balance_chat_ids)}
-                                    options={telegramChatIds}
-                                    onChange={(e) => {
-                                        const selectedChats = e.value || [];
-                                        const chatIds = selectedChats.map((chat: TelegramChat) => String(chat.chat_id));
-                                        setSettings({
-                                            ...settings,
-                                            telegram_balance_chat_ids: chatIds
-                                        });
-                                    }}
-                                    optionLabel="group_name"
-                                    placeholder={t('APP_SETTINGS.SELECT_CHAT_IDS')}
-                                    className="w-full"
-                                    filter
-                                    showClear
-                                    display="chip"
-                                    filterBy="group_name,chat_id"
-                                />
-                                {getChatIds(settings.telegram_balance_chat_ids).length > 0 && (
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        {getChatIds(settings.telegram_balance_chat_ids).map((chatId: string) => {
-                                            const chat = telegramChatIds.find((c: TelegramChat) => String(c.chat_id) === chatId);
-                                            return chat ? (
-                                                <span key={chatId} className="p-2 surface-100 border-round text-sm flex align-items-center gap-2">
-                                                    {chat.group_name} ({chat.chat_id})
-                                                    <i
-                                                        className="pi pi-times cursor-pointer text-red-500"
-                                                        style={{ fontSize: '12px' }}
-                                                        onClick={() => {
-                                                            setSettings({
-                                                                ...settings,
-                                                                telegram_balance_chat_ids: getChatIds(settings.telegram_balance_chat_ids).filter(
-                                                                    (id: string) => id !== chatId
-                                                                )
-                                                            });
-                                                        }}
-                                                    />
-                                                </span>
-                                            ) : null;
-                                        })}
-                                    </div>
-                                )}
+                                {renderTelegramChatCheckboxes('telegram_balance_chat_ids', 'balance_chat_ids')}
                             </div>
                         </div>
                     </div>
@@ -1567,9 +1459,9 @@ case 'package-inquiry':
                     <div className="col-12 md:col-6">
                         <div className="field p-3 border-1 surface-border border-round">
                             <div className="flex align-items-center mb-2">
-                                <InputSwitch
+                                <Switch
                                     checked={settings.telegram_send_transactions || false}
-                                    onChange={(e) => setSettings({ ...settings, telegram_send_transactions: e.value })}
+                                    onCheckedChange={(v) => setSettings({ ...settings, telegram_send_transactions: v })}
                                 />
                                 <label className="ml-2 font-bold">{t('APP_SETTINGS.TELEGRAM_SEND_TRANSACTIONS')}</label>
                             </div>
@@ -1577,50 +1469,7 @@ case 'package-inquiry':
                                 <label htmlFor="transaction_chat_ids" className="text-sm font-bold">
                                     {t('APP_SETTINGS.TELEGRAM_TRANSACTION_CHAT_IDS')}
                                 </label>
-                                <MultiSelect
-                                    id="transaction_chat_ids"
-                                    value={getChatObjects(settings.telegram_transaction_chat_ids)}
-                                    options={telegramChatIds}
-                                    onChange={(e) => {
-                                        const selectedChats = e.value || [];
-                                        const chatIds = selectedChats.map((chat: TelegramChat) => String(chat.chat_id));
-                                        setSettings({
-                                            ...settings,
-                                            telegram_transaction_chat_ids: chatIds
-                                        });
-                                    }}
-                                    optionLabel="group_name"
-                                    placeholder={t('APP_SETTINGS.SELECT_CHAT_IDS')}
-                                    className="w-full"
-                                    filter
-                                    showClear
-                                    display="chip"
-                                    filterBy="group_name,chat_id"
-                                />
-                                {getChatIds(settings.telegram_transaction_chat_ids).length > 0 && (
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        {getChatIds(settings.telegram_transaction_chat_ids).map((chatId: string) => {
-                                            const chat = telegramChatIds.find((c: TelegramChat) => String(c.chat_id) === chatId);
-                                            return chat ? (
-                                                <span key={chatId} className="p-2 surface-100 border-round text-sm flex align-items-center gap-2">
-                                                    {chat.group_name} ({chat.chat_id})
-                                                    <i
-                                                        className="pi pi-times cursor-pointer text-red-500"
-                                                        style={{ fontSize: '12px' }}
-                                                        onClick={() => {
-                                                            setSettings({
-                                                                ...settings,
-                                                                telegram_transaction_chat_ids: getChatIds(settings.telegram_transaction_chat_ids).filter(
-                                                                    (id: string) => id !== chatId
-                                                                )
-                                                            });
-                                                        }}
-                                                    />
-                                                </span>
-                                            ) : null;
-                                        })}
-                                    </div>
-                                )}
+                                {renderTelegramChatCheckboxes('telegram_transaction_chat_ids', 'transaction_chat_ids')}
                             </div>
                         </div>
                     </div>
@@ -1629,9 +1478,9 @@ case 'package-inquiry':
                     <div className="col-12 md:col-6">
                         <div className="field p-3 border-1 surface-border border-round">
                             <div className="flex align-items-center mb-2">
-                                <InputSwitch
+                                <Switch
                                     checked={settings.telegram_send_vouchers || false}
-                                    onChange={(e) => setSettings({ ...settings, telegram_send_vouchers: e.value })}
+                                    onCheckedChange={(v) => setSettings({ ...settings, telegram_send_vouchers: v })}
                                 />
                                 <label className="ml-2 font-bold">{t('APP_SETTINGS.TELEGRAM_SEND_VOUCHERS')}</label>
                             </div>
@@ -1639,50 +1488,7 @@ case 'package-inquiry':
                                 <label htmlFor="voucher_chat_ids" className="text-sm font-bold">
                                     {t('APP_SETTINGS.TELEGRAM_VOUCHER_CHAT_IDS')}
                                 </label>
-                                <MultiSelect
-                                    id="voucher_chat_ids"
-                                    value={getChatObjects(settings.telegram_voucher_chat_ids)}
-                                    options={telegramChatIds}
-                                    onChange={(e) => {
-                                        const selectedChats = e.value || [];
-                                        const chatIds = selectedChats.map((chat: TelegramChat) => String(chat.chat_id));
-                                        setSettings({
-                                            ...settings,
-                                            telegram_voucher_chat_ids: chatIds
-                                        });
-                                    }}
-                                    optionLabel="group_name"
-                                    placeholder={t('APP_SETTINGS.SELECT_CHAT_IDS')}
-                                    className="w-full"
-                                    filter
-                                    showClear
-                                    display="chip"
-                                    filterBy="group_name,chat_id"
-                                />
-                                {getChatIds(settings.telegram_voucher_chat_ids).length > 0 && (
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        {getChatIds(settings.telegram_voucher_chat_ids).map((chatId: string) => {
-                                            const chat = telegramChatIds.find((c: TelegramChat) => String(c.chat_id) === chatId);
-                                            return chat ? (
-                                                <span key={chatId} className="p-2 surface-100 border-round text-sm flex align-items-center gap-2">
-                                                    {chat.group_name} ({chat.chat_id})
-                                                    <i
-                                                        className="pi pi-times cursor-pointer text-red-500"
-                                                        style={{ fontSize: '12px' }}
-                                                        onClick={() => {
-                                                            setSettings({
-                                                                ...settings,
-                                                                telegram_voucher_chat_ids: getChatIds(settings.telegram_voucher_chat_ids).filter(
-                                                                    (id: string) => id !== chatId
-                                                                )
-                                                            });
-                                                        }}
-                                                    />
-                                                </span>
-                                            ) : null;
-                                        })}
-                                    </div>
-                                )}
+                                {renderTelegramChatCheckboxes('telegram_voucher_chat_ids', 'voucher_chat_ids')}
                             </div>
                         </div>
                     </div>
@@ -1717,312 +1523,237 @@ case 'package-inquiry':
         }
     };
 
+    const settingsNavItems: { id: typeof activeTab; label: string }[] = [
+        { id: 'general', label: t('APP_SETTINGS.GENERAL') },
+        { id: 'contact', label: t('APP_SETTINGS.CONTACT_INFO') },
+        { id: 'branding', label: t('APP_SETTINGS.BRANDING') },
+        { id: 'limits', label: t('APP_SETTINGS.LIMITS') },
+        { id: 'integration', label: t('APP_SETTINGS.INTEGRATION') },
+        { id: 'recharge', label: t('APP_SETTINGS.RECHARGE') },
+        { id: 'package-inquiry', label: t('APP_SETTINGS.PACKAGE_INQUIRY', { defaultValue: 'استعلام بسته' }) },
+        { id: 'telegram', label: t('APP_SETTINGS.TELEGRAM') },
+        { id: 'support-contacts', label: t('SUPPORT_CONTACT.TITLE') }
+    ];
+
     const navigationButtons = (
-        <div className="flex flex-column gap-2">
-            <Button
-                label={t('APP_SETTINGS.GENERAL')}
-                className={`p-button-text ${activeTab === 'general' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
-                onClick={() => {
-                    setActiveTab('general');
-                    setMobileNavVisible(false);
-                }}
-            />
-            <Button
-                label={t('APP_SETTINGS.CONTACT_INFO')}
-                className={`p-button-text ${activeTab === 'contact' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
-                onClick={() => {
-                    setActiveTab('contact');
-                    setMobileNavVisible(false);
-                }}
-            />
-            <Button
-                label={t('APP_SETTINGS.BRANDING')}
-                className={`p-button-text ${activeTab === 'branding' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
-                onClick={() => {
-                    setActiveTab('branding');
-                    setMobileNavVisible(false);
-                }}
-            />
-            <Button
-                label={t('APP_SETTINGS.LIMITS')}
-                className={`p-button-text ${activeTab === 'limits' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
-                onClick={() => {
-                    setActiveTab('limits');
-                    setMobileNavVisible(false);
-                }}
-            />
-            <Button
-                label={t('APP_SETTINGS.INTEGRATION')}
-                className={`p-button-text ${activeTab === 'integration' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
-                onClick={() => {
-                    setActiveTab('integration');
-                    setMobileNavVisible(false);
-                }}
-            />
-            <Button
-                label={t('APP_SETTINGS.RECHARGE')}
-                className={`p-button-text ${activeTab === 'recharge' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
-                onClick={() => {
-                    setActiveTab('recharge');
-                    setMobileNavVisible(false);
-                }}
-            />
-            <Button
-                label="Package Inquiry"
-                icon="pi pi-search"
-                className={`p-button-text ${activeTab === 'package-inquiry' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
-                onClick={() => {
-                    setActiveTab('package-inquiry');
-                    setMobileNavVisible(false);
-                }}
-            />
-            <Button
-                label={t('APP_SETTINGS.TELEGRAM')}
-                className={`p-button-text ${activeTab === 'telegram' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
-                onClick={() => {
-                    setActiveTab('telegram');
-                    setMobileNavVisible(false);
-                }}
-            />
-            <Button
-                label={t('SUPPORT_CONTACT.TITLE')}
-                className={`p-button-text ${activeTab === 'support-contacts' ? 'p-button-primary' : 'p-button-secondary'} text-sm md:text-base`}
-                onClick={() => {
-                    setActiveTab('support-contacts');
-                    setMobileNavVisible(false);
-                }}
-            />
-        </div>
+        <nav className="flex flex-col gap-1" aria-label={t('APP_SETTINGS.APP_SETTINGS')}>
+            {settingsNavItems.map((item) => (
+                <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                        setActiveTab(item.id);
+                        setMobileNavVisible(false);
+                    }}
+                    className={cn(
+                        'rounded-lg px-3 py-2 text-start text-sm font-medium transition',
+                        activeTab === item.id
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'text-foreground hover:bg-emerald-50 hover:text-emerald-800'
+                    )}
+                >
+                    {item.label}
+                </button>
+            ))}
+        </nav>
     );
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
+        <div className="space-y-4">
                     <Toast ref={toast} />
-                    <Toolbar className="mb-4" right={rightToolbarTemplate}></Toolbar>
-
-                    <div className="card">
-                        <div className="grid">
-                            {!isMobile ? (
-                                <>
-                                    <div className="col-12 md:col-3">
-                                        <div className="p-3 border-round surface-card">
-                                            <h4 className="text-base md:text-xl">{t('APP_SETTINGS.APP_SETTINGS')}</h4>
-                                            {navigationButtons}
-                                        </div>
-                                    </div>
-
-                                    <div className="col-12 md:col-9">
-                                        <div className="p-3 border-round surface-card">
-                                            {renderTabContent()}
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="col-12">
-                                    <div className="p-3 border-round surface-card">
-                                        <div className="flex align-items-center mb-3">
-                                            <h4 className="text-base md:text-xl m-0">{t('APP_SETTINGS.APP_SETTINGS')}</h4>
-                                            <Button
-                                                icon="pi pi-bars"
-                                                className="p-button-text p-button-plain ml-auto"
-                                                onClick={() => setMobileNavVisible(true)}
-                                            />
-                                        </div>
-                                        {renderTabContent()}
-                                    </div>
+                    <PageHeader
+                        title={t('APP_SETTINGS.APP_SETTINGS', { defaultValue: 'تنظیمات اپلیکیشن' })}
+                        description={t('APP_SETTINGS.PAGE.DESCRIPTION', { defaultValue: 'پیکربندی عمومی، تماس، برندینگ و یکپارچه‌سازی' })}
+                        actions={
+                            <UiButton type="button" size="sm" variant="outline" onClick={openSettings}>
+                                <Settings2 className="h-4 w-4" />
+                                {t('APP_SETTINGS.EDIT_SETTINGS')}
+                            </UiButton>
+                        }
+                    />
+                    <div className="waslat-panel relative overflow-hidden p-4 md:p-6">
+                        {loading ? <div className="absolute inset-x-0 top-0 z-20 h-0.5 animate-pulse bg-emerald-600" /> : null}
+                        {!isMobile ? (
+                            <div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
+                                <aside className="rounded-xl border border-emerald-100/80 bg-emerald-50/30 p-3">
+                                    <h4 className="mb-3 text-start text-base font-semibold md:text-lg">{t('APP_SETTINGS.APP_SETTINGS')}</h4>
+                                    {navigationButtons}
+                                </aside>
+                                <div className="min-w-0 rounded-xl border border-border/60 bg-white p-3 md:p-4">{renderTabContent()}</div>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="m-0 flex-1 text-base font-semibold md:text-lg">{t('APP_SETTINGS.APP_SETTINGS')}</h4>
+                                    <UiButton type="button" variant="outline" size="icon" onClick={() => setMobileNavVisible(true)}>
+                                        <Menu className="h-4 w-4" />
+                                    </UiButton>
                                 </div>
-                            )}
-                        </div>
+                                <div className="rounded-xl border border-border/60 bg-white p-3">{renderTabContent()}</div>
+                            </div>
+                        )}
                     </div>
 
-                    <Sidebar
-                        visible={mobileNavVisible}
-                        onHide={() => setMobileNavVisible(false)}
-                        position="left"
-                        style={{ width: '250px' }}
+                    <Sheet open={mobileNavVisible} onOpenChange={setMobileNavVisible}>
+                        <SheetContent side="left" className="w-full sm:max-w-xs">
+                            <SheetHeader>
+                                <SheetTitle>{t('APP_SETTINGS.APP_SETTINGS')}</SheetTitle>
+                                <SheetDescription>{t('APP_SETTINGS.SHEET_HINT', { defaultValue: 'بخش تنظیمات را انتخاب کنید.' })}</SheetDescription>
+                            </SheetHeader>
+                            <div className="mt-6">{navigationButtons}</div>
+                        </SheetContent>
+                    </Sheet>
+
+            <FormSheet
+                open={settingsDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                size="full"
+                side="left"
+                title={t('APP_SETTINGS.APP_SETTINGS')}
+                description={t('APP_SETTINGS.SHEET_HINT', { defaultValue: 'تنظیمات کلی اپلیکیشن را در تب‌ها ویرایش و ذخیره کنید.' })}
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveSettings}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-3 text-start">{navigationButtons}</div>
+                    <div className="min-w-0 rounded-xl border border-emerald-100 bg-white p-3 md:p-4">{renderTabContent()}</div>
+                </div>
+            </FormSheet>
+
+            <FormSheet
+                open={supportContactDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideSupportContactDialog();
+                }}
+                size="lg"
+                side="left"
+                title={selectedSupportContact.id ? t('SUPPORT_CONTACT.EDIT_CONTACT') : t('SUPPORT_CONTACT.ADD_NEW')}
+                description={t('SUPPORT_CONTACT.FORM.HINT', { defaultValue: 'اطلاعات تماس پشتیبانی را تکمیل کنید.' })}
+                footer={
+                    <FormActions
+                        onCancel={hideSupportContactDialog}
+                        onSubmit={saveSupportContact}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection title={t('SUPPORT_CONTACT.FORM.SECTION.MAIN', { defaultValue: 'اطلاعات تماس' })}>
+                    <FormField
+                        label={t('SUPPORT_CONTACT.TITLE')}
+                        required
+                        fullWidth
+                        error={supportContactSubmitted && !selectedSupportContact.title ? t('THIS_FIELD_IS_REQUIRED') : null}
                     >
-                        <div className="p-3">
-                            <h4 className="text-base md:text-xl mb-3">{t('APP_SETTINGS.APP_SETTINGS')}</h4>
-                            {navigationButtons}
-                        </div>
-                    </Sidebar>
-
-                    <Dialog
-                        visible={settingsDialog}
-                        style={{ width: isMobile ? '95vw' : '900px', maxHeight: '80vh' }}
-                        header={t('FORM.GENERAL.SUBMIT')}
-                        modal
-                        className="p-fluid"
-                        footer={settingsDialogFooter}
-                        onHide={hideDialog}
+                        <Input
+                            id="title"
+                            value={selectedSupportContact.title}
+                            onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, title: e.target.value })}
+                            required
+                            autoFocus
+                            className={classNames('w-full', {
+                                'p-invalid': supportContactSubmitted && !selectedSupportContact.title
+                            })}
+                        />
+                    </FormField>
+                    <FormField label={t('SUPPORT_CONTACT.DESCRIPTION')} fullWidth>
+                        <Input
+                            id="description"
+                            value={selectedSupportContact.description}
+                            onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, description: e.target.value })}
+                            className="w-full"
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('SUPPORT_CONTACT.PHONE')}
+                        required
+                        error={supportContactSubmitted && !selectedSupportContact.phone ? t('THIS_FIELD_IS_REQUIRED') : null}
                     >
-                        <div className="card" style={{ padding: '20px', maxHeight: '60vh', overflowY: 'auto' }}>
-                            <TabView
-                                activeIndex={['general', 'contact', 'branding', 'limits', 'integration', 'recharge', 'package-inquiry', 'telegram', 'support-contacts'].indexOf(activeTab)}
-                                onTabChange={(e) => setActiveTab(['general', 'contact', 'branding', 'limits', 'integration', 'recharge', 'package-inquiry', 'telegram', 'support-contacts'][e.index])}
-                            >
-                                <TabPanel header={t('APP_SETTINGS.GENERAL')}>
-                                    {activeTab === 'general' && renderTabContent()}
-                                </TabPanel>
-                                <TabPanel header={t('APP_SETTINGS.CONTACT_INFO')}>
-                                    {activeTab === 'contact' && renderTabContent()}
-                                </TabPanel>
-                                <TabPanel header={t('APP_SETTINGS.BRANDING')}>
-                                    {activeTab === 'branding' && renderTabContent()}
-                                </TabPanel>
-                                <TabPanel header={t('APP_SETTINGS.LIMITS')}>
-                                    {activeTab === 'limits' && renderTabContent()}
-                                </TabPanel>
-                                <TabPanel header={t('APP_SETTINGS.INTEGRATION')}>
-                                    {activeTab === 'integration' && renderTabContent()}
-                                </TabPanel>
-                                <TabPanel header={t('APP_SETTINGS.RECHARGE')}>
-                                    {activeTab === 'recharge' && renderTabContent()}
-                                </TabPanel>
-                                <TabPanel header="Package Inquiry">
-                                    {activeTab === 'package-inquiry' && renderTabContent()}
-                                </TabPanel>
-                                <TabPanel header={t('APP_SETTINGS.TELEGRAM')}>
-                                    {activeTab === 'telegram' && renderTabContent()}
-                                </TabPanel>
-                                <TabPanel header={t('SUPPORT_CONTACT.TITLE')}>
-                                    {activeTab === 'support-contacts' && renderTabContent()}
-                                </TabPanel>
-                            </TabView>
-                        </div>
-                    </Dialog>
-
-                    {/* Support Contact Dialog */}
-                    <Dialog
-                        visible={supportContactDialog}
-                        style={{ width: isMobile ? '95vw' : '500px' }}
-                        header={selectedSupportContact.id ? t('SUPPORT_CONTACT.EDIT_CONTACT') : t('SUPPORT_CONTACT.ADD_NEW')}
-                        modal
-                        className="p-fluid"
-                        footer={supportContactDialogFooter}
-                        onHide={hideSupportContactDialog}
-                    >
-                        <div className="field">
-                            <label htmlFor="title" className="font-bold">
-                                {t('SUPPORT_CONTACT.TITLE')} *
-                            </label>
-                            <InputText
-                                id="title"
-                                value={selectedSupportContact.title}
-                                onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, title: e.target.value })}
-                                required
-                                className={classNames({
-                                    'p-invalid': supportContactSubmitted && !selectedSupportContact.title
-                                })}
-                            />
-                        </div>
-
-                        <div className="field">
-                            <label htmlFor="description" className="font-bold">
-                                {t('SUPPORT_CONTACT.DESCRIPTION')}
-                            </label>
-                            <InputText
-                                id="description"
-                                value={selectedSupportContact.description}
-                                onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, description: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="field">
-                            <label htmlFor="phone" className="font-bold">
-                                {t('SUPPORT_CONTACT.PHONE')} *
-                            </label>
-                            <InputText
-                                id="phone"
-                                value={selectedSupportContact.phone}
-                                onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, phone: e.target.value })}
-                                required
-                                className={classNames({
-                                    'p-invalid': supportContactSubmitted && !selectedSupportContact.phone
-                                })}
-                            />
-                        </div>
-
-                        <div className="field">
-                            <label htmlFor="telegram" className="font-bold">
-                                {t('SUPPORT_CONTACT.TELEGRAM_LINK')}
-                            </label>
-                            <InputText
-                                id="telegram"
-                                value={selectedSupportContact.links.telegram}
-                                onChange={(e) => setSelectedSupportContact({
+                        <Input
+                            id="phone"
+                            value={selectedSupportContact.phone}
+                            onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, phone: e.target.value })}
+                            required
+                            className={classNames('w-full', {
+                                'p-invalid': supportContactSubmitted && !selectedSupportContact.phone
+                            })}
+                        />
+                    </FormField>
+                    <FormField label={t('SUPPORT_CONTACT.TELEGRAM_LINK')}>
+                        <Input
+                            id="telegram"
+                            value={selectedSupportContact.links.telegram}
+                            onChange={(e) =>
+                                setSelectedSupportContact({
                                     ...selectedSupportContact,
                                     links: { ...selectedSupportContact.links, telegram: e.target.value }
-                                })}
-                            />
-                        </div>
-
-                        <div className="field">
-                            <label htmlFor="website" className="font-bold">
-                                {t('SUPPORT_CONTACT.WEBSITE_LINK')}
-                            </label>
-                            <InputText
-                                id="website"
-                                value={selectedSupportContact.links.website}
-                                onChange={(e) => setSelectedSupportContact({
+                                })
+                            }
+                            className="w-full"
+                        />
+                    </FormField>
+                    <FormField label={t('SUPPORT_CONTACT.WEBSITE_LINK')}>
+                        <Input
+                            id="website"
+                            value={selectedSupportContact.links.website}
+                            onChange={(e) =>
+                                setSelectedSupportContact({
                                     ...selectedSupportContact,
                                     links: { ...selectedSupportContact.links, website: e.target.value }
-                                })}
+                                })
+                            }
+                            className="w-full"
+                        />
+                    </FormField>
+                    <FormField label={t('SUPPORT_CONTACT.IS_WHATSAPP')}>
+                        <div className="flex items-center gap-2">
+                            <Switch
+                                id="is_whatsapp"
+                                checked={selectedSupportContact.is_whatsapp}
+                                onCheckedChange={(v) => setSelectedSupportContact({ ...selectedSupportContact, is_whatsapp: v })}
                             />
                         </div>
-
-                        <div className="grid">
-                            <div className="col-12 md:col-6">
-                                <div className="field flex align-items-center">
-                                    <InputSwitch
-                                        id="is_whatsapp"
-                                        checked={selectedSupportContact.is_whatsapp}
-                                        onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, is_whatsapp: e.value })}
-                                    />
-                                    <label htmlFor="is_whatsapp" className="ml-2">
-                                        {t('SUPPORT_CONTACT.IS_WHATSAPP')}
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className="col-12 md:col-6">
-                                <div className="field flex align-items-center">
-                                    <InputSwitch
-                                        id="is_phone"
-                                        checked={selectedSupportContact.is_phone}
-                                        onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, is_phone: e.value })}
-                                    />
-                                    <label htmlFor="is_phone" className="ml-2">
-                                        {t('SUPPORT_CONTACT.IS_PHONE')}
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className="col-12 md:col-6">
-                                <div className="field">
-                                    <label htmlFor="status" className="font-bold">
-                                        {t('STATUS')}
-                                    </label>
-                                    <Dropdown
-                                        id="status"
-                                        value={selectedSupportContact.status}
-                                        options={[
-                                            { label: t('ACTIVE'), value: 'active' },
-                                            { label: t('INACTIVE'), value: 'inactive' }
-                                        ]}
-                                        onChange={(e) => setSelectedSupportContact({ ...selectedSupportContact, status: e.value })}
-                                        placeholder={t('SELECT_STATUS')}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
+                    </FormField>
+                    <FormField label={t('SUPPORT_CONTACT.IS_PHONE')}>
+                        <div className="flex items-center gap-2">
+                            <Switch
+                                id="is_phone"
+                                checked={selectedSupportContact.is_phone}
+                                onCheckedChange={(v) => setSelectedSupportContact({ ...selectedSupportContact, is_phone: v })}
+                            />
                         </div>
-                    </Dialog>
+                    </FormField>
+                    <FormField label={t('STATUS')} fullWidth>
+                        <Select
+                            value={selectedSupportContact.status || undefined}
+                            onValueChange={(v) =>
+                                setSelectedSupportContact({
+                                    ...selectedSupportContact,
+                                    status: v as 'active' | 'inactive'
+                                })
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('SELECT_STATUS')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="active">{t('ACTIVE')}</SelectItem>
+                                <SelectItem value="inactive">{t('INACTIVE')}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
-                    {/* Delete Support Contact Dialog */}
+            {/* Delete Support Contact Dialog */}
                     <Dialog
                         visible={deleteSupportContactDialog}
                         style={{ width: '450px' }}
@@ -2038,8 +1769,6 @@ case 'package-inquiry':
                             </span>
                         </div>
                     </Dialog>
-                </div>
-            </div>
         </div>
     );
 };

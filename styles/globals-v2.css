@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        /* Emerald fintech green — famous money/growth green */
+        --background: 150 20% 98%;
+        --foreground: 160 30% 10%;
+
+        --card: 0 0% 100%;
+        --card-foreground: 160 30% 10%;
+
+        --popover: 0 0% 100%;
+        --popover-foreground: 160 30% 10%;
+
+        --primary: 160 84% 30%;
+        --primary-foreground: 0 0% 100%;
+
+        --secondary: 152 25% 94%;
+        --secondary-foreground: 160 40% 18%;
+
+        --muted: 150 16% 94%;
+        --muted-foreground: 160 10% 40%;
+
+        --accent: 152 45% 92%;
+        --accent-foreground: 160 50% 20%;
+
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 0 0% 100%;
+
+        --border: 150 14% 88%;
+        --input: 150 14% 88%;
+        --ring: 160 84% 30%;
+
+        --radius: 0.75rem;
+
+        --sidebar: 162 42% 12%;
+        --sidebar-foreground: 150 20% 96%;
+        --sidebar-muted: 162 25% 22%;
+        --sidebar-accent: 160 70% 36%;
+        --sidebar-border: 162 30% 18%;
+
+        --waslat-glow: 160 84% 39%;
+    }
+
+    * {
+        @apply border-border;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    html {
+        /* Persian-first defaults; JS may still sync from i18n */
+        direction: rtl;
+    }
+
+    html[dir='ltr'] {
+        direction: ltr;
+    }
+
+    body {
+        @apply bg-background text-foreground font-sans antialiased;
+        /* Override Sakai Inter — Persian-first IranYekan */
+        font-family: iranyekan, Tahoma, Arial, system-ui, sans-serif !important;
+        font-feature-settings: 'ss01' on;
+        text-align: start;
+        background-color: hsl(var(--background)) !important;
+        color: hsl(var(--foreground)) !important;
+    }
+
+    /* Numbers & tabular data stay readable in both directions */
+    .tabular-nums {
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Chevron / arrow icons that should flip in RTL */
+    [dir='rtl'] .mirror-x {
+        transform: scaleX(-1);
+    }
+}
+
+@layer utilities {
+    .waslat-grid-bg {
+        background-image:
+            radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--waslat-glow) / 0.18), transparent),
+            linear-gradient(to bottom, hsl(var(--background)), hsl(150 18% 96%));
+    }
+
+    .waslat-panel {
+        @apply rounded-xl border border-border/80 bg-card shadow-panel;
+    }
+}
+
+/**
+ * PrimeFlex maps .w-1 … .w-12 to % column widths (with !important),
+ * so Tailwind h-4/w-4 on Lucide icons becomes ~33% wide. Force real sizes.
+ */
+.waslat-nav-icon,
+aside svg.lucide,
+header svg.lucide {
+    width: 16px !important;
+    height: 16px !important;
+    max-width: 16px !important;
+    min-width: 16px !important;
+    flex-shrink: 0 !important;
+}
+
+.waslat-nav-logo {
+    width: 28px !important;
+    height: 28px !important;
+    max-width: 28px !important;
+    min-width: 28px !important;
+    flex-shrink: 0 !important;
+}
+
+.waslat-nav-hit {
+    width: 36px !important;
+    height: 36px !important;
+    max-width: 36px !important;
+    min-width: 36px !important;
+}
+
+.waslat-stat-icon {
+    width: 40px !important;
+    height: 40px !important;
+    max-width: 40px !important;
+    min-width: 40px !important;
+}
+
+.waslat-nav-divider {
+    width: 20px !important;
+    height: 1px !important;
+}
+
+.waslat-sidebar {
+    min-width: 0;
+}
+
+.waslat-sidebar[data-collapsed='true'] {
+    width: 64px !important;
+    max-width: 64px !important;
+    min-width: 64px !important;
+}
+
+.waslat-sidebar[data-collapsed='false'] {
+    width: 220px !important;
+    max-width: 220px !important;
+    min-width: 220px !important;
+}

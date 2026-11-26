@@ -9,11 +9,19 @@ const getAuthToken = () => {
 };
 
 // Fetch hawala List
-export const _fetchHawalaList = (page: number = 1, search: string = '') => async (dispatch: Dispatch) => {
+export const _fetchHawalaList = (
+  page: number = 1,
+  search: string = '',
+  status: string = '',
+  hawalaBranchId?: number | string | null
+) => async (dispatch: Dispatch) => {
   dispatch({ type: FETCH_HAWALA_LIST_REQUEST });
   try {
     const token = getAuthToken();
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/hawala-orders?search=${search}&page=${page}`, {
+    const params = new URLSearchParams({ search, page: String(page) });
+    if (status) params.set('status', status);
+    if (hawalaBranchId) params.set('hawala_branch_id', String(hawalaBranchId));
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/hawala-orders?${params.toString()}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -84,7 +92,7 @@ export const _addHawala = (hawalaData: any, toast: React.RefObject<Toast>, t: an
       life: 3000,
     });
 
-    return response.data;
+    return true;
 
   } catch (error: any) {
     dispatch({
@@ -117,7 +125,7 @@ export const _addHawala = (hawalaData: any, toast: React.RefObject<Toast>, t: an
       life: 3000,
     });
 
-    throw error; // Re-throw the error for handling in the component if needed
+    return false;
   }
 };
 

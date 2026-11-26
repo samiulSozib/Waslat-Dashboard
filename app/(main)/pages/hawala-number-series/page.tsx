@@ -6,28 +6,29 @@ import {
     _changeHawalaNumberSeriesStatus,
     _deleteHawalaNumberSeries,
     _editHawalaNumberSeries,
-    _fetchHawalaNextNumber,
     _fetchHawalaNumberSeriesList
 } from '@/app/redux/actions/hawalaSeriesActions';
 import { AppDispatch } from '@/app/redux/store';
-import i18n from '@/i18n';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { SearchSelect } from '@/components/admin/search-select';
+import { ListPage } from '@/components/admin/list-page';
+import { RowActions } from '@/components/admin/row-actions';
+import { Badge } from '@/components/ui/badge';
+import { Button as UiButton } from '@/components/ui/button';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { HawalaBranch, HawalaNumberSeries } from '@/types/interface';
+import { cn } from '@/lib/utils';
+import { Check, Eye, EyeOff, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import { Button } from 'primereact/button';
-import { Checkbox } from 'primereact/checkbox';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { InputText } from 'primereact/inputtext';
-import { Paginator } from 'primereact/paginator';
-import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { customCellStyle } from '../../utilities/customRow';
+import withAuth from '../../authGuard';
 import { isRTL } from '../../utilities/rtlUtil';
 
 const HawalaNumberSeriesPage = () => {
@@ -44,18 +45,18 @@ const HawalaNumberSeriesPage = () => {
     const [deleteHawalaSeriesDialog, setDeleteHawalaSeriesDialog] = useState(false);
     const [deleteHawalaSeriesBulkDialog, setDeleteHawalaSeriesBulkDialog] = useState(false);
     const [hawalaSeries, setHawalaSeries] = useState<HawalaNumberSeries>(emptyHawalaSeries);
-    const [selectedHawalaSeries, setSelectedHawalaSeries] = useState(null);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
-    const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
-    const { series, loading, pagination, nextNumber } = useSelector((state: any) => state.hawalaNumberSeriesReducer);
+    const { series, loading, pagination } = useSelector((state: any) => state.hawalaNumberSeriesReducer);
     const { hawalaBranches } = useSelector((state: any) => state.hawalaBranchReducer);
 
     const { t } = useTranslation();
-    const [searchTag, setSearchTag] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const searchTag = useDebouncedValue(searchInput, 350);
     const [branchSearchTerm, setBranchSearchTerm] = useState('');
+    const [refreshing, setRefreshing] = useState(false);
+    const totalPages = Math.max(1, Math.ceil((pagination?.total || 0) / (pagination?.items_per_page || 20)));
 
     useEffect(() => {
         dispatch(_fetchHawalaNumberSeriesList(1, searchTag));
@@ -139,218 +140,35 @@ const HawalaNumberSeriesPage = () => {
         setDeleteHawalaSeriesDialog(false);
     };
 
-    const confirmDeleteSelected = () => {
-        setDeleteHawalaSeriesBulkDialog(true);
-    };
-
     const handleStatusChange = (id: number, is_active: boolean) => {
         dispatch(_changeHawalaNumberSeriesStatus(id, is_active, toast, t));
     };
 
-    const fetchNextNumber = (branchId: number) => {
-        dispatch(_fetchHawalaNextNumber(branchId, toast, t));
+    const onPageChange = (page: number) => {
+        dispatch(_fetchHawalaNumberSeriesList(page, searchTag));
     };
 
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('HAWALA_SERIES.CREATE_NEW')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                </div>
-            </React.Fragment>
-        );
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await dispatch(_fetchHawalaNumberSeriesList(pagination?.page || 1, searchTag) as any);
+        setRefreshing(false);
     };
 
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <div className="flex items-center">
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-    //                 <i className="pi pi-search" />
-    //                 <InputText
-    //                     type="search"
-    //                     onInput={(e) => setSearchTag(e.currentTarget.value)}
-    //                     placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-    //                     className="w-full md:w-auto"
-    //                 />
-    //             </span>
-    //         </div>
-    //     );
-    // };
-
-    const [localSearchTerm, setLocalSearchTerm] = useState('');
-
-    const leftToolbarTemplate = () => {
-
-        const handleSearch = () => {
-            setSearchTag(localSearchTerm);
-        };
-
-        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        };
-
-        return (
-            <React.Fragment>
-                <div className="flex align-items-center gap-2">
-                    <span className="p-input-icon-left">
-                        <i className="pi pi-search" />
-                        <InputText
-                            type="search"
-                            value={localSearchTerm}
-                            onChange={(e) => setLocalSearchTerm(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        />
-                    </span>
-                    <Button
-                        label={t('SEARCH')}
-                        onClick={handleSearch}
-                        className="p-button-sm"
-                    />
-                    {localSearchTerm && (
-                        <Button
-                            icon="pi pi-times"
-                            onClick={() => {
-                                setLocalSearchTerm('');
-                                setSearchTag('');
-                            }}
-                            className="p-button-sm p-button-secondary p-button-text"
-
-                        />
-                    )}
-                </div>
-            </React.Fragment>
-        );
-    };
-
-    const branchBodyTemplate = (rowData: HawalaNumberSeries) => {
-        //const branch = hawalaBranches.find((b: HawalaBranch) => b.id === rowData.branch_id);
-        return (
-            <>
-                <span className="p-column-title">{t('HAWALA_SERIES.TABLE.BRANCH')}</span>
-                {rowData?.branch?.name}
-            </>
-        );
-    };
-
-    const prefixBodyTemplate = (rowData: HawalaNumberSeries) => {
-        return (
-            <>
-                <span className="p-column-title">{t('HAWALA_SERIES.TABLE.PREFIX')}</span>
-                {rowData.prefix}
-            </>
-        );
-    };
-
-    const currentNumberBodyTemplate = (rowData: HawalaNumberSeries) => {
-        return (
-            <>
-                <span className="p-column-title">{t('HAWALA_SERIES.TABLE.CURRENT_NUMBER')}</span>
-                {rowData.current_number}
-            </>
-        );
-    };
-
-    const resetDailyBodyTemplate = (rowData: HawalaNumberSeries) => {
-        return (
-            <>
-                <span className="p-column-title">{t('HAWALA_SERIES.TABLE.RESET_DAILY')}</span>
-                <i className={classNames('pi', {
-                    'pi-check text-green-500': rowData.reset_daily,
-                    'pi-times text-red-500': !rowData.reset_daily
-                })} />
-            </>
-        );
-    };
-
-    const statusBodyTemplate = (rowData: HawalaNumberSeries) => {
-        const statusClass = rowData.is_active ? 'text-green-500' : 'text-red-500';
-        const statusLabel = rowData.is_active ? t('APP.GENERAL.ACTIVE') : t('APP.GENERAL.INACTIVE');
-
-        return (
-            <>
-                <span className="p-column-title">{t('HAWALA_SERIES.TABLE.STATUS')}</span>
-                <span className={statusClass}>{statusLabel}</span>
-            </>
-        );
-    };
-
-    // const nextNumberBodyTemplate = (rowData: HawalaNumberSeries) => {
-    //     return (
-    //         <>
-    //             <span className="p-column-title">{t('HAWALA_SERIES.TABLE.NEXT_NUMBER')}</span>
-    //             <div className="flex items-center gap-2">
-    //                 <span>{rowData.prefix}{rowData.current_number + 1}</span>
-    //                 <Button
-    //                     icon="pi pi-refresh"
-    //                     rounded
-    //                     text
-    //                     severity="info"
-    //                     size="small"
-    //                     onClick={() => fetchNextNumber(rowData.branch_id)}
-    //                     tooltip={t('HAWALA_SERIES.FETCH_NEXT_NUMBER')}
-    //                 />
-    //             </div>
-    //         </>
-    //     );
-    // };
-
-    const actionBodyTemplate = (rowData: HawalaNumberSeries) => {
-        return (
-            <div className="flex gap-2">
-                <Button
-                    icon="pi pi-pencil"
-                    rounded
-                    severity="success"
-                    size="small"
-                    onClick={() => editHawalaSeries(rowData)}
-                />
-                <Button
-                    icon="pi pi-trash"
-                    rounded
-                    severity="warning"
-                    size="small"
-                    onClick={() => confirmDeleteHawalaSeries(rowData)}
-                />
-                <Button
-                    icon={rowData.is_active ? "pi pi-eye-slash" : "pi pi-eye"}
-                    rounded
-                    severity={rowData.is_active ? "secondary" : "info"}
-                    size="small"
-                    onClick={() => handleStatusChange(rowData.id, !rowData.is_active)}
-                    tooltip={rowData.is_active ? t('DEACTIVATE') : t('ACTIVATE')}
-                />
-            </div>
-        );
-    };
-
-    const hawalaSeriesDialogFooter = (
-        <>
-            <Button
-                label={t('APP.GENERAL.CANCEL')}
-                icon="pi pi-times"
-                severity="danger"
-                className={isRTL() ? 'rtl-button' : ''}
-                onClick={hideDialog}
-            />
-            <Button
-                label={t('FORM.GENERAL.SUBMIT')}
-                icon="pi pi-check"
-                severity="success"
-                className={isRTL() ? 'rtl-button' : ''}
-                onClick={saveHawalaSeries}
-            />
-        </>
-    );
+    const getRowActions = (row: HawalaNumberSeries) => [
+        { label: t('TABLE.GENERAL.EDIT'), icon: <Pencil className="h-4 w-4" />, onClick: () => editHawalaSeries(row) },
+        {
+            label: row.is_active ? t('DEACTIVATE') : t('ACTIVATE'),
+            icon: row.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />,
+            onClick: () => handleStatusChange(row.id, !row.is_active)
+        },
+        {
+            label: t('TABLE.GENERAL.DELETE'),
+            icon: <Trash2 className="h-4 w-4" />,
+            danger: true,
+            separatorBefore: true,
+            onClick: () => confirmDeleteHawalaSeries(row)
+        }
+    ];
 
     const deleteHawalaSeriesDialogFooter = (
         <>
@@ -389,265 +207,209 @@ const HawalaNumberSeriesPage = () => {
         </>
     );
 
-    const onPageChange = (event: any) => {
-        const page = event.page + 1;
-        dispatch(_fetchHawalaNumberSeriesList(page, searchTag));
-    };
-
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-
-                    {/* Next Number Display */}
-                    {/* {nextNumber && (
-                        <div className="mb-4 p-3 border-round bg-blue-50 border-1 border-blue-200">
-                            <div className="flex align-items-center gap-2">
-                                <i className="pi pi-info-circle text-blue-500"></i>
-                                <span className="font-semibold text-blue-700">
-                                    {t('HAWALA_SERIES.NEXT_NUMBER_AVAILABLE')}: {nextNumber}
-                                </span>
-                            </div>
-                        </div>
-                    )} */}
-
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={series}
-                        selection={selectedHawalaSeries}
-                        onSelectionChange={(e) => setSelectedHawalaSeries(e.value as any)}
-                        dataKey="id"
-                        paginator={false}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        className="datatable-responsive"
-                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                        globalFilter={globalFilter}
-                        responsiveLayout="scroll"
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{
-                            direction: isRTL() ? 'rtl' : 'ltr',
-                            fontFamily: "'iranyekan', sans-serif,iranyekan"
-                        }}
-                    >
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="branch_id"
-                            header={t('HAWALA_SERIES.TABLE.BRANCH')}
-                            body={branchBodyTemplate}
-                            sortable
-                        />
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="prefix"
-                            header={t('HAWALA_SERIES.TABLE.PREFIX')}
-                            body={prefixBodyTemplate}
-                            sortable
-                        />
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="current_number"
-                            header={t('HAWALA_SERIES.TABLE.CURRENT_NUMBER')}
-                            body={currentNumberBodyTemplate}
-                            sortable
-                        />
-                        {/* <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="next_number"
-                            header={t('HAWALA_SERIES.TABLE.NEXT_NUMBER')}
-                            body={nextNumberBodyTemplate}
-                        /> */}
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="reset_daily"
-                            header={t('HAWALA_SERIES.TABLE.RESET_DAILY')}
-                            body={resetDailyBodyTemplate}
-                            sortable
-                        />
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="is_active"
-                            header={t('HAWALA_SERIES.TABLE.STATUS')}
-                            body={statusBodyTemplate}
-                            sortable
-                        />
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            body={actionBodyTemplate}
-                            headerStyle={{ minWidth: '12rem' }}
-                        />
-                    </DataTable>
-
-                    <Paginator
-                        first={(pagination?.page - 1) * pagination?.items_per_page}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        onPageChange={(e) => onPageChange(e)}
-                        template={
-                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        firstPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-right"
-                                : "pi pi-angle-double-left"
-                        }
-                        lastPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-left"
-                                : "pi pi-angle-double-right"
-                        }
+        <div className="space-y-4">
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.HAWALA_NUMBER_SERIES', { defaultValue: 'سری شماره حواله' })}
+                description={t('HAWALA_SERIES.PAGE.DESCRIPTION', { defaultValue: 'پیشوند و شماره‌گذاری حواله به تفکیک شعبه' })}
+                loading={loading}
+                actions={
+                    <>
+                        <UiButton variant="default" size="sm" onClick={openNew}>
+                            <Plus className="h-4 w-4" />
+                            {t('HAWALA_SERIES.CREATE_NEW')}
+                        </UiButton>
+                        <UiButton variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-4 w-4', (refreshing || loading) && 'animate-spin')} />
+                            {t('REFRESH', { defaultValue: 'بروزرسانی' })}
+                        </UiButton>
+                    </>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو در سری‌ها...' })}
                     />
-
-                    {/* Add/Edit Dialog */}
-                    <Dialog
-                        visible={hawalaSeriesDialog}
-                        style={{ width: '600px', padding: '5px' }}
-                        header={t('HAWALA_SERIES.DETAILS')}
-                        modal
-                        className="p-fluid"
-                        footer={hawalaSeriesDialogFooter}
-                        onHide={hideDialog}
-                    >
-                        <div className="card flex flex-wrap p-fluid mt-3 gap-4">
-                            <div className="flex-1 col-12">
-                                <div className="field">
-                                    <label htmlFor="branch" style={{ fontWeight: 'bold' }}>
-                                        {t('HAWALA_SERIES.FORM.BRANCH')} *
-                                    </label>
-                                    <Dropdown
-                                        id="branch"
-                                        value={hawalaSeries.branch}
-                                        options={hawalaBranches}
-                                        onChange={(e) => {
-                                            setHawalaSeries((prev) => ({
-                                                ...prev,
-                                                branch: e.value,
-                                                branch_id: e.value?.id || 0
-                                            }));
-                                        }}
-                                        optionLabel="name"
-                                        filter
-                                        filterBy="name"
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        showFilterClear
-                                        placeholder={t('HAWALA_SERIES.FORM.SELECT_BRANCH')}
-                                        className={classNames('w-full', {
-                                            'p-invalid': submitted && !hawalaSeries.branch_id
-                                        })}
-                                        panelClassName="min-w-[20rem]"
-                                        onFilter={(e) => {
-                                            setBranchSearchTerm(e.filter);
-                                        }}
-                                    />
-                                    {submitted && !hawalaSeries.branch_id && (
-                                        <small style={{ color: 'red', fontSize: '12px' }}>
-                                            {t('APP.VALIDATION.REQUIRED_BRANCH')}
-                                        </small>
-                                    )}
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="prefix" style={{ fontWeight: 'bold' }}>
-                                        {t('HAWALA_SERIES.FORM.PREFIX')} *
-                                    </label>
-                                    <InputText
-                                        id="prefix"
-                                        value={hawalaSeries.prefix}
-                                        onChange={(e) =>
-                                            setHawalaSeries((prev: any) => ({
-                                                ...prev,
-                                                prefix: e.target.value.toUpperCase()
-                                            }))
-                                        }
-                                        required
-                                        placeholder={t('HAWALA_SERIES.FORM.PREFIX_PLACEHOLDER')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !hawalaSeries.prefix
-                                        })}
-                                    />
-                                    {submitted && !hawalaSeries.prefix && (
-                                        <small style={{ color: 'red', fontSize: '12px' }}>
-                                            {t('APP.VALIDATION.REQUIRED_PREFIX')}
-                                        </small>
-                                    )}
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="current_number" style={{ fontWeight: 'bold' }}>
-                                        {t('HAWALA_SERIES.FORM.CURRENT_NUMBER')} *
-                                    </label>
-                                    <InputText
-                                        id="current_number"
-                                        value={hawalaSeries.current_number?.toString()}
-                                        onChange={(e) =>
-                                            setHawalaSeries((prev: any) => ({
-                                                ...prev,
-                                                current_number: Number(e.target.value)
-                                            }))
-                                        }
-                                        required
-                                        keyfilter="num"
-                                        placeholder={t('HAWALA_SERIES.FORM.CURRENT_NUMBER_PLACEHOLDER')}
-                                        className={classNames({
-                                            'p-invalid': submitted && hawalaSeries.current_number === undefined
-                                        })}
-                                    />
-                                    {submitted && hawalaSeries.current_number === undefined && (
-                                        <small style={{ color: 'red', fontSize: '12px' }}>
-                                            {t('APP.VALIDATION.REQUIRED_CURRENT_NUMBER')}
-                                        </small>
-                                    )}
-                                </div>
-
-                                <div className="field flex align-items-center gap-2">
-                                    <Checkbox
-                                        id="reset_daily"
-                                        checked={hawalaSeries.reset_daily}
-                                        onChange={(e) =>
-                                            setHawalaSeries((prev: any) => ({
-                                                ...prev,
-                                                reset_daily: e.checked || false
-                                            }))
-                                        }
-                                    />
-                                    <label htmlFor="reset_daily" style={{ fontWeight: 'bold' }}>
-                                        {t('HAWALA_SERIES.FORM.RESET_DAILY')}
-                                    </label>
-                                </div>
-
-                                <div className="field flex align-items-center gap-2">
-                                    <Checkbox
-                                        id="is_active"
-                                        checked={hawalaSeries.is_active}
-                                        onChange={(e) =>
-                                            setHawalaSeries((prev: any) => ({
-                                                ...prev,
-                                                is_active: e.checked || false
-                                            }))
-                                        }
-                                    />
-                                    <label htmlFor="is_active" style={{ fontWeight: 'bold' }}>
-                                        {t('HAWALA_SERIES.FORM.ACTIVE')}
-                                    </label>
-                                </div>
-                            </div>
+                }
+                footer={
+                    <div className="flex flex-col gap-2 border-t border-emerald-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-xs text-muted-foreground">
+                            {t('DATA_TABLE.TABLE.PAGINATOR.SHOWING', { defaultValue: 'صفحه' })}{' '}
+                            {pagination?.page || 1} / {totalPages} · {pagination?.total || 0}
                         </div>
-                    </Dialog>
+                        <div className="flex items-center gap-2">
+                            <UiButton variant="outline" size="sm" disabled={(pagination?.page || 1) <= 1} onClick={() => onPageChange((pagination?.page || 1) - 1)}>
+                                {t('PREVIOUS', { defaultValue: 'قبلی' })}
+                            </UiButton>
+                            <UiButton variant="outline" size="sm" disabled={(pagination?.page || 1) >= totalPages} onClick={() => onPageChange((pagination?.page || 1) + 1)}>
+                                {t('NEXT', { defaultValue: 'بعدی' })}
+                            </UiButton>
+                        </div>
+                    </div>
+                }
+            >
+                <table className="w-full min-w-[880px] border-collapse text-xs">
+                    <thead>
+                        <tr className="border-b border-emerald-100 bg-emerald-50/70 text-start">
+                            <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">{t('TABLE.GENERAL.ACTIONS', { defaultValue: 'عملیات' })}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('HAWALA_SERIES.TABLE.BRANCH')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('HAWALA_SERIES.TABLE.PREFIX')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('HAWALA_SERIES.TABLE.CURRENT_NUMBER')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('HAWALA_SERIES.TABLE.RESET_DAILY')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('HAWALA_SERIES.TABLE.STATUS')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {(series || []).length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="px-2 py-12 text-center text-muted-foreground">
+                                    {t('DATA_TABLE.TABLE.NO_DATA', { defaultValue: 'داده‌ای یافت نشد' })}
+                                </td>
+                            </tr>
+                        ) : (
+                            (series || []).map((row: HawalaNumberSeries) => (
+                                <tr key={row.id} className="border-b border-emerald-50 transition hover:bg-emerald-50/50">
+                                    <td className="px-2 py-1.5 align-middle">
+                                        <RowActions items={getRowActions(row)} />
+                                    </td>
+                                    <td className="px-2 py-1.5 text-start">{row?.branch?.name || '—'}</td>
+                                    <td className="px-2 py-1.5 font-mono font-medium">{row.prefix || '—'}</td>
+                                    <td className="px-2 py-1.5 tabular-nums">{row.current_number ?? '—'}</td>
+                                    <td className="px-2 py-1.5">
+                                        {row.reset_daily ? (
+                                            <Check className="h-4 w-4 text-emerald-600" aria-hidden />
+                                        ) : (
+                                            <X className="h-4 w-4 text-muted-foreground" aria-hidden />
+                                        )}
+                                    </td>
+                                    <td className="px-2 py-1.5">
+                                        <Badge variant={row.is_active ? 'success' : 'muted'} className="text-[10px]">
+                                            {row.is_active ? t('APP.GENERAL.ACTIVE') : t('APP.GENERAL.INACTIVE')}
+                                        </Badge>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </ListPage>
+
+            <FormSheet
+                open={hawalaSeriesDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                size="lg"
+                side="left"
+                title={t('HAWALA_SERIES.DETAILS')}
+                description={
+                    hawalaSeries.id
+                        ? t('HAWALA_SERIES.FORM.EDIT_HINT', { defaultValue: 'ویرایش سری شماره حواله' })
+                        : t('HAWALA_SERIES.FORM.CREATE_HINT', { defaultValue: 'تعریف سری شماره جدید' })
+                }
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveHawalaSeries}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection title={t('HAWALA_SERIES.FORM.SECTION.MAIN', { defaultValue: 'اطلاعات سری' })}>
+                    <FormField
+                        label={t('HAWALA_SERIES.FORM.BRANCH')}
+                        required
+                        fullWidth
+                        error={submitted && !hawalaSeries.branch_id ? t('APP.VALIDATION.REQUIRED_BRANCH') : null}
+                    >
+                        <SearchSelect
+                            value={hawalaSeries.branch}
+                            options={hawalaBranches || []}
+                            onChange={(selected) => {
+                                setHawalaSeries((prev) => ({
+                                    ...prev,
+                                    branch: selected,
+                                    branch_id: selected?.id || 0
+                                }));
+                            }}
+                            optionLabel="name"
+                            searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                            placeholder={t('HAWALA_SERIES.FORM.SELECT_BRANCH')}
+                            error={submitted && !hawalaSeries.branch_id}
+                            returnFullObject
+                            onSearch={(term) => setBranchSearchTerm(term)}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('HAWALA_SERIES.FORM.PREFIX')}
+                        required
+                        error={submitted && !hawalaSeries.prefix ? t('APP.VALIDATION.REQUIRED_PREFIX') : null}
+                    >
+                        <Input
+                            id="prefix"
+                            value={hawalaSeries.prefix}
+                            onChange={(e) =>
+                                setHawalaSeries((prev: any) => ({
+                                    ...prev,
+                                    prefix: e.target.value.toUpperCase()
+                                }))
+                            }
+                            required
+                            placeholder={t('HAWALA_SERIES.FORM.PREFIX_PLACEHOLDER')}
+                            className={cn('w-full', submitted && !hawalaSeries.prefix && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('HAWALA_SERIES.FORM.CURRENT_NUMBER')}
+                        required
+                        error={submitted && hawalaSeries.current_number === undefined ? t('APP.VALIDATION.REQUIRED_CURRENT_NUMBER') : null}
+                    >
+                        <Input
+                            id="current_number"
+                            value={hawalaSeries.current_number?.toString()}
+                            onChange={(e) =>
+                                setHawalaSeries((prev: any) => ({
+                                    ...prev,
+                                    current_number: Number(e.target.value)
+                                }))
+                            }
+                            required
+                            inputMode="numeric"
+                            placeholder={t('HAWALA_SERIES.FORM.CURRENT_NUMBER_PLACEHOLDER')}
+                            className={cn('w-full', submitted && hawalaSeries.current_number === undefined && 'border-rose-300')}
+                        />
+                    </FormField>
+                </FormSection>
+                <FormSection title={t('HAWALA_SERIES.FORM.SECTION.OPTIONS', { defaultValue: 'تنظیمات' })}>
+                    <FormField label={t('HAWALA_SERIES.FORM.RESET_DAILY')} fullWidth>
+                        <Switch
+                            id="reset_daily"
+                            checked={Boolean(hawalaSeries.reset_daily)}
+                            onCheckedChange={(checked) =>
+                                setHawalaSeries((prev: any) => ({
+                                    ...prev,
+                                    reset_daily: checked
+                                }))
+                            }
+                        />
+                    </FormField>
+                    <FormField label={t('HAWALA_SERIES.FORM.ACTIVE')} fullWidth>
+                        <Switch
+                            id="is_active"
+                            checked={Boolean(hawalaSeries.is_active)}
+                            onCheckedChange={(checked) =>
+                                setHawalaSeries((prev: any) => ({
+                                    ...prev,
+                                    is_active: checked
+                                }))
+                            }
+                        />
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
                     {/* Delete Confirmation Dialog */}
                     <Dialog
@@ -684,10 +446,8 @@ const HawalaNumberSeriesPage = () => {
                             <span>{t('APP.DELETE_SELECTED_CONFIRMATION')}</span>
                         </div>
                     </Dialog>
-                </div>
-            </div>
         </div>
     );
 };
 
-export default HawalaNumberSeriesPage;
+export default withAuth(HawalaNumberSeriesPage);

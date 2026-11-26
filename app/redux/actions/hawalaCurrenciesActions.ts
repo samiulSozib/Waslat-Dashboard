@@ -62,6 +62,7 @@ export const _addHawalaCurrency = (currencyData: HawalaCurrency, toast: React.Re
         formData.append('sell_rate', parseInt(currencyData.sell_rate || '0').toString());
         formData.append('buy_rate', parseInt(currencyData.buy_rate || '0').toString());
         formData.append('amount_in_letter',currencyData.amount_in_letter.toString());
+        formData.append('description', currencyData.description || '');
 
 
 

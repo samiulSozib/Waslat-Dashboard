@@ -1,22 +1,26 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
-import { Button } from 'primereact/button';
+import { Button as PrimeButton } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { RowActions } from '@/components/admin/row-actions';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
 import { _fetchCountries } from '@/app/redux/actions/countriesActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Language } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
 import { _addLanguage, _deleteLanguage, _editLanguage, _fetchLanguages } from '@/app/redux/actions/languageActions';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
@@ -119,31 +123,6 @@ const LanguagePage = () => {
         setDeleteLanguagesDialog(true);
     };
 
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('LANGUAGE.TABLE.CREATELANGUAGE')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                    {/* <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    /> */}
-                </div>
-            </React.Fragment>
-        );
-    };
-
     // const leftToolbarTemplate = () => {
     //     return (
     //         <div className="flex items-center">
@@ -187,14 +166,24 @@ const LanguagePage = () => {
         );
     };
 
-    const actionBodyTemplate = (rowData: Language) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editLanguage(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteLanguage(rowData)} />
-            </>
-        );
-    };
+    const actionBodyTemplate = (rowData: Language) => (
+        <RowActions
+            items={[
+                {
+                    label: t('TABLE.GENERAL.EDIT'),
+                    icon: <Pencil className="h-4 w-4" />,
+                    onClick: () => editLanguage(rowData)
+                },
+                {
+                    label: t('TABLE.GENERAL.DELETE'),
+                    icon: <Trash2 className="h-4 w-4" />,
+                    danger: true,
+                    separatorBefore: true,
+                    onClick: () => confirmDeleteLanguage(rowData)
+                }
+            ]}
+        />
+    );
 
     // const header = (
     //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
@@ -206,59 +195,67 @@ const LanguagePage = () => {
     //     </div>
     // );
 
-    const languageDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveLanguage} />
-        </>
-    );
     const deleteLanguageDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideDeleteLanguageDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteLanguage} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideDeleteLanguageDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteLanguage} />
         </>
     );
     const deleteCompaniesDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteLanguagesDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteLanguagesDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
         </>
     );
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={languages}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedLanguage(e.value as any)}
-                        dataKey="id"
-                        paginator
-                        rows={10}
-                        rowsPerPageOptions={[5, 10, 25]}
-                        className="datatable-responsive"
-                        paginatorTemplate={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        globalFilter={globalFilter}
-                        // header={header}
-                        responsiveLayout="scroll"
-                    >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
+        <>
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.LANGUAGE', { defaultValue: 'زبان' })}
+                description="مدیریت زبان‌ها و جهت نوشتار"
+                loading={loading}
+                actions={
+                    <Button type="button" size="sm" onClick={openNew}>
+                        <Plus className="h-4 w-4" />
+                        {t('LANGUAGE.TABLE.CREATELANGUAGE')}
+                    </Button>
+                }
+                toolbar={
+                    <FilterBar
+                        search={globalFilter}
+                        onSearchChange={setGlobalFilter}
+                        searchPlaceholder={t('TABLE.GENERAL.SEARCH', { defaultValue: 'جستجو...' })}
+                    />
+                }
+            >
+                <DataTable
+                    ref={dt}
+                    value={languages}
+                    selection={selectedCompanies}
+                    onSelectionChange={(e) => setSelectedLanguage(e.value as any)}
+                    dataKey="id"
+                    paginator
+                    rows={10}
+                    rowsPerPageOptions={[5, 10, 25]}
+                    size="small"
+                    className="datatable-responsive p-datatable-sm"
+                    paginatorTemplate={
+                        isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                    }
+                    currentPageReportTemplate={t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}
+                    emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
+                    dir={isRTL() ? 'rtl' : 'ltr'}
+                    style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                    globalFilter={globalFilter}
+                    responsiveLayout="scroll"
+                >
+                        <Column
+                            header={t('TABLE.GENERAL.ACTION')}
+                            body={actionBodyTemplate}
+                            headerStyle={{ width: '4.5rem' }}
+                            style={{ ...customCellStyle, textAlign: 'start' }}
+                        />
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="name"
@@ -280,90 +277,88 @@ const LanguagePage = () => {
                             sortable
                             body={directionBodyTemplate}
                         ></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
+            </ListPage>
 
-                    <Dialog visible={languageDialog} style={{ width: '700px', padding: '5px' }} header={t('LANGUAGE.DETAILS')} modal className="p-fluid" footer={languageDialogFooter} onHide={hideDialog}>
-                        <div className="card" style={{ padding: '40px' }}>
-                            <div className="field">
-                                <label htmlFor="language_name" style={{ fontWeight: 'bold' }}>
-                                    {t('LANGUAGE.FORM.INPUT.LANGUAGENAME')}
-                                </label>
-                                <InputText
-                                    id="language_name"
-                                    value={language.language_name}
-                                    onChange={(e) =>
-                                        setLanguage((prevLanguage) => ({
-                                            ...prevLanguage,
-                                            language_name: e.target.value
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('LANGUAGE.FORM.PLACEHOLDER.LANGUAGENAME')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !language.language_name
-                                    })}
-                                />
-                                {submitted && !language.language_name && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            <div className="field">
-                                <label htmlFor="language_code" style={{ fontWeight: 'bold' }}>
-                                    {t('LANGUAGE.FORM.INPUT.LANGUAGECODE')}
-                                </label>
-                                <InputText
-                                    id="language_code"
-                                    value={language.language_code}
-                                    onChange={(e) =>
-                                        setLanguage((prevLanguage) => ({
-                                            ...prevLanguage,
-                                            language_code: e.target.value
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('LANGUAGE.FORM.PLACEHOLDER.LANGUAGECODE')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !language.language_code
-                                    })}
-                                />
-                                {submitted && !language.language_code && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            <div className="field">
-                                <label htmlFor="status" style={{ fontWeight: 'bold' }}>
-                                    {t('LANGUAGE.TABLE.COLUMN.DIRECTION')}
-                                </label>
-                                <Dropdown
-                                    id="direction"
-                                    value={language.direction}
-                                    options={[
-                                        { label: 'Left to Right(ltr)', value: 'ltr' },
-                                        { label: 'Right to Left(rtl)', value: 'rtl' }
-                                    ]}
-                                    onChange={(e) =>
-                                        setLanguage((prev) => ({
-                                            ...prev,
-                                            direction: e.value
-                                        }))
-                                    }
-                                    optionLabel="label"
-                                    optionValue="value"
-                                    placeholder={t('LANGUAGE.TABLE.COLUMN.DIRECTION')}
-                                    className="w-full"
-                                />
-                            </div>
-                        </div>
-                    </Dialog>
+            <FormSheet
+                open={languageDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                title={t('LANGUAGE.DETAILS')}
+                description={language.id ? 'ویرایش زبان' : 'ثبت زبان جدید'}
+                size="lg"
+                side="left"
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveLanguage}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection title={t('LANGUAGE.DETAILS')} description="نام، کد و جهت نوشتار">
+                    <FormField
+                        label={t('LANGUAGE.FORM.INPUT.LANGUAGENAME')}
+                        required
+                        error={submitted && !language.language_name ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="language_name"
+                            value={language.language_name}
+                            onChange={(e) =>
+                                setLanguage((prevLanguage) => ({
+                                    ...prevLanguage,
+                                    language_name: e.target.value
+                                }))
+                            }
+                            required
+                            autoFocus
+                            placeholder={t('LANGUAGE.FORM.PLACEHOLDER.LANGUAGENAME')}
+                            className={cn('w-full', submitted && !language.language_name && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('LANGUAGE.FORM.INPUT.LANGUAGECODE')}
+                        required
+                        error={submitted && !language.language_code ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="language_code"
+                            value={language.language_code}
+                            onChange={(e) =>
+                                setLanguage((prevLanguage) => ({
+                                    ...prevLanguage,
+                                    language_code: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('LANGUAGE.FORM.PLACEHOLDER.LANGUAGECODE')}
+                            className={cn('w-full', submitted && !language.language_code && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField label={t('LANGUAGE.TABLE.COLUMN.DIRECTION')}>
+                        <Select
+                            value={language.direction || undefined}
+                            onValueChange={(v) =>
+                                setLanguage((prev) => ({
+                                    ...prev,
+                                    direction: v as 'ltr' | 'rtl'
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('LANGUAGE.TABLE.COLUMN.DIRECTION')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="ltr">Left to Right (ltr)</SelectItem>
+                                <SelectItem value="rtl">Right to Left (rtl)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
                     <Dialog visible={deleteLanguageDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteLanguageDialogFooter} onHide={hideDeleteLanguageDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -382,9 +377,7 @@ const LanguagePage = () => {
                             {language && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>
-                </div>
-            </div>
-        </div>
+        </>
     );
 };
 

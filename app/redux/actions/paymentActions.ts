@@ -264,6 +264,7 @@ export const _addPayment = (
             detail: t("PAYMENT_ADDED"),
             life: 3000,
         });
+        return true;
     } catch (error: any) {
         dispatch({ type: ADD_PAYMENT_FAIL, payload: error.message });
 
@@ -283,6 +284,7 @@ export const _addPayment = (
             detail: errorMessage,
             life: 3000,
         });
+        return false;
     }
 };
 

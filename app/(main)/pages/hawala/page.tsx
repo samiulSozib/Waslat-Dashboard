@@ -7,29 +7,32 @@ import { _fetchHawalaCurrencies } from '@/app/redux/actions/hawalaCurrenciesActi
 import { _fetchHawalaNextNumber } from '@/app/redux/actions/hawalaSeriesActions';
 import { _fetchResellers } from '@/app/redux/actions/resellerActions';
 import { AppDispatch } from '@/app/redux/store';
-import i18n from '@/i18n';
 import { Currency, Hawala, Order } from '@/types/interface';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Button } from 'primereact/button';
+import { Button as PrimeButton } from 'primereact/button';
 import { Card } from 'primereact/card';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { InputText } from 'primereact/inputtext';
-import { InputTextarea } from 'primereact/inputtextarea';
-import { Paginator } from 'primereact/paginator';
-import { ProgressBar } from 'primereact/progressbar';
-import { SplitButton } from 'primereact/splitbutton';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
+import { Check, CheckCircle2, ChevronDown, Clock3, Info, List, Plus, RefreshCw, X } from 'lucide-react';
+import axios from 'axios';
+import { StatCard } from '@/components/admin/stat-card';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { ListPage } from '@/components/admin/list-page';
+import { RowActions, type RowActionItem } from '@/components/admin/row-actions';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { currencyFaName, defaultHawalaRateDescription, resolveCurrencyFlag } from '@/lib/currency-flags';
+import { quoteHawalaDebit } from '@/lib/hawala-quote';
+import { cn } from '@/lib/utils';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import withAuth from '../../authGuard';
-import { customCellStyle } from '../../utilities/customRow';
-import { isRTL } from '../../utilities/rtlUtil';
 import CustomDropdownWithSearch from '@/app/(main)/components/customDropDownWithSearch';
 
 // Form Data Interface
@@ -42,6 +45,7 @@ interface HawalaFormData {
     hawalaAmount: string;
     currencyCodeId: string;
     branchId: string;
+    commissionAmount: string;
     commissionPaidBy: string;
     customHawalaNumber: string;
     adminNote: string;
@@ -54,9 +58,7 @@ const HawalaPage = () => {
     const [deleteOrdersDialog, setDeleteOrdersDialog] = useState(false);
     const [selectedCompanies, setSelectedCompanyCode] = useState(null);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
-    const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
 
     // Redux Selectors
@@ -71,7 +73,11 @@ const HawalaPage = () => {
     const { t } = useTranslation();
 
     // Search and Filter States
-    const [searchTag, setSearchTag] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const searchTag = useDebouncedValue(searchInput, 350);
+    const [statusFilter, setStatusFilter] = useState('');
+    const [summary, setSummary] = useState({ total: 0, pending: 0, confirmed: 0 });
+    const [ratesOpen, setRatesOpen] = useState(true);
     const [resellerSearchTerm, setResellerSearchTerm] = useState('');
 
     // Dialog States
@@ -97,27 +103,37 @@ const HawalaPage = () => {
         hawalaAmount: "",
         currencyCodeId: "",
         branchId: "",
+        commissionAmount: "",
         commissionPaidBy: "sender",
         customHawalaNumber: "",
         adminNote: ""
     });
 
-    // Calculation States
-    const [finalAmount, setFinalAmount] = useState(0);
-    const [exchangeRate, setExchangeRate] = useState(0);
-    const [resellerCurrencyPreferenceId, setResellerCurrencyPreferenceId] = useState<number | undefined>();
-    const [resellerCurrencyPreferenceCode, setResellerCurrencyPreferenceCode] = useState<string | undefined>();
     const [hawalaNumberInput, setHawalaNumberInput] = useState('');
     const [fetchingNextNumber, setFetchingNextNumber] = useState(false);
 
     // Initial Data Fetch
     useEffect(() => {
-        dispatch(_fetchHawalaList(1, searchTag));
+        dispatch(_fetchHawalaList(1, searchTag, statusFilter));
         dispatch(_fetchHawalaCurrencies());
         dispatch(_fetchHawalaBranchList());
         dispatch(_fetchResellers(1, '', '', 15));
         dispatch(_fetchCurrencies());
-    }, [dispatch, searchTag]);
+    }, [dispatch, searchTag, statusFilter]);
+
+    useEffect(() => {
+        const token = localStorage.getItem('api_token') || '';
+        const headers = { Authorization: `Bearer ${token}` };
+        const countFor = async (status?: string) => {
+            const params = new URLSearchParams({ page: '1', items_per_page: '1' });
+            if (status) params.set('status', status);
+            const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/hawala-orders?${params.toString()}`, { headers });
+            return Number(response.data?.payload?.pagination?.total || 0);
+        };
+        Promise.all([countFor(), countFor('pending'), countFor('confirmed')])
+            .then(([total, pending, confirmed]) => setSummary({ total, pending, confirmed }))
+            .catch(() => setSummary({ total: 0, pending: 0, confirmed: 0 }));
+    }, [hawalas]);
 
     // Reseller Search Debounce
     useEffect(() => {
@@ -132,40 +148,41 @@ const HawalaPage = () => {
         return () => clearTimeout(timer);
     }, [resellerSearchTerm, dispatch]);
 
-    // Currency Calculation
-    useEffect(() => {
-        const currencyCode = formData?.reseller?.code || '';
-        const selectedCurrency = currencies.find((currency: Currency) => currency.code === currencyCode);
+    const walletCurrency = useMemo(() => {
+        const code = String(formData.reseller?.code || '').trim().toUpperCase();
+        if (!code) return null;
+        return (currencies || []).find((currency: Currency) => String(currency.code || '').trim().toUpperCase() === code) || null;
+    }, [formData.reseller, currencies]);
 
-        if (selectedCurrency) {
-            setResellerCurrencyPreferenceId(selectedCurrency.id);
-            setResellerCurrencyPreferenceCode(selectedCurrency.code);
-        }
-    }, [formData?.reseller, currencies]);
+    const selectedPayoutCurrency = useMemo(() => {
+        const id = Number(formData.currencyCodeId || 0);
+        if (!id) return null;
+        return (currencies || []).find((currency: Currency) => Number(currency.id) === id) || null;
+    }, [formData.currencyCodeId, currencies]);
 
-    // Filter currencies based on reseller's preference
-    const filteredCurrencies = hawala_currencies?.filter(
-        (rate: any) => rate.from_currency_id === resellerCurrencyPreferenceId?.toString()
-    ) || [];
-
-    // Final Amount Calculation
-    useEffect(() => {
-        if (formData.hawalaAmount && formData.currencyCodeId) {
-            const selectedRate = filteredCurrencies.find(
-                (rate: any) => rate.to_currency_id == formData.currencyCodeId
-            );
-            if (selectedRate) {
-                const amount = parseFloat(formData.hawalaAmount);
-                const rate = amount / parseFloat(selectedRate.amount);
-                const final = selectedRate.sell_rate * rate;
-                setFinalAmount(final);
-                setExchangeRate(rate);
-            }
-        } else {
-            setFinalAmount(0);
-            setExchangeRate(0);
-        }
-    }, [formData.hawalaAmount, formData.currencyCodeId, filteredCurrencies]);
+    const hawalaQuote = useMemo(
+        () =>
+            quoteHawalaDebit(
+                Number(walletCurrency?.id || 0),
+                Number(formData.currencyCodeId || 0),
+                Number(formData.hawalaAmount || 0),
+                hawala_currencies || [],
+                walletCurrency?.code,
+                Number(formData.commissionAmount || 0),
+                selectedPayoutCurrency?.code,
+                formData.commissionPaidBy === 'receiver' ? 'receiver' : 'sender'
+            ),
+        [
+            walletCurrency,
+            formData.currencyCodeId,
+            formData.hawalaAmount,
+            formData.commissionAmount,
+            formData.commissionPaidBy,
+            hawala_currencies,
+            selectedPayoutCurrency?.code
+        ]
+    );
+    const formatQuote = (value: number) => value.toLocaleString('en-US', { maximumFractionDigits: 4 });
 
     // Auto-fill hawala number when nextNumber changes
     // Auto-fill hawala number when nextNumber changes
@@ -206,13 +223,6 @@ const HawalaPage = () => {
             }));
         }
     }, [nextNumber, addHawalaDialog, formData.branchId]);
-    // Get unique to_currencies from filtered rates
-    const availableToCurrencies = filteredCurrencies.reduce((acc: any, rate: any) => {
-        if (!acc.some((currency: Currency) => currency.id === rate.to_currency.id)) {
-            acc.push(rate.to_currency);
-        }
-        return acc;
-    }, []);
 
     // Event Handlers
     const handleInputChange = (e: any) => {
@@ -245,21 +255,24 @@ const HawalaPage = () => {
         setAddHawalaDialog(true);
     };
 
+    const emptyHawalaForm = (): HawalaFormData => ({
+        reseller: null,
+        senderName: "",
+        receiverName: "",
+        receiverFatherName: "",
+        receiverIdCardNumber: "",
+        hawalaAmount: "",
+        currencyCodeId: "",
+        branchId: "",
+        commissionAmount: "",
+        commissionPaidBy: "sender",
+        customHawalaNumber: "",
+        adminNote: ""
+    });
+
     const closeAddHawalaDialog = () => {
         setAddHawalaDialog(false);
-        setFormData({
-            reseller: null,
-            senderName: "",
-            receiverName: "",
-            receiverFatherName: "",
-            receiverIdCardNumber: "",
-            hawalaAmount: "",
-            currencyCodeId: "",
-            branchId: "",
-            commissionPaidBy: "sender",
-            customHawalaNumber: "",
-            adminNote: ""
-        });
+        setFormData(emptyHawalaForm());
         setSubmitted(false);
     };
 
@@ -269,15 +282,22 @@ const HawalaPage = () => {
         // Validation
         if (!formData.reseller || !formData.senderName || !formData.receiverName ||
             !formData.receiverFatherName || !formData.receiverIdCardNumber ||
-            !formData.hawalaAmount || !formData.currencyCodeId || !formData.branchId) {
+            !formData.hawalaAmount || !formData.currencyCodeId || !formData.branchId ||
+            hawalaQuote.missingRate || hawalaQuote.invalidCommission || hawalaQuote.debit == null) {
             toast.current?.show({
                 severity: 'error',
                 summary: t('VALIDATION_ERROR'),
-                detail: t('PLEASE_FILLED_ALL_REQUIRED_FIELDS'),
+                detail: hawalaQuote.invalidCommission
+                    ? t('HAWALA_COMMISSION_TOO_HIGH', { defaultValue: 'کارمزد باید کمتر از مبلغ حواله باشد' })
+                    : hawalaQuote.missingRate
+                      ? t('RESELLER.PROFILE.NO_BOARD_RATE', { defaultValue: 'نرخ این جفت ارز در تابلو ثبت نشده' })
+                      : t('PLEASE_FILLED_ALL_REQUIRED_FIELDS'),
                 life: 3000
             });
             return;
         }
+
+        const commissionAmount = Math.max(0, parseFloat(formData.commissionAmount || '0') || 0);
 
         // Prepare data according to API requirement
         const hawalaData = {
@@ -289,37 +309,23 @@ const HawalaPage = () => {
             receiver_id_card_number: formData.receiverIdCardNumber,
             hawala_amount: parseFloat(formData.hawalaAmount),
             hawala_amount_currency_id: parseInt(formData.currencyCodeId),
-            commission_amount: 0, // You can calculate this if needed
+            commission_amount: commissionAmount,
             commission_paid_by_sender: formData.commissionPaidBy === "sender",
             commission_paid_by_receiver: formData.commissionPaidBy === "receiver",
             custom_hawala_number: formData.customHawalaNumber || undefined,
             admin_note: formData.adminNote || undefined
         };
 
-        //console.log('Submitting Hawala Data:', hawalaData);
-
         // Dispatch action to add hawala
         dispatch(_addHawala(hawalaData, toast, t));
 
         // Close dialog and reset form
         setAddHawalaDialog(false);
-        setFormData({
-            reseller: null,
-            senderName: "",
-            receiverName: "",
-            receiverFatherName: "",
-            receiverIdCardNumber: "",
-            hawalaAmount: "",
-            currencyCodeId: "",
-            branchId: "",
-            commissionPaidBy: "sender",
-            customHawalaNumber: "",
-            adminNote: ""
-        });
+        setFormData(emptyHawalaForm());
         setSubmitted(false);
 
         // Refresh the hawala list
-        dispatch(_fetchHawalaList(1, searchTag));
+        dispatch(_fetchHawalaList(1, searchTag, statusFilter));
     };
 
     const fetchNextHawalaNumber = async (branchId: number | string) => {
@@ -427,9 +433,17 @@ const HawalaPage = () => {
         setDeleteOrdersDialog(true);
     };
 
-    const onPageChange = (event: any) => {
-        const page = event.page + 1;
-        dispatch(_fetchHawalaList(page, searchTag));
+    const totalPages = Math.max(1, Math.ceil((pagination?.total || 0) / (pagination?.items_per_page || 20)));
+
+    const formatHawalaRate = (value: unknown) => {
+        if (value == null || value === '') return '—';
+        const amount = Number(value);
+        if (Number.isNaN(amount)) return String(value);
+        return amount.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    };
+
+    const onPageChange = (page: number) => {
+        dispatch(_fetchHawalaList(page, searchTag, statusFilter));
     };
 
     const viewHawala = (hawala: Hawala) => {
@@ -456,299 +470,34 @@ const HawalaPage = () => {
         });
     };
 
-    // Template Functions
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="my-2">
-                    <Button
-                        label={t('ADD_HAWALA')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"}
-                        onClick={openAddHawalaDialog}
-                    />
-                </div>
-            </React.Fragment>
-        );
-    };
-
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <React.Fragment>
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left">
-    //                 <i className="pi pi-search" />
-    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
-    //             </span>
-    //         </React.Fragment>
-    //     );
-    // };
-
-    const [localSearchTerm, setLocalSearchTerm] = useState('');
-
-    const leftToolbarTemplate = () => {
-
-        const handleSearch = () => {
-            setSearchTag(localSearchTerm);
-        };
-
-        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        };
-
-        return (
-            <React.Fragment>
-                <div className="flex align-items-center gap-2">
-                    <span className="p-input-icon-left">
-                        <i className="pi pi-search" />
-                        <InputText
-                            type="search"
-                            value={localSearchTerm}
-                            onChange={(e) => setLocalSearchTerm(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        />
-                    </span>
-                    <Button
-                        label={t('SEARCH')}
-                        onClick={handleSearch}
-                        className="p-button-sm"
-                    />
-                    {localSearchTerm && (
-                        <Button
-                            icon="pi pi-times"
-                            onClick={() => {
-                                setLocalSearchTerm('');
-                                setSearchTag('');
-                            }}
-                            className="p-button-sm p-button-secondary p-button-text"
-
-                        />
-                    )}
-                </div>
-            </React.Fragment>
-        );
-    };
-
-    // Column Templates (keep all your existing column templates as they are)
-    const hawalaNumberBodyTemplate = (rowData: Hawala) => {
-        return (
-            <>
-                <span className="p-column-title">Hawala Number</span>
-                <span className="text-sm text-gray-700 font-medium">{rowData.hawala_number}</span>
-            </>
-        );
-    };
-
-    const hawalaCustomNumberBodyTemplate = (rowData: Hawala) => {
-        return (
-            <>
-                <span className="p-column-title">Cusotm Number</span>
-                <span className="text-sm text-gray-700 font-medium">{rowData.hawala_custom_number}</span>
-            </>
-        );
-    };
-
-    const senderNameBodyTemplate = (rowData: Hawala) => {
-        return (
-            <>
-                <span className="p-column-title">Sender Name</span>
-                <span className="text-sm text-gray-700">{rowData.sender_name}</span>
-            </>
-        );
-    };
-
-    const receiverNameBodyTemplate = (rowData: Hawala) => {
-        return (
-            <>
-                <span className="p-column-title">Receiver Name</span>
-                <span className="text-sm text-gray-700">{rowData.receiver_name}</span>
-            </>
-        );
-    };
-
-    const hawalaAmountBodyTemplate = (rowData: Hawala) => {
-        return (
-            <>
-                <span className="p-column-title">Hawala Amount</span>
-                <div className="flex flex-column">
-                    <span className="text-sm font-semibold text-gray-800">{rowData.hawala_amount}</span>
-                    <span className="text-xs text-gray-500">{rowData.hawala_amount_currency_code}</span>
-                </div>
-            </>
-        );
-    };
-
-    const convertedAmountTakenResellerBodyTemplate = (rowData: Hawala) => {
-        return (
-            <>
-                <span className="p-column-title">Converted Amount</span>
-                <div className="flex flex-column">
-                    <span className="text-sm font-semibold text-gray-800">{rowData.converted_amount_taken_from_reseller}</span>
-                    <span className="text-xs text-gray-500">{rowData.reseller_prefered_currency_code}</span>
-                </div>
-            </>
-        );
-    };
-
-    const commissionAmountBodyTemplate = (rowData: Hawala) => {
-        return (
-            <>
-                <span className="p-column-title">Commission Amount</span>
-                <span className="text-sm text-green-600 font-semibold">{rowData.commission_amount}</span>
-            </>
-        );
-    };
-
-    const adminNoteBodyTemplate = (rowData: Hawala) => {
-        return (
-            <>
-                <span className="p-column-title">Admin Note</span>
-                <span className="text-sm text-gray-600">{rowData.admin_note || '-'}</span>
-            </>
-        );
-    };
-
-    const resellerNameBodyTemplate = (rowData: Order) => {
-        return (
-            <>
-                <span className="p-column-title">Reseller Name</span>
-                <span className="text-sm text-gray-700">{rowData.reseller?.reseller_name}</span>
-            </>
-        );
-    };
-
-    const resellerPreferedCurrencyCodeBodyTemplate = (rowData: Hawala) => {
-        return (
-            <>
-                <span className="p-column-title">Reseller Prefered Currency Code</span>
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{rowData.reseller_prefered_currency_code}</span>
-            </>
-        );
-    };
-
-    const hawalaAmounCurrencyCodetBodyTemplate = (rowData: Hawala) => {
-        return (
-            <>
-                <span className="p-column-title">Hawala Amount Currency Code</span>
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{rowData.hawala_amount_currency_code}</span>
-            </>
-        );
-    };
-
-    const createdAtBodyTemplate = (rowData: Hawala) => {
-        const formatDate = (dateString: string | null | undefined) => {
-            if (!dateString) {
-                return { formattedDate: '-', formattedTime: '-' };
-            }
-
-            const date = new Date(dateString);
-
-            if (isNaN(date.getTime())) {
-                return { formattedDate: '-', formattedTime: '-' };
-            }
-
-            const optionsDate: Intl.DateTimeFormatOptions = {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            };
-            const optionsTime: Intl.DateTimeFormatOptions = {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            };
-            const formattedDate = date.toLocaleDateString('en-US', optionsDate);
-            const formattedTime = date.toLocaleTimeString('en-US', optionsTime);
-
-            return { formattedDate, formattedTime };
-        };
-
-        const { formattedDate, formattedTime } = formatDate(rowData?.created_at?.toString());
-
-        return (
-            <>
-                <span className="p-column-title">Created At</span>
-                <div className="flex flex-column">
-                    <span className="text-sm text-gray-700">{formattedDate}</span>
-                    <span className="text-xs text-gray-500">{formattedTime}</span>
-                </div>
-            </>
-        );
-    };
-
-    const statusBodyTemplate = (rowData: Hawala) => {
+    const hawalaRowActions = (rowData: Hawala): RowActionItem[] => {
         const status = rowData.status;
-
-        let statusText = 'Unknown';
-        let statusClass = '';
-
-        if (status == 'pending') {
-            statusText = t('ORDER.STATUS.PENDING');
-            statusClass = 'bg-yellow-100 text-yellow-800 border-yellow-200';
-        } else if (status == 'confirmed') {
-            statusText = t('ORDER.STATUS.CONFIRMED');
-            statusClass = 'bg-green-100 text-green-800 border-green-200';
-        } else if (status == 'rejected') {
-            statusText = t('ORDER.STATUS.REJECTED');
-            statusClass = 'bg-red-100 text-red-800 border-red-200';
-        } else if (status == 'under_process') {
-            statusText = t('ORDER.STATUS.UNDER_PROCESS');
-            statusClass = 'bg-blue-100 text-blue-800 border-blue-200';
-        } else if (status == 'cancelled') {
-            statusText = t('ORDER.STATUS.CANCELLED');
-            statusClass = 'bg-gray-100 text-gray-800 border-gray-200';
-        }
-
-        return (
-            <>
-                <span className="p-column-title">Status</span>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${statusClass}`}>
-                    {statusText}
-                </span>
-            </>
-        );
-    };
-
-    const actionBodyTemplate = (rowData: Hawala) => {
-        const status = rowData.status;
-
-        let items: any[] = [];
+        const items: RowActionItem[] = [];
 
         if (status === 'pending' || status === 'under_process') {
-            items = [
+            items.push(
                 {
                     label: t('ORDER.STATUS.CONFIRMED'),
-                    icon: 'pi pi-check',
-                    command: () => handleConfirmStatus(rowData, 1) // Use handleConfirmStatus instead of confirmChangeStatus
+                    icon: <Check className="h-3.5 w-3.5" />,
+                    onClick: () => handleConfirmStatus(rowData, 1)
                 },
                 {
                     label: t('ORDER.STATUS.REJECTED'),
-                    icon: 'pi pi-times',
-                    command: () => confirmChangeStatus(rowData, 2)
+                    icon: <X className="h-3.5 w-3.5" />,
+                    onClick: () => confirmChangeStatus(rowData, 2),
+                    danger: true,
+                    separatorBefore: true
                 }
-            ];
+            );
         } else if (status === 'rejected') {
-            items = [
-                {
-                    label: t('ORDER.STATUS.CONFIRMED'),
-                    icon: 'pi pi-check',
-                    command: () => handleConfirmStatus(rowData, 1) // Use handleConfirmStatus here too
-                }
-            ];
+            items.push({
+                label: t('ORDER.STATUS.CONFIRMED'),
+                icon: <Check className="h-3.5 w-3.5" />,
+                onClick: () => handleConfirmStatus(rowData, 1)
+            });
         }
 
-        if (items.length > 0) {
-            return <SplitButton label="" icon="pi pi-cog" model={items} className="p-button-rounded" severity="info" dir="ltr" />;
-        }
-
-        if (status === 'confirmed') {
-            return <SplitButton label="" icon="pi pi-cog" disabled className="p-button-rounded" severity="info" dir="ltr" />;
-        }
-
-        return null;
+        return items;
     };
 
     const handleConfirmStatus = async (rowData: Hawala, statusCode: number) => {
@@ -793,185 +542,228 @@ const HawalaPage = () => {
     // Dialog Footers
     const companyDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" text onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={() => { }} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" text onClick={hideDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={() => { }} />
         </>
     );
 
     const deleteCompanyDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" text onClick={hideDeleteOrderDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={deleteOrder} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" text onClick={hideDeleteOrderDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={deleteOrder} />
         </>
     );
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
+        <>
+            <Toast ref={toast} />
 
-                    <Toolbar
-                        className="mb-4"
-                        left={leftToolbarTemplate}
-                        right={rightToolbarTemplate}
-                    />
-
-                    <DataTable
-                        ref={dt}
-                        value={hawalas}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedCompanyCode(e.value as any)}
-                        dataKey="id"
-                        className="datatable-responsive"
-                        globalFilter={globalFilter}
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        responsiveLayout="scroll"
-                        paginator={false}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        rowClassName={() => 'cursor-pointer select-none'}
-                        onRowClick={(e) => viewHawala(e.data as Hawala)}
-                        selectionMode="single"
-                    >
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            body={actionBodyTemplate}
-                            headerStyle={{ minWidth: '10rem' }}
+            <ListPage
+                title={t('MENU.HAWALAS', { defaultValue: 'حواله‌ها' })}
+                description={t('HAWALA_LIST_DESCRIPTION', { defaultValue: 'مدیریت و پیگیری حواله‌ها' })}
+                loading={loading}
+                actions={
+                    <Button size="sm" onClick={openAddHawalaDialog}>
+                        <Plus className="h-4 w-4" />
+                        {t('ADD_HAWALA', { defaultValue: 'افزودن حواله' })}
+                    </Button>
+                }
+                toolbar={
+                    <div className="space-y-3">
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            <StatCard
+                                label="کل حواله‌ها"
+                                value={summary.total}
+                                icon={List}
+                                tone="slate"
+                                className={statusFilter === '' ? 'ring-2 ring-slate-400' : undefined}
+                                onClick={() => setStatusFilter('')}
+                            />
+                            <StatCard
+                                label="در انتظار تأیید"
+                                value={summary.pending}
+                                hint="نیاز به اقدام ادمین"
+                                icon={Clock3}
+                                tone="amber"
+                                className={statusFilter === 'pending' ? 'ring-2 ring-amber-400' : undefined}
+                                onClick={() => setStatusFilter('pending')}
+                            />
+                            <StatCard
+                                label="تأیید شده"
+                                value={summary.confirmed}
+                                icon={CheckCircle2}
+                                tone="primary"
+                                className={statusFilter === 'confirmed' ? 'ring-2 ring-emerald-500' : undefined}
+                                onClick={() => setStatusFilter('confirmed')}
+                            />
+                        </div>
+                        <div className="waslat-panel w-full max-w-xl overflow-hidden">
+                            <button
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-start text-xs font-semibold"
+                                aria-expanded={ratesOpen}
+                                onClick={() => setRatesOpen((open) => !open)}
+                            >
+                                <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 transition-transform', ratesOpen ? 'rotate-0' : '-rotate-90')} />
+                                <span>{t('TODAYS_EXCHANGE_RATES', { defaultValue: 'نرخ‌های تبدیل امروز' })}</span>
+                            </button>
+                            {ratesOpen ? (
+                                (hawala_currencies || []).length === 0 ? (
+                                <div className="border-t border-border px-3 py-2 text-xs text-muted-foreground">نرخی ثبت نشده</div>
+                            ) : (
+                                <ul className="divide-y divide-border border-t border-border">
+                                    {(hawala_currencies || []).map((rate: any) => {
+                                        const fromCurrency = (currencies || []).find((item: Currency) => String(item.id) === String(rate.from_currency?.id)) || rate.from_currency;
+                                        const toCurrency = (currencies || []).find((item: Currency) => String(item.id) === String(rate.to_currency?.id)) || rate.to_currency;
+                                        const fromFlag = resolveCurrencyFlag(fromCurrency || {});
+                                        const toFlag = resolveCurrencyFlag(toCurrency || {});
+                                        const fromName = currencyFaName(fromCurrency);
+                                        const toName = currencyFaName(toCurrency);
+                                        const amountLabel = formatHawalaRate(rate.amount);
+                                        const buyLabel = formatHawalaRate(rate.buy_rate);
+                                        const sellLabel = formatHawalaRate(rate.sell_rate);
+                                        const generated = defaultHawalaRateDescription({ ...rate, from_currency: fromCurrency, to_currency: toCurrency });
+                                        const customDescription = rate.description?.trim();
+                                        const flag = (src: string) =>
+                                            src ? <img src={src} alt="" className="inline-block h-3.5 w-5 shrink-0 rounded-[2px] border border-border object-cover align-middle" /> : null;
+                                        return (
+                                            <li key={rate.id} className="space-y-1 px-3 py-1.5 text-xs">
+                                                <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 leading-5">
+                                                    <span>هر</span>
+                                                    <span className="font-semibold tabular-nums">{amountLabel}</span>
+                                                    {flag(fromFlag)}
+                                                    <span className="font-medium">{fromName}</span>
+                                                    <span>به</span>
+                                                    {flag(toFlag)}
+                                                    <span className="font-medium">{toName}</span>
+                                                    <span className="font-medium tabular-nums text-emerald-700">خرید {buyLabel}</span>
+                                                    <span className="font-medium tabular-nums text-rose-600">فروش {sellLabel}</span>
+                                                </p>
+                                                <p className="flex flex-wrap items-center gap-x-1 gap-y-1 text-[11px] leading-5 text-muted-foreground">
+                                                    {customDescription && customDescription !== generated ? (
+                                                        customDescription
+                                                    ) : (
+                                                        <>
+                                                            <span>یعنی صراف از مشتریان</span>
+                                                            <span className="tabular-nums">{amountLabel}</span>
+                                                            {flag(fromFlag)}
+                                                            <span>{fromName} را به قیمت</span>
+                                                            <span className="tabular-nums">{buyLabel}</span>
+                                                            {flag(toFlag)}
+                                                            <span>{toName} می‌خرد و</span>
+                                                            <span className="tabular-nums">{sellLabel}</span>
+                                                            {flag(toFlag)}
+                                                            <span>{toName} می‌فروشد.</span>
+                                                        </>
+                                                    )}
+                                                </p>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                                )
+                            ) : null}
+                        </div>
+                        <FilterBar
+                            search={searchInput}
+                            onSearchChange={setSearchInput}
+                            searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو در حواله‌ها...' })}
                         />
+                    </div>
+                }
+                footer={
+                    <div className="flex flex-col gap-2 border-t border-border px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-xs text-muted-foreground">
+                            {t('DATA_TABLE.TABLE.PAGINATOR.SHOWING', { defaultValue: 'نمایش' })}{' '}
+                            · {t('PAGE', { defaultValue: 'صفحه' })} {pagination?.page || 1} / {totalPages} ·{' '}
+                            {t('TOTAL', { defaultValue: 'مجموع' })} {pagination?.total || 0}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" disabled={(pagination?.page || 1) <= 1} onClick={() => onPageChange((pagination?.page || 1) - 1)}>
+                                {t('PREVIOUS', { defaultValue: 'قبلی' })}
+                            </Button>
+                            <Button variant="outline" size="sm" disabled={(pagination?.page || 1) >= totalPages} onClick={() => onPageChange((pagination?.page || 1) + 1)}>
+                                {t('NEXT', { defaultValue: 'بعدی' })}
+                            </Button>
+                        </div>
+                    </div>
+                }
+            >
+                <table className="w-full min-w-[1280px] border-collapse text-xs">
+                    <thead>
+                        <tr className="border-b border-border bg-muted/40 text-start">
+                            <th className="sticky start-0 z-10 bg-muted/95 px-2 py-2 font-semibold whitespace-nowrap">
+                                {t('ACTIONS', { defaultValue: 'عملیات' })}
+                            </th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('HAWALA.TABLE.COLUMN.HAWALA_NUMBER')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('HAWALA.TABLE.COLUMN.HAWALA_CUSTOM_NUMBER')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('HAWALA.TABLE.COLUMN.SENDER_NAME')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('HAWALA.TABLE.COLUMN.RECEIVER_NAME')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('HAWALA.TABLE.COLUMN.AMOUNT')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('HAWALA.TABLE.COLUMN.CURRENCY')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('HAWALA.TABLE.COLUMN.CONVERTED_AMOUNT')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('HAWALA.TABLE.COLUMN.RESELLER_CURRENCY')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('HAWALA.TABLE.COLUMN.COMMISSION')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('HAWALA.TABLE.COLUMN.ADMIN_NOTE')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('HAWALA.TABLE.COLUMN.RESELLER_NAME')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('ORDER.TABLE.COLUMN.ORDEREDDATE')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('HAWALA.TABLE.COLUMN.STATUS')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {(hawalas || []).length === 0 ? (
+                            <tr>
+                                <td colSpan={14} className="px-3 py-12 text-center text-muted-foreground">
+                                    {t('DATA_TABLE.TABLE.NO_DATA', { defaultValue: 'داده‌ای یافت نشد' })}
+                                </td>
+                            </tr>
+                        ) : (
+                            (hawalas || []).map((row: Hawala) => {
+                                const { date: createdDate, time: createdTime } = formatHawalaDateTime(row.created_at?.toString());
+                                return (
+                                    <tr
+                                        key={row.id}
+                                        className="cursor-pointer border-b border-border/70 transition-colors hover:bg-emerald-50/50"
+                                        onClick={() => viewHawala(row)}
+                                    >
+                                        <td className="sticky start-0 z-10 bg-white px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
+                                            <RowActions items={hawalaRowActions(row)} />
+                                        </td>
+                                        <td className="px-2 py-1.5 font-medium tabular-nums whitespace-nowrap">{row.hawala_number || '—'}</td>
+                                        <td className="px-2 py-1.5 tabular-nums whitespace-nowrap">{row.hawala_custom_number || '—'}</td>
+                                        <td className="px-2 py-1.5 whitespace-nowrap">{row.sender_name || '—'}</td>
+                                        <td className="px-2 py-1.5 whitespace-nowrap">{row.receiver_name || '—'}</td>
+                                        <td className="px-2 py-1.5">
+                                            <span className="block font-semibold tabular-nums">{row.hawala_amount ?? '—'}</span>
+                                            <span className="text-[10px] text-muted-foreground">{row.hawala_amount_currency_code}</span>
+                                        </td>
+                                        <td className="px-2 py-1.5 text-muted-foreground whitespace-nowrap">{row.hawala_amount_currency_code || '—'}</td>
+                                        <td className="px-2 py-1.5">
+                                            <span className="block font-semibold tabular-nums">{row.converted_amount_taken_from_reseller ?? '—'}</span>
+                                            <span className="text-[10px] text-muted-foreground">{row.reseller_prefered_currency_code}</span>
+                                        </td>
+                                        <td className="px-2 py-1.5 text-muted-foreground whitespace-nowrap">{row.reseller_prefered_currency_code || '—'}</td>
+                                        <td className="px-2 py-1.5 font-semibold text-emerald-700 tabular-nums">{row.commission_amount ?? '—'}</td>
+                                        <td className="max-w-[12rem] truncate px-2 py-1.5 text-muted-foreground" title={row.admin_note || undefined}>
+                                            {row.admin_note || '—'}
+                                        </td>
+                                        <td className="px-2 py-1.5 whitespace-nowrap">{row.reseller?.reseller_name || '—'}</td>
+                                        <td className="px-2 py-1.5 whitespace-nowrap">
+                                            <span className="block tabular-nums">{createdDate}</span>
+                                            <span className="text-[10px] text-muted-foreground tabular-nums">{createdTime}</span>
+                                        </td>
+                                        <td className="px-2 py-1.5 whitespace-nowrap">
+                                            <Badge variant={hawalaStatusVariant(row.status)}>{hawalaStatusLabel(t, row.status)}</Badge>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
+                    </tbody>
+                </table>
+            </ListPage>
 
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="hawala_number"
-                            header={t('HAWALA.TABLE.COLUMN.HAWALA_NUMBER')}
-                            body={hawalaNumberBodyTemplate}
-                            sortable
-                        />
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="hawala_number"
-                            header={t('HAWALA.TABLE.COLUMN.HAWALA_CUSTOM_NUMBER')}
-                            body={hawalaCustomNumberBodyTemplate}
-                            sortable
-                        />
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="sender_name"
-                            header={t('HAWALA.TABLE.COLUMN.SENDER_NAME')}
-                            body={senderNameBodyTemplate}
-                        />
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="receiver_name"
-                            header={t('HAWALA.TABLE.COLUMN.RECEIVER_NAME')}
-                            body={receiverNameBodyTemplate}
-                        />
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="hawala_amount"
-                            header={t('HAWALA.TABLE.COLUMN.AMOUNT')}
-                            body={hawalaAmountBodyTemplate}
-                            sortable
-                        />
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="hawala_amount_currency_code"
-                            header={t('HAWALA.TABLE.COLUMN.CURRENCY')}
-                            body={hawalaAmounCurrencyCodetBodyTemplate}
-                        />
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="converted_amount_taken_from_reseller"
-                            header={t('HAWALA.TABLE.COLUMN.CONVERTED_AMOUNT')}
-                            body={convertedAmountTakenResellerBodyTemplate}
-                            sortable
-                        />
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="reseller_prefered_currency_code"
-                            header={t('HAWALA.TABLE.COLUMN.RESELLER_CURRENCY')}
-                            body={resellerPreferedCurrencyCodeBodyTemplate}
-                        />
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="commission_amount"
-                            header={t('HAWALA.TABLE.COLUMN.COMMISSION')}
-                            body={commissionAmountBodyTemplate}
-                            sortable
-                        />
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="admin_note"
-                            header={t('HAWALA.TABLE.COLUMN.ADMIN_NOTE')}
-                            body={adminNoteBodyTemplate}
-                        />
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field=""
-                            header={t('HAWALA.TABLE.COLUMN.RESELLER_NAME')}
-                            body={resellerNameBodyTemplate}
-                        />
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="created_at"
-                            header={t('ORDER.TABLE.COLUMN.ORDEREDDATE')}
-                            body={createdAtBodyTemplate}
-                        />
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="status"
-                            header={t('HAWALA.TABLE.COLUMN.STATUS')}
-                            body={statusBodyTemplate}
-                            sortable
-                        />
-                    </DataTable>
-
-                    <Paginator
-                        first={(pagination?.page - 1) * pagination?.items_per_page}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        onPageChange={onPageChange}
-                        template={
-                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        firstPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-right"
-                                : "pi pi-angle-double-left"
-                        }
-                        lastPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-left"
-                                : "pi pi-angle-double-right"
-                        }
-                    />
-
-                    {/* Exchange Rates Modal */}
+            {/* Exchange Rates Modal */}
                     <Dialog
                         visible={showRatesModal}
                         style={{ width: '500px' }}
@@ -1007,7 +799,7 @@ const HawalaPage = () => {
                             ))}
                         </div>
                         <div className="flex justify-content-end mt-3">
-                            <Button
+                            <PrimeButton
                                 label={t("CLOSE")}
                                 icon="pi pi-times"
                                 onClick={() => setShowRatesModal(false)}
@@ -1042,13 +834,13 @@ const HawalaPage = () => {
                         modal
                         footer={
                             <>
-                                <Button
+                                <PrimeButton
                                     label={t('CANCEL')}
                                     icon="pi pi-times"
                                     severity="secondary"
                                     onClick={() => setStatusChangeDialog(false)}
                                 />
-                                <Button
+                                <PrimeButton
                                     label={t('CONFIRM')}
                                     icon="pi pi-check"
                                     severity="success"
@@ -1077,7 +869,7 @@ const HawalaPage = () => {
                         modal
                         footer={
                             <>
-                                <Button
+                                <PrimeButton
                                     label={t('CANCEL')}
                                     icon="pi pi-times"
                                     severity="secondary"
@@ -1086,7 +878,7 @@ const HawalaPage = () => {
                                         setHawalaNumberInput('');
                                     }}
                                 />
-                                <Button
+                                <PrimeButton
                                     label={t('CONFIRM')}
                                     icon="pi pi-check"
                                     severity="success"
@@ -1105,7 +897,7 @@ const HawalaPage = () => {
                             <label htmlFor="hawalaNumber" className="font-medium block mb-2">
                                 {t('HAWALA_NUMBER')} *
                             </label>
-                            <InputText
+                            <Input
                                 id="hawalaNumber"
                                 value={hawalaNumberInput}
                                 onChange={(e) => setHawalaNumberInput(e.target.value)}
@@ -1293,14 +1085,14 @@ const HawalaPage = () => {
                                         gap: '0.5rem',
                                         justifyContent: 'flex-end'
                                     }}>
-                                        <Button
+                                        <PrimeButton
                                             label={t('APP.GENERAL.CANCEL')}
                                             icon="pi pi-times"
                                             onClick={() => setViewHawalaDialog(false)}
                                             className="p-button-text p-button-sm"
                                             style={{ minWidth: '90px' }}
                                         />
-                                        <Button
+                                        <PrimeButton
                                             label={t('DOWNLOAD')}
                                             icon="pi pi-download"
                                             onClick={downloadHawalaAsImage}
@@ -1313,53 +1105,42 @@ const HawalaPage = () => {
                         </div>
                     </Dialog>
 
-                    {/* Add Hawala Dialog */}
-                   <Dialog
-    visible={addHawalaDialog}
-    style={{ width: '95vw', maxWidth: '1200px' }}
-    header={t("ADD_HAWALA_ORDER")}
-    modal
-    className="p-fluid"
-    breakpoints={{ '960px': '100vw', '640px': '100vw' }}
-    contentStyle={{ padding: '0.5rem 1rem 1rem 1rem' }}
-    footer={
-        <>
-            <Button
-                label={t("CANCEL")}
-                icon="pi pi-times"
-                severity="danger"
-                text
-                onClick={closeAddHawalaDialog}
-            />
-            <Button
-                label={t("SAVE")}
-                icon="pi pi-check"
-                severity="success"
-                onClick={handleAddHawalaSubmit}
-            />
-        </>
-    }
-    onHide={closeAddHawalaDialog}
->
-    <div className="grid" style={{ padding: '0.5rem 0' }}>
-        <div className="col-12">
-            <div className="flex justify-content-end mb-3">
-                <Button
-                    icon="pi pi-info-circle"
-                    className="p-button-outlined p-button-sm"
-                    onClick={() => setShowRatesModal(true)}
-                    tooltip={t("TODAYS_RATE")}
-                    tooltipOptions={{ position: 'top' }}
-                />
-            </div>
+            <FormSheet
+                open={addHawalaDialog}
+                onOpenChange={(open) => {
+                    if (!open) closeAddHawalaDialog();
+                }}
+                title={t('ADD_HAWALA_ORDER', { defaultValue: 'ثبت حواله جدید' })}
+                description={t('ADD_HAWALA_SHEET_DESC', { defaultValue: 'فرستنده، گیرنده، مبلغ و شعبه را تکمیل کنید' })}
+                size="full"
+                side="left"
+                footer={
+                    <FormActions
+                        onCancel={closeAddHawalaDialog}
+                        onSubmit={handleAddHawalaSubmit}
+                        submitDisabled={Boolean(
+                            formData.hawalaAmount &&
+                                formData.currencyCodeId &&
+                                (hawalaQuote.missingRate || hawalaQuote.invalidCommission)
+                        )}
+                        submitLabel={t('SAVE', { defaultValue: 'ذخیره' })}
+                        cancelLabel={t('CANCEL', { defaultValue: 'انصراف' })}
+                    />
+                }
+            >
+                <div className="mb-1 flex justify-end">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setShowRatesModal(true)}>
+                        <Info className="h-4 w-4" />
+                        {t('TODAYS_RATE', { defaultValue: 'نرخ امروز' })}
+                    </Button>
+                </div>
 
-            <div className="p-2 surface-50 border-round" style={{ backgroundColor: '#f8fafc' }}>
-                <div className="grid formgrid p-fluid" style={{ margin: '0' }}>
-                    {/* Reseller - Full width on mobile, half on desktop */}
-                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
-                        <label htmlFor="reseller" style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>
-                            {t('PAYMENT.FORM.INPUT.RESELLER')} *
-                        </label>
+                <FormSection className="gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    <FormField
+                        label={t('PAYMENT.FORM.INPUT.RESELLER', { defaultValue: 'نماینده' })}
+                        required
+                        error={submitted && !formData.reseller ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
                         <CustomDropdownWithSearch
                             id="reseller"
                             value={formData.reseller}
@@ -1385,27 +1166,24 @@ const HawalaPage = () => {
                             itemTemplate={(option) => {
                                 if (!option) return null;
                                 return (
-                                    <div className="flex flex-column p-2 gap-1" style={{ fontSize: '0.9rem' }}>
+                                    <div className="flex flex-col gap-1 p-2 text-sm">
                                         <div className="font-semibold">
                                             {option.contact_name} || {option.reseller_name}
                                         </div>
-                                        <div className="text-sm text-gray-600">
-                                            {option.phone && (
-                                                <span className="ml-2 text-gray-500">{option.phone}</span>
-                                            )}
-                                        </div>
+                                        {option.phone ? (
+                                            <span className="text-muted-foreground">{option.phone}</span>
+                                        ) : null}
                                     </div>
                                 );
                             }}
                             valueTemplate={(option) => {
                                 if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
                                 return (
-                                    <div className="flex flex-column" style={{ fontSize: '0.9rem' }}>
-                                        <span style={{ fontWeight: 'bold' }}>
-                                            {option.reseller_name}
-                                        </span>
-                                        <small className="text-gray-500 text-xs">
-                                            {option.contact_name} {option.phone && ` | ${option.phone}`}
+                                    <div className="flex flex-col text-sm">
+                                        <span className="font-bold">{option.reseller_name}</span>
+                                        <small className="text-xs text-muted-foreground">
+                                            {option.contact_name}
+                                            {option.phone ? ` | ${option.phone}` : ''}
                                         </small>
                                     </div>
                                 );
@@ -1414,321 +1192,325 @@ const HawalaPage = () => {
                                 setResellerSearchTerm(searchTerm);
                             }}
                         />
-                    </div>
+                    </FormField>
 
-                    {/* Sender Name */}
-                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
-                        <label htmlFor="senderName" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
-                            {t("SENDER_NAME")} *
-                        </label>
-                        <InputText
+                    {formData.reseller ? (
+                        <FormField label={t('RESELLER.PROFILE.WALLET_BALANCE', { defaultValue: 'موجودی کیف' })}>
+                            <Input
+                                value={`${formatQuote(Number(formData.reseller.balance || 0))} ${currencyFaName(walletCurrency || { code: formData.reseller.code })}`}
+                                disabled
+                            />
+                        </FormField>
+                    ) : null}
+
+                    <FormField
+                        label={t('SENDER_NAME', { defaultValue: 'نام فرستنده' })}
+                        required
+                        error={submitted && !formData.senderName ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
                             id="senderName"
                             name="senderName"
                             value={formData.senderName}
                             onChange={handleInputChange}
-                            placeholder={t("SENDER_NAME")}
-                            required
-                            className={classNames('w-full', {
-                                'p-invalid': submitted && !formData.senderName
-                            })}
-                            style={{ fontSize: '0.95rem' }}
+                            placeholder={t('SENDER_NAME')}
+                            className={cn('w-full', submitted && !formData.senderName && 'border-rose-300')}
                         />
-                        {submitted && !formData.senderName && (
-                            <small className="p-invalid" style={{ color: 'red' }}>
-                                {t('THIS_FIELD_IS_REQUIRED')}
-                            </small>
-                        )}
-                    </div>
+                    </FormField>
 
-                    {/* Receiver Name */}
-                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
-                        <label htmlFor="receiverName" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
-                            {t("RECEIVER_NAME")} *
-                        </label>
-                        <InputText
+                    <FormField
+                        label={t('RECEIVER_NAME', { defaultValue: 'نام گیرنده' })}
+                        required
+                        error={submitted && !formData.receiverName ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
                             id="receiverName"
                             name="receiverName"
                             value={formData.receiverName}
                             onChange={handleInputChange}
-                            placeholder={t("RECEIVER_NAME")}
-                            required
-                            className={classNames('w-full', {
-                                'p-invalid': submitted && !formData.receiverName
-                            })}
-                            style={{ fontSize: '0.95rem' }}
+                            placeholder={t('RECEIVER_NAME')}
+                            className={cn('w-full', submitted && !formData.receiverName && 'border-rose-300')}
                         />
-                        {submitted && !formData.receiverName && (
-                            <small className="p-invalid" style={{ color: 'red' }}>
-                                {t('THIS_FIELD_IS_REQUIRED')}
-                            </small>
-                        )}
-                    </div>
+                    </FormField>
 
-                    {/* Receiver Father Name */}
-                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
-                        <label htmlFor="receiverFatherName" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
-                            {t("RECEIVER_FATHERS_NAME")} *
-                        </label>
-                        <InputText
+                    <FormField
+                        label={t('RECEIVER_FATHERS_NAME', { defaultValue: 'نام پدر گیرنده' })}
+                        required
+                        error={submitted && !formData.receiverFatherName ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
                             id="receiverFatherName"
                             name="receiverFatherName"
                             value={formData.receiverFatherName}
                             onChange={handleInputChange}
-                            placeholder={t("RECEIVER_FATHERS_NAME")}
-                            required
-                            className={classNames('w-full', {
-                                'p-invalid': submitted && !formData.receiverFatherName
-                            })}
-                            style={{ fontSize: '0.95rem' }}
+                            placeholder={t('RECEIVER_FATHERS_NAME')}
+                            className={cn('w-full', submitted && !formData.receiverFatherName && 'border-rose-300')}
                         />
-                        {submitted && !formData.receiverFatherName && (
-                            <small className="p-invalid" style={{ color: 'red' }}>
-                                {t('THIS_FIELD_IS_REQUIRED')}
-                            </small>
-                        )}
-                    </div>
+                    </FormField>
 
-                    {/* Receiver ID Card Number */}
-                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
-                        <label htmlFor="receiverIdCardNumber" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
-                            {t("RECEIVER_ID_CARD_NUMBER")} *
-                        </label>
-                        <InputText
+                    <FormField
+                        label={t('RECEIVER_ID_CARD_NUMBER', { defaultValue: 'شماره تذکره گیرنده' })}
+                        required
+                        error={submitted && !formData.receiverIdCardNumber ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
                             id="receiverIdCardNumber"
                             name="receiverIdCardNumber"
                             value={formData.receiverIdCardNumber}
                             onChange={handleInputChange}
-                            placeholder={t("RECEIVER_ID_CARD_NUMBER")}
-                            required
-                            keyfilter="int"
-                            className={classNames('w-full', {
-                                'p-invalid': submitted && !formData.receiverIdCardNumber
-                            })}
-                            style={{ fontSize: '0.95rem' }}
+                            placeholder={t('RECEIVER_ID_CARD_NUMBER')}
+                            inputMode="numeric"
+                            className={cn('w-full', submitted && !formData.receiverIdCardNumber && 'border-rose-300')}
                         />
-                        {submitted && !formData.receiverIdCardNumber && (
-                            <small className="p-invalid" style={{ color: 'red' }}>
-                                {t('THIS_FIELD_IS_REQUIRED')}
-                            </small>
-                        )}
-                    </div>
+                    </FormField>
 
-                    {/* Hawala Amount */}
-                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
-                        <label htmlFor="hawalaAmount" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
-                            {t("HAWALA_AMOUNT")} *
-                        </label>
-                        <InputText
+                    <FormField
+                        label={t('HAWALA_AMOUNT', { defaultValue: 'مبلغ حواله' })}
+                        required
+                        error={submitted && !formData.hawalaAmount ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
                             id="hawalaAmount"
                             name="hawalaAmount"
                             value={formData.hawalaAmount}
                             onChange={handleInputChange}
-                            placeholder={t("HAWALA_AMOUNT")}
-                            required
-                            keyfilter="money"
-                            className={classNames('w-full', {
-                                'p-invalid': submitted && !formData.hawalaAmount
-                            })}
-                            style={{ fontSize: '0.95rem' }}
+                            placeholder={t('HAWALA_AMOUNT', { defaultValue: 'مبلغ حواله' })}
+                            inputMode="decimal"
+                            className={cn('w-full tabular-nums', submitted && !formData.hawalaAmount && 'border-rose-300')}
                         />
-                        {submitted && !formData.hawalaAmount && (
-                            <small className="p-invalid" style={{ color: 'red' }}>
-                                {t('THIS_FIELD_IS_REQUIRED')}
-                            </small>
-                        )}
-                    </div>
+                    </FormField>
 
-                    {/* Destination Currency */}
-                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
-                        <label htmlFor="currencyCodeId" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
-                            {t("DESTINATION_CURRENCY")} *
-                        </label>
-                        <Dropdown
-                            id="currencyCodeId"
-                            name="currencyCodeId"
-                            value={formData.currencyCodeId}
+                    <FormField
+                        label={t('CURRENCY', { defaultValue: 'ارز' })}
+                        required
+                        error={
+                            submitted && !formData.currencyCodeId
+                                ? t('THIS_FIELD_IS_REQUIRED')
+                                : submitted && hawalaQuote.missingRate
+                                  ? t('RESELLER.PROFILE.NO_BOARD_RATE', { defaultValue: 'نرخ این جفت ارز در تابلو ثبت نشده' })
+                                  : null
+                        }
+                    >
+                        <Select
+                            value={formData.currencyCodeId ? String(formData.currencyCodeId) : ''}
+                            onValueChange={(value) =>
+                                setFormData((prev) => ({
+                                    ...prev,
+                                    currencyCodeId: value
+                                }))
+                            }
+                        >
+                            <SelectTrigger
+                                id="currencyCodeId"
+                                className={cn('w-full', submitted && !formData.currencyCodeId && 'border-rose-300')}
+                            >
+                                <SelectValue placeholder={t('SELECT_CURRENCY')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(currencies || []).map((currency: Currency) => (
+                                    <SelectItem key={currency.id} value={String(currency.id)}>
+                                        {currency.code}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+
+                    <FormField
+                        label={t('COMMISSION_AMOUNT', { defaultValue: 'کارمزد' })}
+                        error={
+                            hawalaQuote.invalidCommission
+                                ? t('HAWALA_COMMISSION_TOO_HIGH', { defaultValue: 'کارمزد باید کمتر از مبلغ حواله باشد' })
+                                : null
+                        }
+                    >
+                        <Input
+                            id="commissionAmount"
+                            name="commissionAmount"
+                            value={formData.commissionAmount}
                             onChange={handleInputChange}
-                            options={availableToCurrencies}
-                            optionLabel="name"
-                            optionValue="id"
-                            placeholder={t("SELECT_CURRENCY")}
-                            className={classNames('w-full', {
-                                'p-invalid': submitted && !formData.currencyCodeId
-                            })}
-                            style={{ fontSize: '0.95rem' }}
+                            placeholder="0"
+                            inputMode="decimal"
+                            className="w-full tabular-nums"
                         />
-                        {submitted && !formData.currencyCodeId && (
-                            <small className="p-invalid" style={{ color: 'red' }}>
-                                {t('THIS_FIELD_IS_REQUIRED')}
-                            </small>
-                        )}
-                    </div>
+                    </FormField>
 
-                    {/* Commission Paid By */}
-                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
-                        <label className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
-                            {t("COMMISSION_PAID_BY")} *
-                        </label>
-                        <div className="flex flex-wrap gap-3">
-                            <div className="field-checkbox">
+                    <FormField label={t('COMMISSION_PAID_BY', { defaultValue: 'کارمزد توسط' })}>
+                        <div className="flex flex-wrap items-center gap-3 pt-1.5">
+                            <label className="flex cursor-pointer items-center gap-1.5 text-sm">
                                 <input
                                     type="radio"
                                     id="commissionSender"
                                     name="commissionPaidBy"
                                     value="sender"
-                                    checked={formData.commissionPaidBy === "sender"}
+                                    checked={formData.commissionPaidBy === 'sender'}
                                     onChange={handleInputChange}
-                                    className="mr-2"
                                 />
-                                <label htmlFor="commissionSender">{t("SENDER")}</label>
-                            </div>
-                            <div className="field-checkbox">
+                                {t('SENDER', { defaultValue: 'فرستنده' })}
+                            </label>
+                            <label className="flex cursor-pointer items-center gap-1.5 text-sm">
                                 <input
                                     type="radio"
                                     id="commissionReceiver"
                                     name="commissionPaidBy"
                                     value="receiver"
-                                    checked={formData.commissionPaidBy === "receiver"}
+                                    checked={formData.commissionPaidBy === 'receiver'}
                                     onChange={handleInputChange}
-                                    className="mr-2"
                                 />
-                                <label htmlFor="commissionReceiver">{t("RECEIVER")}</label>
-                            </div>
+                                {t('RECEIVER', { defaultValue: 'گیرنده' })}
+                            </label>
                         </div>
-                    </div>
+                    </FormField>
 
-                    {/* Conversion Details - Full Width Card */}
-                    <div className="col-12" style={{ padding: '0.5rem' }}>
-                        <Card className="bg-blue-50 border-1 border-blue-200" style={{ margin: '0.25rem 0' }}>
-                            <div className="grid" style={{ margin: '0' }}>
-                                <div className="col-12 sm:col-4 text-center" style={{ padding: '0.5rem' }}>
-                                    <div className="text-sm text-blue-600 font-medium">{t("EXCHANGE_RATE")}</div>
-                                    <div className="text-base md:text-lg font-bold text-blue-800">
-                                        {exchangeRate > 0 ? `1 ${resellerCurrencyPreferenceCode} = ${exchangeRate.toFixed(4)}` : t("N/A")}
-                                    </div>
-                                </div>
-                                <div className="col-12 sm:col-4 text-center" style={{ padding: '0.5rem' }}>
-                                    <div className="text-sm text-blue-600 font-medium">{t("FINAL_AMOUNT")}</div>
-                                    <div className="text-base md:text-lg font-bold text-blue-800">
-                                        {finalAmount > 0 ? `${finalAmount.toFixed(2)} ${resellerCurrencyPreferenceCode}` : t("N/A")}
-                                    </div>
-                                </div>
-                                <div className="col-12 sm:col-4 text-center" style={{ padding: '0.5rem' }}>
-                                    <div className="text-sm text-blue-600 font-medium">{t("SOURCE_CURRENCY")}</div>
-                                    <div className="text-base md:text-lg font-bold text-blue-800">{resellerCurrencyPreferenceCode}</div>
-                                </div>
-                            </div>
-                        </Card>
-                    </div>
-
-                    {/* Hawala Branch */}
-                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
-                        <label htmlFor="branchId" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
-                            {t("HAWALA_BRANCH")} *
-                            {fetchingNextNumber && formData.branchId && (
-                                <i className="pi pi-spin pi-spinner ml-2" style={{ fontSize: '1rem' }} />
-                            )}
-                        </label>
-                        <Dropdown
-                            id="branchId"
-                            name="branchId"
-                            value={formData.branchId}
-                            onChange={(e) => {
-                                handleInputChange(e);
-                                setFormData(prev => ({
+                    <FormField
+                        label={t('HAWALA_BRANCH', { defaultValue: 'شعبه حواله' })}
+                        required
+                        error={submitted && !formData.branchId ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Select
+                            value={formData.branchId ? String(formData.branchId) : ''}
+                            onValueChange={(value) => {
+                                setFormData((prev) => ({
                                     ...prev,
-                                    customHawalaNumber: ""
+                                    branchId: value,
+                                    customHawalaNumber: ''
                                 }));
                             }}
-                            options={hawalaBranches}
-                            optionLabel="name"
-                            optionValue="id"
-                            placeholder={t("SELECT_BRANCH")}
-                            className={classNames('w-full mb-2', {
-                                'p-invalid': submitted && !formData.branchId
-                            })}
-                            style={{ fontSize: '0.95rem' }}
-                        />
-                        {submitted && !formData.branchId && (
-                            <small className="p-invalid" style={{ color: 'red' }}>
-                                {t('THIS_FIELD_IS_REQUIRED')}
-                            </small>
-                        )}
-                        {formData.branchId && (
-                            <small className="text-blue-600" style={{ fontSize: '0.8rem' }}>
-                                {fetchingNextNumber ? t('FETCHING_HAWALA_NUMBER') : t('HAWALA_NUMBER_AUTO_GENERATED')}
-                            </small>
-                        )}
-                    </div>
+                        >
+                            <SelectTrigger
+                                id="branchId"
+                                className={cn('w-full', submitted && !formData.branchId && 'border-rose-300')}
+                            >
+                                <SelectValue placeholder={t('SELECT_BRANCH')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(hawalaBranches || []).map((branch: { id: number; name: string }) => (
+                                    <SelectItem key={branch.id} value={String(branch.id)}>
+                                        {branch.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormField>
 
-                    {/* Custom Hawala Number */}
-                    <div className="field col-12 md:col-6" style={{ padding: '0.5rem' }}>
-                        <label htmlFor="customHawalaNumber" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
-                            {t("CUSTOM_HAWALA_NUMBER")}
-                            {fetchingNextNumber && (
-                                <i className="pi pi-spin pi-spinner ml-2" style={{ fontSize: '1rem' }} />
-                            )}
-                        </label>
-                        <div className="p-inputgroup mb-2" style={{ display: 'flex' }}>
-                            <InputText
+                    <FormField label={t('CUSTOM_HAWALA_NUMBER', { defaultValue: 'شماره اختصاصی' })}>
+                        <div className="flex gap-2">
+                            <Input
                                 id="customHawalaNumber"
                                 name="customHawalaNumber"
                                 value={formData.customHawalaNumber}
                                 onChange={handleInputChange}
-                                placeholder={fetchingNextNumber ? t('GENERATING_HAWALA_NUMBER') : t("CUSTOM_HAWALA_NUMBER")}
-                                className={classNames('w-full', {
-                                    'bg-blue-50 border-blue-200': !!formData.customHawalaNumber && !!formData.branchId
-                                })}
-                                style={{ fontSize: '0.95rem' }}
+                                placeholder={fetchingNextNumber ? t('GENERATING_HAWALA_NUMBER') : t('CUSTOM_HAWALA_NUMBER')}
+                                className={cn(
+                                    'w-full flex-1 tabular-nums',
+                                    !!formData.customHawalaNumber && !!formData.branchId && 'bg-emerald-50'
+                                )}
                             />
-                            {formData.customHawalaNumber && formData.branchId && (
+                            {formData.customHawalaNumber && formData.branchId ? (
                                 <Button
-                                    icon="pi pi-refresh"
-                                    className="p-button-outlined p-button-secondary"
-                                    tooltip={t('REGENERATE_NUMBER')}
-                                    tooltipOptions={{ position: 'top' }}
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    title={t('REGENERATE_NUMBER', { defaultValue: 'تولید مجدد شماره' })}
                                     onClick={() => {
                                         if (formData.branchId) {
                                             fetchNextHawalaNumber(formData.branchId);
                                         }
                                     }}
-                                    style={{ flexShrink: 0 }}
-                                />
-                            )}
+                                >
+                                    <RefreshCw className={cn('h-4 w-4', fetchingNextNumber && 'animate-spin')} />
+                                </Button>
+                            ) : null}
                         </div>
-                        {formData.customHawalaNumber && formData.branchId && (
-                            <small className="text-green-600" style={{ fontSize: '0.8rem' }}>
-                                <i className="pi pi-check-circle mr-1"></i>
-                                {t('HAWALA_NUMBER_AUTO_GENERATED')}
-                            </small>
-                        )}
-                    </div>
+                    </FormField>
 
-                    {/* Admin Note - Full Width */}
-                    <div className="field col-12" style={{ padding: '0.5rem' }}>
-                        <label htmlFor="adminNote" className="font-medium block mb-2" style={{ fontWeight: 'bold' }}>
-                            {t("ADMIN_NOTE")}
-                        </label>
-                        <InputTextarea
+                    {(hawalaQuote.debit != null || hawalaQuote.payout != null || hawalaQuote.missingRate || hawalaQuote.invalidCommission) && (
+                        <div className="col-span-full rounded-lg border border-emerald-100 bg-emerald-50/40 px-3 py-2">
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                {hawalaQuote.debit != null ? (
+                                    <div className="text-sm">
+                                        <div className="text-[11px] text-muted-foreground">
+                                            {t('RESELLER.PROFILE.DEBIT_FROM_BALANCE', { defaultValue: 'از موجودی کم می‌شود' })}
+                                        </div>
+                                        <div className="font-semibold tabular-nums text-foreground">
+                                            {formatQuote(hawalaQuote.debit)}{' '}
+                                            {currencyFaName(walletCurrency || { code: formData.reseller?.code })}
+                                        </div>
+                                    </div>
+                                ) : null}
+                                {hawalaQuote.payout != null ? (
+                                    <div className="text-sm">
+                                        <div className="text-[11px] text-muted-foreground">
+                                            {t('RESELLER.PROFILE.RECEIVER_GETS', { defaultValue: 'گیرنده می‌گیرد' })}
+                                        </div>
+                                        <div className="font-semibold tabular-nums text-emerald-800">
+                                            {formatQuote(hawalaQuote.payout)} {currencyFaName({ code: hawalaQuote.payoutCurrencyCode })}
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
+                            {formData.commissionPaidBy === 'receiver' && Number(formData.commissionAmount || 0) > 0 && hawalaQuote.payout != null ? (
+                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                    {t('HAWALA_RECEIVER_PAYS_HINT', {
+                                        defaultValue: 'کارمزد از مبلغ حواله کم می‌شود؛ گیرنده مبلغ خالص را می‌گیرد'
+                                    })}
+                                </p>
+                            ) : null}
+                            {hawalaQuote.missingRate ? (
+                                <p className="mt-1 text-[11px] text-destructive">
+                                    {t('RESELLER.PROFILE.NO_BOARD_RATE', { defaultValue: 'نرخ این جفت ارز در تابلو ثبت نشده' })}
+                                </p>
+                            ) : null}
+                            {hawalaQuote.invalidCommission ? (
+                                <p className="mt-1 text-[11px] text-destructive">
+                                    {t('HAWALA_COMMISSION_TOO_HIGH', { defaultValue: 'کارمزد باید کمتر از مبلغ حواله باشد' })}
+                                </p>
+                            ) : null}
+                        </div>
+                    )}
+
+                    <FormField label={t('ADMIN_NOTE', { defaultValue: 'یادداشت مدیر' })} fullWidth>
+                        <Textarea
                             id="adminNote"
                             name="adminNote"
                             value={formData.adminNote}
                             onChange={handleInputChange}
-                            placeholder={t("ADMIN_NOTE_PLACEHOLDER")}
-                            rows={3}
+                            placeholder={t('ADMIN_NOTE_PLACEHOLDER', { defaultValue: 'یادداشت اختیاری...' })}
+                            rows={2}
                             className="w-full"
-                            style={{ fontSize: '0.95rem', resize: 'vertical' }}
                         />
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</Dialog>
-                </div>
-            </div>
-        </div>
+                    </FormField>
+                </FormSection>
+            </FormSheet>
+        </>
     );
 };
+
+function hawalaStatusLabel(t: (key: string, options?: object) => string, status?: string) {
+    if (status === 'pending') return t('ORDER.STATUS.PENDING');
+    if (status === 'confirmed') return t('ORDER.STATUS.CONFIRMED');
+    if (status === 'rejected') return t('ORDER.STATUS.REJECTED');
+    if (status === 'under_process') return t('ORDER.STATUS.UNDER_PROCESS');
+    if (status === 'cancelled') return t('ORDER.STATUS.CANCELLED');
+    return t('ORDER.STATUS.UNKNOWN', { defaultValue: 'نامشخص' });
+}
+
+function hawalaStatusVariant(status?: string): 'warning' | 'success' | 'danger' | 'muted' | 'secondary' {
+    if (status === 'pending' || status === 'under_process') return 'warning';
+    if (status === 'confirmed') return 'success';
+    if (status === 'rejected') return 'danger';
+    if (status === 'cancelled') return 'muted';
+    return 'secondary';
+}
+
+function formatHawalaDateTime(dateString?: string | null) {
+    if (!dateString) return { date: '—', time: '—' };
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return { date: '—', time: '—' };
+    return {
+        date: date.toLocaleDateString('fa-IR', { year: 'numeric', month: 'short', day: 'numeric' }),
+        time: date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
+    };
+}
 
 export default withAuth(HawalaPage);

@@ -48,7 +48,11 @@ export const _fetchSingleProvider = (
         });
 
         const queryString = queryParams.toString();
-        const url = `${process.env.NEXT_PUBLIC_BASE_URL}/api-providers/${providerId}/${code}/${capability}${queryString ? `?${queryString}` : ''}`;
+        // ZoodPay plans use their own address. The shared provider/capability
+        // address belongs to INAX and the other providers, and stays unchanged.
+        const url = code === 'zoodpay'
+            ? `${process.env.NEXT_PUBLIC_BASE_URL}/zoodpay-providers/${providerId}/bundle-plans${company ? `?company=${encodeURIComponent(company)}` : ''}`
+            : `${process.env.NEXT_PUBLIC_BASE_URL}/api-providers/${providerId}/${code}/${capability}${queryString ? `?${queryString}` : ''}`;
 
         console.log("🌐 API URL:", url);
 
@@ -125,7 +129,7 @@ export const _fetchSingleProvider = (
                 products: productsData,
                 provider: response.data.data?.provider || response.data.provider,
                 internets: internetData,
-                rawInternets: code === "iimobile"
+                rawInternets: code === "iimobile" || code === "zoodpay"
                     ? response.data.data?.categories?.[0]?.bundles
                     : response.data.data?.raw?.internet || response.data.data?.internet || [],
                 rawBundles: response.data.data?.bundles || [],

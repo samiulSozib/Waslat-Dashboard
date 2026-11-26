@@ -1,7 +1,7 @@
-// utils/rtlUtils.ts
 import i18n from 'i18next';
+import { DEFAULT_LOCALE, isRtlLocale } from '@/lib/locale';
 
+/** Persian-first: unknown/empty language is treated as RTL */
 export const isRTL = () => {
-    return ["ar", "fa", "ps", "ar"].includes(i18n.language);
+    return isRtlLocale(i18n.language || DEFAULT_LOCALE);
 };
-

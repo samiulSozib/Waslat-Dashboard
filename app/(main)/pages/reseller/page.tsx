@@ -1,25 +1,16 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
-import { Button } from 'primereact/button';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
+import { Button as PrimeButton } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
-import { Dropdown, DropdownChangeEvent } from 'primereact/dropdown';
 import { _fetchCountries } from '@/app/redux/actions/countriesActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Country, Currency, District, Province, Reseller, ResellerGroup } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
 import { _addReseller, _changeResellerStatus, _deleteReseller, _editReseller, _fetchResellers, _getResellerById } from '@/app/redux/actions/resellerActions';
-import { FileUpload } from 'primereact/fileupload';
-import { Password } from 'primereact/password';
 import { _fetchDistricts } from '@/app/redux/actions/districtActions';
 import { _fetchProvinces } from '@/app/redux/actions/provinceActions';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
@@ -27,14 +18,41 @@ import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
 import { resellerGroupReducer } from '@/app/redux/reducers/resellerGroupReducer';
 import { _fetchResellerGroups } from '@/app/redux/actions/resellerGroupActions';
-import { InputSwitch } from 'primereact/inputswitch';
-import { SplitButton } from 'primereact/splitbutton';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Paginator } from 'primereact/paginator';
-import { customCellStyleImage } from '../../utilities/customRow';
-import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
 import { generateSubResellerExcelFile } from '../../utilities/generateExcel';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { FilterField, FILTER_SHEET_BODY_CLASS } from '@/components/admin/filter-field';
+import { RowActions } from '@/components/admin/row-actions';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { SearchSelect } from '@/components/admin/search-select';
+import { FileDrop } from '@/components/ui/file-drop';
+import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { cn } from '@/lib/utils';
+import { Check, Download, Eye, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+
+type ResellerFilters = {
+    filter_status: string | null;
+    filter_startdate: string | null;
+    filter_enddate: string | null;
+    filter_has_loan: string | null;
+};
+
+const emptyResellerFilters: ResellerFilters = {
+    filter_status: null,
+    filter_startdate: null,
+    filter_enddate: null,
+    filter_has_loan: null
+};
 
 const ResellerPage = () => {
     const emptyReseller: Reseller = {
@@ -97,11 +115,8 @@ const ResellerPage = () => {
     const [deleteResellersDialog, setDeleteResellersDialog] = useState(false);
     const [statusResellerDialog, setStatusResellerDialog] = useState(false);
     const [reseller, setReseller] = useState<Reseller>(emptyReseller);
-    const [selectedCompanies, setSelectedCompanies] = useState(null);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
-    const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { resellers, loading, pagination, singleReseller } = useSelector((state: any) => state.resellerReducer);
     const { countries } = useSelector((state: any) => state.countriesReducer);
@@ -111,18 +126,12 @@ const ResellerPage = () => {
     const { reseller_groups } = useSelector((state: any) => state.resellerGroupReducer);
     const { t } = useTranslation();
     const router = useRouter();
-    const [searchTag, setSearchTag] = useState('');
-    const [filterDialogVisible, setFilterDialogVisible] = useState(false);
-    const [filters, setFilters] = useState({
-        filter_status: null as string | null,
-        filter_startdate: null as string | null,
-        filter_enddate: null as string | null,
-        filter_has_loan: null as string | null // Add this line
-
-    });
-    const [activeFilters, setActiveFilters] = useState({});
+    const [searchInput, setSearchInput] = useState('');
+    const searchTag = useDebouncedValue(searchInput, 350);
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [draftFilters, setDraftFilters] = useState<ResellerFilters>(emptyResellerFilters);
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
     const [refreshing, setRefreshing] = useState(false);
-    const filterRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         dispatch(_fetchResellers(1, searchTag, activeFilters));
@@ -143,20 +152,6 @@ useEffect(() => {
         dispatch(_fetchResellerGroups());
     }
 }, [resellerDialog, dispatch]);
-
-    // Add this useEffect for click outside detection
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            if (target.closest('.p-dropdown-panel')) return;
-            if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
-                setFilterDialogVisible(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [filterDialogVisible]);
 
     useEffect(() => {
         //console.log(resellers)
@@ -323,416 +318,133 @@ useEffect(() => {
         //console.log(singleReseller)
     }, [dispatch, singleReseller]);
 
-    const leftToolbarTemplate = () => {
-        return (
-            <div className="flex flex-col sm:flex-row gap-2 w-full">
-                {/* Search Input - Full width on mobile, auto on desktop */}
-                <div className="flex-grow flex-1">
-                    <span className="p-input-icon-left w-full">
-                        <i className="pi pi-search" />
-                        <InputText
-                            type="search"
-                            onInput={(e) => setSearchTag(e.currentTarget.value)}
-                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                            className="w-full"
-                        />
-                    </span>
-                </div>
+    const resellerStatusLabel = (status: number) =>
+        status === 1 ? t('TABLE.GENERAL.ACTIVATE', { defaultValue: 'فعال' }) : t('TABLE.GENERAL.DEACTIVATE', { defaultValue: 'غیرفعال' });
 
-                {/* Export Button - Full width on mobile, auto on desktop */}
-                <Button
-                    label={window.innerWidth >= 640 ? t('EXPORT.EXPORT') : t('EXPORT.EXPORT')}
-
-                    icon="pi pi-file-excel"
-                    severity="success"
-                    onClick={exportToExcel}
-                    className="flex-1 w-full sm:w-auto"
-                />
-            </div>
-        );
-    };
-
-    const rightToolbarTemplate = () => {
-        return (
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                {/* Filter Button with Dropdown */}
-                <div className="flex-1 w-full sm:w-auto" ref={filterRef} style={{ position: 'relative' }}>
-                    <Button
-                        className={`p-button-info w-full sm:w-auto ${isRTL() ? 'rtl-button' : ''}`}
-                        label={window.innerWidth >= 640 ? t('FILTER') : t('FILTER')}
-
-                        icon="pi pi-filter"
-                        onClick={() => setFilterDialogVisible(!filterDialogVisible)}
-                    />
-                    {filterDialogVisible && (
-                        <div
-                            className="p-card p-fluid"
-                            style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: isRTL() ? 'auto' : 0,  // Changed this line
-                                right: isRTL() ? 0 : 'auto', // Changed this line
-                                width: '250px',
-                                zIndex: 1000,
-                                marginTop: '0.5rem',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                            }}
-                        >
-                            <div className="p-card-body" style={{ padding: '1rem' }}>
-                                {/* Filter dialog content remains the same */}
-                                <div className="grid">
-                                    <div className="col-12">
-                                        <label htmlFor="statusFilter" style={{ fontSize: '0.875rem' }}>
-                                            {t('PAYMENT.TABLE.COLUMN.STATUS')}
-                                        </label>
-                                        <Dropdown
-                                            id="statusFilter"
-                                            options={[
-                                                { label: t('TABLE.GENERAL.ACTIVATE'), value: '1' },
-                                                { label: t('TABLE.GENERAL.DEACTIVATE'), value: '0' }
-                                            ]}
-                                            value={filters.filter_status}
-                                            onChange={(e) => setFilters({ ...filters, filter_status: e.value })}
-                                            placeholder={t('SELECT_STATUS')}
-                                            style={{ width: '100%' }}
-                                        />
-                                    </div>
-                                    {/* <div className="col-12">
-                                        <label htmlFor="loanFilter" style={{ fontSize: '0.875rem' }}>
-                                            {t('RESELLER.TABLE.COLUMN.LOANAMOUNT')}
-                                        </label>
-                                        <Dropdown
-                                            id="loanFilter"
-                                            options={[
-                                                { label: t('HAS_LOAN'), value: '1' },
-                                                { label: t('NO_LOAN'), value: '0' }
-                                            ]}
-                                            value={filters.filter_has_loan}
-                                            onChange={(e) => setFilters({ ...filters, filter_has_loan: e.value })}
-                                            placeholder={t('SELECT_LOAN_STATUS')}
-                                            style={{ width: '100%' }}
-                                        />
-                                    </div> */}
-                                    <div className="col-12">
-                                        <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
-                                            {t('START_DATE')}
-                                        </label>
-                                        <InputText type="date" id="startDateFilter" value={filters.filter_startdate || ''} onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })} style={{ width: '100%' }} />
-                                    </div>
-                                    <div className="col-12">
-                                        <label htmlFor="endDateFilter" style={{ fontSize: '0.875rem' }}>
-                                            {t('END_DATE')}
-                                        </label>
-                                        <InputText type="date" id="endDateFilter" value={filters.filter_enddate || ''} onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })} style={{ width: '100%' }} />
-                                    </div>
-                                    <div className="col-12 mt-3 flex justify-content-between gap-2">
-                                        <Button
-                                            label={t('RESET')}
-                                            icon="pi pi-times"
-                                            className="p-button-secondary p-button-sm"
-                                            onClick={() => {
-                                                setFilters({
-                                                    filter_status: null,
-                                                    filter_startdate: null,
-                                                    filter_enddate: null,
-                                                    filter_has_loan: null
-                                                });
-                                            }}
-                                        />
-                                        <Button
-                                            label={t('APPLY')}
-                                            icon="pi pi-check"
-                                            className="p-button-sm"
-                                            onClick={() => {
-                                                handleSubmitFilter(filters);
-                                                setFilterDialogVisible(false);
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Create Reseller Button */}
-                <Button
-                    className={`flex-1 w-full sm:w-auto ${isRTL() ? 'rtl-button' : ''}`}
-                    label={window.innerWidth >= 640 ? t('ADD') : t('ADD')}
-
-                    icon="pi pi-plus"
-                    severity="success"
-                    onClick={openNew}
-                />
-            </div>
-        );
-    };
-
-    const nameBodyTemplate = (rowData: Reseller) => {
-        return (
-            <>
-                <span className="p-column-title">Name</span>
-                <div className="" style={{ display: 'flex', textAlign: 'center', alignItems: 'center', gap: '10px' }}>
-                    <img
-                        src={`${rowData.profile_image_url}`}
-                        alt={rowData.reseller_name}
-                        className="shadow-2"
-                        style={{
-                            padding: '2px',
-                            width: '45px',
-                            height: '45px',
-                            borderRadius: '50%', // Makes the image circular
-                            objectFit: 'cover' // Ensures the image is cropped correctly within the circle
-                        }}
-                    />
-                    <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'start' }}>
-                        <span style={{ fontWeight: 'bold' }}>{rowData.email}</span>
-                        {rowData.reseller_name}
-                    </div>
-                </div>
-            </>
-        );
-    };
-
-    const parentNameBodyTemplate = (rowData: Reseller) => {
-        if (!rowData.parent_reseller_name && !rowData.parent_reseller_profile_image_url) {
-            return null; // or return <></> if you prefer
-        }
-
-        return (
-            <>
-                <span className="p-column-title">Name</span>
-                <div
-                    style={{
-                        display: 'flex',
-                        textAlign: 'center',
-                        alignItems: 'center',
-                        gap: '10px'
-                    }}
-                >
-                    <img
-                        src={`${rowData.parent_reseller_profile_image_url}`}
-                        alt={rowData.parent_reseller_name || ''}
-                        className="shadow-2"
-                        style={{
-                            padding: '2px',
-                            width: '45px',
-                            height: '45px',
-                            borderRadius: '50%',
-                            objectFit: 'cover'
-                        }}
-                    />
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            textAlign: 'start'
-                        }}
-                    >
-                        <span style={{ fontWeight: 'bold' }}>{rowData.parent_reseller_name}</span>
-                    </div>
-                </div>
-            </>
-        );
-    };
-
-    const phoneBodyTemplate = (rowData: Reseller) => {
-        return (
-            <>
-                <span className="p-column-title">Phone</span>
-                {rowData.phone}
-            </>
-        );
-    };
-
-    const balanceBodyTemplate = (rowData: Reseller) => {
-        return (
-            <>
-                <span className="p-column-title">Balance</span>
-                <span style={{ color: 'green' }}>{rowData.balance}</span>
-            </>
-        );
-    };
-
-    const totalPaymentBodyTemplate = (rowData: Reseller) => {
-        return (
-            <>
-                <span className="p-column-title">Total Payment</span>
-                {rowData.total_payments_received}
-            </>
-        );
-    };
-
-    const totalBalanceSentBodyTemplate = (rowData: Reseller) => {
-        return (
-            <>
-                <span className="p-column-title">Total Balance Sent</span>
-                {rowData.total_balance_sent}
-            </>
-        );
-    };
-
-    const totalEarningBalanceBodyTemplate = (rowData: Reseller) => {
-        return (
-            <>
-                <span className="p-column-title">Total Earning Balance</span>
-                {rowData.total_earning_balance}
-            </>
-        );
-    };
-
-    const availablePaymentBodyTemplate = (rowData: Reseller) => {
+    const getAvailablePayment = (rowData: Reseller) => {
         const totalPayments = Number(rowData?.total_payments_received) || 0;
         const totalBalance = Number(rowData?.total_balance_sent) || 0;
-        const availablePaymentAmount = totalPayments - totalBalance;
-
-        return (
-            <>
-                <span className="p-column-title">Available Payment</span>
-                {availablePaymentAmount > 0 ? availablePaymentAmount : 0}
-            </>
-        );
+        const amount = totalPayments - totalBalance;
+        return amount > 0 ? amount : 0;
     };
 
-    const loanAmountBodyTemplate = (rowData: Reseller) => {
+    const getLoanAmount = (rowData: Reseller) => {
         const total_payments_received = Number(rowData.total_payments_received);
         const total_balance_sent = Number(rowData.total_balance_sent);
         const loanAmount = total_balance_sent - total_payments_received;
-        return (
-            <>
-                <span className="p-column-title">Loan Amount</span>
-                <span style={{ color: 'red' }}>{loanAmount > 0 ? loanAmount : 0}</span>
-            </>
-        );
+        return loanAmount > 0 ? loanAmount : 0;
     };
 
-    const preferredCurrencyBodyTemplate = (rowData: Reseller) => {
+    const getPreferredCurrency = (rowData: Reseller) => {
         const currency = typeof rowData.code === 'object' && rowData.code !== null ? rowData.code.code : rowData.code;
-
-        return (
-            <>
-                <span className="p-column-title">Preferred Currency</span>
-                {currency || '-'}
-            </>
-        );
+        return currency || '—';
     };
 
-    const countryBodyTemplate = (rowData: Reseller) => {
-        return (
-            <>
-                <span className="p-column-title">Country</span>
-                {rowData.country}
-            </>
-        );
+    const resellerRowActions = (rowData: Reseller) => [
+        {
+            label: t('TABLE.GENERAL.EDIT'),
+            icon: <Pencil className="h-4 w-4" />,
+            onClick: () => editReseller(rowData)
+        },
+        {
+            label: t('VIEW_DETAILS'),
+            icon: <Eye className="h-4 w-4" />,
+            onClick: () => viewResellerDetails(rowData.id)
+        },
+        {
+            label: t('ACTIVATE'),
+            icon: <Check className="h-4 w-4" />,
+            onClick: () => confirmChangeStatus(rowData),
+            hidden: rowData.status !== 0
+        },
+        {
+            label: t('DEACTIVATE'),
+            icon: <X className="h-4 w-4" />,
+            onClick: () => confirmChangeStatus(rowData),
+            hidden: rowData.status !== 1
+        },
+        {
+            label: t('TABLE.GENERAL.DELETE'),
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => confirmDeleteReseller(rowData),
+            danger: true,
+            separatorBefore: true
+        }
+    ];
+
+    const handleSubmitFilter = (filters: ResellerFilters | Record<string, string | null>) => {
+        const cleanedFilters = Object.fromEntries(
+            Object.entries(filters).filter(([_, value]) => value !== null && value !== '')
+        ) as Record<string, string>;
+        setActiveFilters(cleanedFilters);
     };
 
-    const statusBodyTemplate = (rowData: Reseller) => {
-        // Define the text and background color based on the status value
-        const getStatusText = (status: string) => {
-            return status == '1' ? 'Active' : 'Deactivated';
-        };
+    const filterChips = useMemo(() => {
+        const list: { key: string; label: string }[] = [];
+        if (activeFilters.filter_status) {
+            list.push({
+                key: 'filter_status',
+                label: `وضعیت: ${activeFilters.filter_status === '1' ? t('TABLE.GENERAL.ACTIVATE', { defaultValue: 'فعال' }) : t('TABLE.GENERAL.DEACTIVATE', { defaultValue: 'غیرفعال' })}`
+            });
+        }
+        if (activeFilters.filter_startdate) list.push({ key: 'filter_startdate', label: `از: ${activeFilters.filter_startdate}` });
+        if (activeFilters.filter_enddate) list.push({ key: 'filter_enddate', label: `تا: ${activeFilters.filter_enddate}` });
+        if (activeFilters.filter_has_loan) {
+            list.push({ key: 'filter_has_loan', label: `وام: ${activeFilters.filter_has_loan}` });
+        }
+        return list;
+    }, [activeFilters, t]);
 
-        const getStatusClasses = (status: number) => {
-            return status == 1 ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
-        };
-
-        return (
-            <>
-                <span className="p-column-title">Status</span>
-                <span style={{ borderRadius: '5px' }} className={`inline-block px-2 py-1 rounded text-sm font-semibold ${getStatusClasses(rowData.status)}`}>
-                    {getStatusText(rowData.status.toString())}
-                </span>
-            </>
-        );
+    const applyFilters = () => {
+        handleSubmitFilter(draftFilters);
+        setFilterOpen(false);
     };
 
-    const actionBodyTemplate = (rowData: Reseller) => {
-        // Define the dropdown actions
-        const items = [
-            {
-                label: t('TABLE.GENERAL.EDIT'),
-                icon: 'pi pi-pencil',
-                command: () => editReseller(rowData)
-                //disabled: menuType === 'guest', // Example condition
-            },
-            {
-                label: t('TABLE.GENERAL.DELETE'),
-                icon: 'pi pi-trash',
-                command: () => confirmDeleteReseller(rowData)
-                //disabled: menuType !== 'admin', // Example condition
-            },
-            {
-                label: t('ACTIVATE'),
-                icon: 'pi pi-check',
-                command: () => confirmChangeStatus(rowData),
-                visible: rowData.status == 0 // Disable if already active
-            },
-            {
-                label: t('DEACTIVATE'),
-                icon: 'pi pi-times',
-                command: () => confirmChangeStatus(rowData),
-                visible: rowData.status == 1 // Disable if already inactive
-            },
-            {
-                label: t('VIEW_DETAILS'),
-                icon: 'pi pi-info-circle',
-                command: () => viewResellerDetails(rowData.id)
-            }
-        ];
-
-        return (
-            <SplitButton
-                style={{ fontSize: '8px' }}
-                label=""
-                icon="pi pi-cog"
-                model={items}
-                className="p-button-rounded"
-                severity="info" // Optional: change severity or style
-                dir="ltr"
-            />
-        );
+    const clearAllFilters = () => {
+        setDraftFilters(emptyResellerFilters);
+        setActiveFilters({});
+        setFilterOpen(false);
     };
 
-    // const header = (
-    //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-    //         <h5 className="m-0">Manage Products</h5>
-    //         <span className="block mt-2 md:mt-0 p-input-icon-left">
-    //             <i className="pi pi-search" />
-    //             <InputText type="search" onInput={(e) => setGlobalFilter(e.currentTarget.value)} placeholder="Search..." />
-    //         </span>
-    //     </div>
-    // );
+    const removeFilterChip = (key: string) => {
+        const nextDraft = { ...draftFilters, [key]: null } as ResellerFilters;
+        setDraftFilters(nextDraft);
+        handleSubmitFilter(nextDraft);
+    };
 
-    const resellerDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveReseller} />
-        </>
-    );
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await dispatch(_fetchResellers(pagination?.page || 1, searchTag, activeFilters) as any);
+        setRefreshing(false);
+    };
+
+    const isResellerEdit = Boolean(reseller.id && reseller.id !== 0);
+
     const deleteResellerDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteResellerDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={deleteReseller} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteResellerDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={deleteReseller} />
         </>
     );
 
     const statusResellerDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideStatusResellerDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={changeResellerStatus} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideStatusResellerDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={changeResellerStatus} />
         </>
     );
     const deleteResellersDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteResellersDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteResellersDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
         </>
     );
 
-    const onPageChange = (event: any) => {
-        const page = event.page + 1;
+    const onPageChange = (page: number) => {
         dispatch(_fetchResellers(page, searchTag, activeFilters));
     };
+
+    const totalPages = Math.max(1, Math.ceil((pagination?.total || 0) / (pagination?.items_per_page || 20)));
 
     useEffect(() => {
         if (resellerDialog) {
@@ -771,11 +483,6 @@ useEffect(() => {
 
 
 
-    const handleSubmitFilter = (filters: any) => {
-        const cleanedFilters = Object.fromEntries(Object.entries(filters).filter(([_, value]) => value !== null && value !== ''));
-        setActiveFilters(cleanedFilters);
-    };
-
     const exportToExcel = async () => {
         await generateSubResellerExcelFile({
             t,
@@ -785,902 +492,684 @@ useEffect(() => {
     };
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
+        <div className="space-y-4">
+            <Toast ref={toast} />
 
-                    <DataTable
-                        ref={dt}
-                        value={resellers}
-                        selection={selectedCompanies}
-                        onRowClick={(e) => viewResellerDetails(e.data.id)}
-                        dataKey="id"
-                        paginator={false} // Disable PrimeReact's built-in paginator
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        className="datatable-responsive"
-                        paginatorTemplate={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        globalFilter={globalFilter}
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        // header={header}
-
-                        responsiveLayout="scroll"
-                    >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
-                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ width: '5rem' }}></Column>
-                        <Column
-                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="name"
-                            header={t('RESELLER.TABLE.COLUMN.RESELLERNAME')}
-
-                            body={nameBodyTemplate}
-                        ></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="phone" header={t('RESELLER.TABLE.COLUMN.PHONE')} body={phoneBodyTemplate}></Column>
-                        <Column
-                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="total_earning_balance"
-                            header={t('TOTAL_EARNING_BALANCE')}
-                            body={totalEarningBalanceBodyTemplate}
-                            headerStyle={{ whiteSpace: 'nowrap' }}
-                        ></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="balance" header={t('MENU.BALANCE')} body={balanceBodyTemplate}></Column>
-                        <Column
-                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="available_payment"
-                            header={t('RESELLER.TABLE.COLUMN.AVAILABLEPAYMENT')}
-                            body={availablePaymentBodyTemplate}
-                            headerStyle={{ whiteSpace: 'nowrap' }}
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="total_payment"
-                            header={t('RESELLER.TABLE.COLUMN.PAYMENT')}
-                            body={totalPaymentBodyTemplate}
-                            headerStyle={{ whiteSpace: 'nowrap' }}
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="total_balance"
-                            header={t('RESELLER.TABLE.COLUMN.TOTAL_BALANCE')}
-                            body={totalBalanceSentBodyTemplate}
-                            headerStyle={{ whiteSpace: 'nowrap' }}
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="loan_amount"
-                            header={t('RESELLER.TABLE.COLUMN.LOANAMOUNT')}
-                            body={loanAmountBodyTemplate}
-                            headerStyle={{ whiteSpace: 'nowrap' }}
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="preferred_currency"
-                            header={t('MENU.CURRENCY')}
-                            body={preferredCurrencyBodyTemplate}
-
-                        ></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="name" header={t('PARENT_RESELLER_NAME')} body={parentNameBodyTemplate} headerStyle={{ whiteSpace: 'nowrap' }}></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="country" header={t('RESELLER.TABLE.COLUMN.COUNTRY')} body={countryBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="status" header={t('BUNDLE.TABLE.FILTER.STATUS')} body={statusBodyTemplate}></Column>
-                    </DataTable>
-                    <Paginator
-                        first={(pagination?.page - 1) * pagination?.items_per_page}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        onPageChange={(e) => onPageChange(e)}
-                        template={
-                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        firstPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-right"
-                                : "pi pi-angle-double-left"
-                        }
-                        lastPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-left"
-                                : "pi pi-angle-double-right"
-                        }
-                    />
-
-                    <Dialog
-                        visible={resellerDialog}
-                        style={{
-                            width: '95vw', // Responsive width
-                            maxWidth: '900px' // Max desktop size
+            <ListPage
+                title={t('MENU.RESELLER', { defaultValue: 'فروشندگان' })}
+                description="مدیریت فروشندگان، موجودی و دسترسی‌ها"
+                loading={loading}
+                actions={
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-4 w-4', (refreshing || loading) && 'animate-spin')} />
+                            {t('REFRESH', { defaultValue: 'بروزرسانی' })}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={exportToExcel}>
+                            <Download className="h-4 w-4" />
+                            {t('EXPORT.EXPORT', { defaultValue: 'خروجی اکسل' })}
+                        </Button>
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={openNew}>
+                            <Plus className="h-4 w-4" />
+                            {t('ADD', { defaultValue: 'افزودن' })}
+                        </Button>
+                    </div>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو در فروشندگان...' })}
+                        chips={filterChips}
+                        onRemoveChip={removeFilterChip}
+                        onClearAll={clearAllFilters}
+                        onOpenFilters={() => {
+                            setDraftFilters({
+                                filter_status: activeFilters.filter_status ?? null,
+                                filter_startdate: activeFilters.filter_startdate ?? null,
+                                filter_enddate: activeFilters.filter_enddate ?? null,
+                                filter_has_loan: activeFilters.filter_has_loan ?? null
+                            });
+                            setFilterOpen(true);
                         }}
-                        header={t('RESELLER.DETAILS')}
-                        modal
-                        className="p-fluid"
-                        footer={resellerDialogFooter}
-                        onHide={hideDialog}
+                    />
+                }
+                footer={
+                    <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-xs text-muted-foreground">
+                            صفحه {pagination?.page || 1} از {totalPages} · مجموع {pagination?.total || 0}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" disabled={(pagination?.page || 1) <= 1} onClick={() => onPageChange((pagination?.page || 1) - 1)}>
+                                قبلی
+                            </Button>
+                            <Button variant="outline" size="sm" disabled={(pagination?.page || 1) >= totalPages} onClick={() => onPageChange((pagination?.page || 1) + 1)}>
+                                بعدی
+                            </Button>
+                        </div>
+                    </div>
+                }
+            >
+                <table className="w-full min-w-[1200px] border-collapse text-sm">
+                    <thead>
+                        <tr className="border-b border-border bg-muted/40 text-start">
+                            <th className="w-12 whitespace-nowrap px-2 py-2 font-semibold">عملیات</th>
+                            <th className="min-w-[14rem] whitespace-nowrap px-2 py-2 font-semibold">{t('RESELLER.TABLE.COLUMN.RESELLERNAME')}</th>
+                            <th className="whitespace-nowrap px-2 py-2 font-semibold">{t('RESELLER.TABLE.COLUMN.PHONE')}</th>
+                            <th className="whitespace-nowrap px-2 py-2 font-semibold">{t('TOTAL_EARNING_BALANCE')}</th>
+                            <th className="whitespace-nowrap px-2 py-2 font-semibold">{t('MENU.BALANCE')}</th>
+                            <th className="whitespace-nowrap px-2 py-2 font-semibold">{t('RESELLER.TABLE.COLUMN.AVAILABLEPAYMENT')}</th>
+                            <th className="whitespace-nowrap px-2 py-2 font-semibold">{t('RESELLER.TABLE.COLUMN.PAYMENT')}</th>
+                            <th className="whitespace-nowrap px-2 py-2 font-semibold">{t('RESELLER.TABLE.COLUMN.TOTAL_BALANCE')}</th>
+                            <th className="whitespace-nowrap px-2 py-2 font-semibold">{t('RESELLER.TABLE.COLUMN.LOANAMOUNT')}</th>
+                            <th className="whitespace-nowrap px-2 py-2 font-semibold">{t('MENU.CURRENCY')}</th>
+                            <th className="min-w-[10rem] whitespace-nowrap px-2 py-2 font-semibold">{t('PARENT_RESELLER_NAME')}</th>
+                            <th className="whitespace-nowrap px-2 py-2 font-semibold">{t('RESELLER.TABLE.COLUMN.COUNTRY')}</th>
+                            <th className="whitespace-nowrap px-2 py-2 font-semibold">{t('BUNDLE.TABLE.FILTER.STATUS')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {(resellers || []).length === 0 ? (
+                            <tr>
+                                <td colSpan={13} className="px-3 py-16 text-center text-muted-foreground">
+                                    {t('DATA_TABLE.TABLE.NO_DATA', { defaultValue: 'داده‌ای یافت نشد' })}
+                                </td>
+                            </tr>
+                        ) : (
+                            (resellers || []).map((row: Reseller) => (
+                                <tr
+                                    key={row.id}
+                                    className="cursor-pointer border-b border-border/70 transition-colors hover:bg-emerald-50/50"
+                                    onClick={() => viewResellerDetails(row.id)}
+                                >
+                                    <td className="px-2 py-1.5 align-middle" onClick={(e) => e.stopPropagation()}>
+                                        <RowActions items={resellerRowActions(row)} />
+                                    </td>
+                                    <td className="px-2 py-1.5 align-middle">
+                                        <div className="flex items-center gap-2 text-start">
+                                            <img
+                                                src={`${row.profile_image_url}`}
+                                                alt={row.reseller_name}
+                                                className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-border"
+                                            />
+                                            <div className="min-w-0">
+                                                <div className="truncate text-xs font-semibold text-foreground">{row.email}</div>
+                                                <div className="truncate text-muted-foreground">{row.reseller_name}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-2 py-1.5 align-middle tabular-nums">{row.phone}</td>
+                                    <td className="px-2 py-1.5 align-middle tabular-nums">{row.total_earning_balance}</td>
+                                    <td className="px-2 py-1.5 align-middle tabular-nums text-emerald-700">{row.balance}</td>
+                                    <td className="px-2 py-1.5 align-middle tabular-nums">{getAvailablePayment(row)}</td>
+                                    <td className="px-2 py-1.5 align-middle tabular-nums">{row.total_payments_received}</td>
+                                    <td className="px-2 py-1.5 align-middle tabular-nums">{row.total_balance_sent}</td>
+                                    <td className="px-2 py-1.5 align-middle tabular-nums text-destructive">{getLoanAmount(row)}</td>
+                                    <td className="px-2 py-1.5 align-middle">{getPreferredCurrency(row)}</td>
+                                    <td className="px-2 py-1.5 align-middle">
+                                        {row.parent_reseller_name || row.parent_reseller_profile_image_url ? (
+                                            <div className="flex items-center gap-2 text-start">
+                                                {row.parent_reseller_profile_image_url ? (
+                                                    <img
+                                                        src={`${row.parent_reseller_profile_image_url}`}
+                                                        alt={row.parent_reseller_name || ''}
+                                                        className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-border"
+                                                    />
+                                                ) : null}
+                                                <span className="truncate text-xs font-medium">{row.parent_reseller_name}</span>
+                                            </div>
+                                        ) : (
+                                            '—'
+                                        )}
+                                    </td>
+                                    <td className="px-2 py-1.5 align-middle text-start">{row.country}</td>
+                                    <td className="px-2 py-1.5 align-middle">
+                                        <Badge variant={row.status === 1 ? 'success' : 'danger'}>{resellerStatusLabel(row.status)}</Badge>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </ListPage>
+
+            <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                <SheetContent side="left" className="w-full sm:max-w-md">
+                    <SheetHeader>
+                        <SheetTitle>{t('FILTER', { defaultValue: 'فیلتر فروشندگان' })}</SheetTitle>
+                        <SheetDescription>فیلترها روی نتایج سرور اعمال می‌شوند.</SheetDescription>
+                    </SheetHeader>
+                    <div className={FILTER_SHEET_BODY_CLASS}>
+                        <FilterField label={t('PAYMENT.TABLE.COLUMN.STATUS', { defaultValue: 'وضعیت' })}>
+                            <Select
+                                value={draftFilters.filter_status ?? undefined}
+                                onValueChange={(v) => setDraftFilters((p) => ({ ...p, filter_status: v }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_STATUS', { defaultValue: 'انتخاب وضعیت' })} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="1">{t('TABLE.GENERAL.ACTIVATE', { defaultValue: 'فعال' })}</SelectItem>
+                                    <SelectItem value="0">{t('TABLE.GENERAL.DEACTIVATE', { defaultValue: 'غیرفعال' })}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+                        <FilterField label={t('START_DATE', { defaultValue: 'تاریخ شروع' })}>
+                            <Input
+                                type="date"
+                                value={draftFilters.filter_startdate || ''}
+                                onChange={(e) => setDraftFilters((p) => ({ ...p, filter_startdate: e.target.value || null }))}
+                            />
+                        </FilterField>
+                        <FilterField label={t('END_DATE', { defaultValue: 'تاریخ پایان' })}>
+                            <Input
+                                type="date"
+                                value={draftFilters.filter_enddate || ''}
+                                onChange={(e) => setDraftFilters((p) => ({ ...p, filter_enddate: e.target.value || null }))}
+                            />
+                        </FilterField>
+                        <div className="flex gap-2 pt-2">
+                            <Button type="button" variant="outline" className="flex-1" onClick={() => setDraftFilters(emptyResellerFilters)}>
+                                {t('RESET', { defaultValue: 'بازنشانی' })}
+                            </Button>
+                            <Button type="button" className="flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={applyFilters}>
+                                {t('APPLY', { defaultValue: 'اعمال' })}
+                            </Button>
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            <FormSheet
+                open={resellerDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                size="full"
+                side="left"
+                title={isResellerEdit ? 'ویرایش نماینده' : 'افزودن نماینده'}
+                description={
+                    isResellerEdit
+                        ? 'ویرایش هویت، حساب، موقعیت، تنظیمات مالی و دسترسی‌ها'
+                        : 'ثبت فروشنده جدید — تمام فیلدهای الزامی را تکمیل کنید'
+                }
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveReseller}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection title="تصویر و هویت" description="تصویر پروفایل و نام‌های نمایشی">
+                    <FormField label={t('RESELLER.FORM.INPUT.RESELLERNAME')} required error={submitted && !reseller.reseller_name ? t('THIS_FIELD_IS_REQUIRED') : null}>
+                        <Input
+                            id="reseller_name"
+                            value={reseller?.reseller_name}
+                            onChange={(e) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    reseller_name: e.target.value
+                                }))
+                            }
+                            required
+                            autoFocus
+                            placeholder={t('RESELLER.FORM.PLACEHOLDER.RESELLERNAME')}
+                            className={cn('w-full', submitted && !reseller.reseller_name && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('RESELLER.FORM.INPUT.CONTACTNAME')}
+                        required
+                        error={submitted && !reseller.contact_name ? t('THIS_FIELD_IS_REQUIRED') : null}
                     >
-                        <div className="card" style={{ padding: '5px' }}>
-                            {reseller.profile_image_url && (
-                                <img
-                                    src={
-                                        reseller.profile_image_url instanceof File
-                                            ? URL.createObjectURL(reseller.profile_image_url) // Temporary preview for file
-                                            : reseller.profile_image_url // Direct URL for existing logo
-                                    }
-                                    alt="Uploaded Preview"
-                                    width="150"
-                                    className="mt-0 mx-auto mb-5 block shadow-2"
-                                />
-                            )}
-                            <FileUpload
-                                mode="basic"
-                                name="company_logo"
-                                accept="image/*"
-                                customUpload
-                                onSelect={(e) =>
+                        <Input
+                            id="contact_name"
+                            value={reseller.contact_name || ''}
+                            onChange={(e) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    contact_name: e.target.value
+                                }))
+                            }
+                            placeholder={t('RESELLER.FORM.PLACEHOLDER.CONTACTNAME')}
+                            className={cn('w-full', submitted && !reseller.contact_name && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField label="تصویر پروفایل" fullWidth>
+                        <FileDrop
+                            value={reseller.profile_image_url instanceof File ? reseller.profile_image_url : null}
+                            previewUrl={
+                                typeof reseller.profile_image_url === 'string' && reseller.profile_image_url
+                                    ? reseller.profile_image_url
+                                    : null
+                            }
+                            onChange={(file) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    profile_image_url:
+                                        file ?? (prev.profile_image_url instanceof File ? '' : prev.profile_image_url)
+                                }))
+                            }
+                            accept="image/*"
+                            label="تصویر پروفایل"
+                        />
+                    </FormField>
+                </FormSection>
+
+                <FormSection title="حساب کاربری" description="ایمیل، تلفن و رمز عبور (فقط هنگام ایجاد)">
+                    <FormField label={t('RESELLER.FORM.INPUT.EMAIL')} required error={submitted && !reseller.email ? t('THIS_FIELD_IS_REQUIRED') : null}>
+                        <Input
+                            id="email"
+                            type="email"
+                            value={reseller?.email}
+                            onChange={(e) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    email: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('RESELLER.FORM.PLACEHOLDER.EMAIL')}
+                            className={cn('w-full', submitted && !reseller.email && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField label={t('RESELLER.FORM.INPUT.PHONE')} required error={submitted && !reseller.phone ? t('THIS_FIELD_IS_REQUIRED') : null}>
+                        <Input
+                            id="phone"
+                            value={reseller.phone || ''}
+                            onChange={(e) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    phone: e.target.value
+                                }))
+                            }
+                            placeholder={t('RESELLER.FORM.PLACEHOLDER.PHONE')}
+                            className={cn('w-full', submitted && !reseller.phone && 'border-rose-300')}
+                        />
+                    </FormField>
+                    {reseller.id === 0 ? (
+                        <FormField
+                            label={t('PASSWORD', { defaultValue: 'رمز عبور' })}
+                            required
+                            fullWidth
+                            error={submitted && !reseller.account_password ? t('THIS_FIELD_IS_REQUIRED') : null}
+                        >
+                            <PasswordInput
+                                id="account_password"
+                                value={reseller?.account_password}
+                                onChange={(e) =>
                                     setReseller((prev: Reseller) => ({
                                         ...prev,
-                                        profile_image_url: e.files[0]
+                                        account_password: e.target.value
                                     }))
                                 }
-                                style={{ textAlign: 'center', marginBottom: '10px' }}
+                                required
+                                autoComplete="new-password"
+                                className={cn('w-full', submitted && !reseller.account_password && 'border-rose-300')}
                             />
-                            <div className="formgrid grid">
-                                <div className="field col">
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="name">
-                                        {t('RESELLER.FORM.INPUT.RESELLERNAME')}
-                                    </label>
-                                    <InputText
-                                        id="reseller_name"
-                                        value={reseller?.reseller_name}
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                reseller_name: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        placeholder={t('RESELLER.FORM.PLACEHOLDER.RESELLERNAME')}
-                                        style={{ fontSize: '0.8rem', height: '40px' }}
-                                        className={classNames({
-                                            'p-invalid': submitted && !reseller.reseller_name
-                                        })}
-                                    />
-                                    {submitted && !reseller.reseller_name && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
+                        </FormField>
+                    ) : null}
+                </FormSection>
 
-                                <div className="field col">
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="name">
-                                        {t('RESELLER.FORM.INPUT.CONTACTNAME')}
-                                    </label>
-                                    <InputText
-                                        id="contact_name"
-                                        value={reseller.contact_name || ''}
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                contact_name: e.target.value
-                                            }))
-                                        }
-                                        placeholder={t('RESELLER.FORM.PLACEHOLDER.CONTACTNAME')}
-                                        style={{ fontSize: '0.8rem', height: '40px' }}
-                                        className={classNames({
-                                            'p-invalid': submitted && !reseller.contact_name
-                                        })}
-                                    />
-                                </div>
-                            </div>
+                <FormSection title="موقعیت" description="کشور، ولایت و ناحیه">
+                    <FormField label={t('RESELLER.FORM.INPUT.COUNTRY')} required error={submitted && !reseller.country_id ? t('THIS_FIELD_IS_REQUIRED') : null}>
+                        <SearchSelect
+                            value={(countries || []).find((country: Country) => country.id === reseller.country_id) || null}
+                            options={countries || []}
+                            onChange={(selected: Country | null) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    country_id: selected?.id ?? 0,
+                                    country: selected?.country_name || ''
+                                }))
+                            }
+                            optionLabel="country_name"
+                            optionValue="id"
+                            placeholder={t('RESELLER.FORM.PLACEHOLDER.COUNTRY', { defaultValue: 'انتخاب کشور' })}
+                            error={submitted && !reseller.country_id}
+                            returnFullObject
+                        />
+                    </FormField>
+                    <FormField label={t('RESELLER.FORM.INPUT.PROVINCE')} required error={submitted && !reseller.province_id ? t('THIS_FIELD_IS_REQUIRED') : null}>
+                        <SearchSelect
+                            value={(provinces || []).find((province: Province) => province.id === reseller.province_id) || null}
+                            options={provinces || []}
+                            onChange={(selected: Province | null) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    province_id: selected?.id ?? 0
+                                }))
+                            }
+                            optionLabel="province_name"
+                            optionValue="id"
+                            searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                            placeholder={t('RESELLER.FORM.PLACEHOLDER.PROVINCE', { defaultValue: 'انتخاب ولایت' })}
+                            error={submitted && !reseller.province_id}
+                            returnFullObject
+                        />
+                    </FormField>
+                    <FormField label={t('RESELLER.FORM.INPUT.DISTRICT')} required error={submitted && !reseller.districts_id ? t('THIS_FIELD_IS_REQUIRED') : null}>
+                        <SearchSelect
+                            value={(districts || []).find((district: District) => district.id === reseller.districts_id) || null}
+                            options={districts || []}
+                            onChange={(selected: District | null) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    districts_id: selected?.id ?? 0
+                                }))
+                            }
+                            optionLabel="district_name"
+                            optionValue="id"
+                            searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                            placeholder={t('RESELLER.FORM.PLACEHOLDER.DISTRICT', { defaultValue: 'انتخاب ناحیه' })}
+                            error={submitted && !reseller.districts_id}
+                            returnFullObject
+                        />
+                    </FormField>
+                </FormSection>
 
-                            <div className="formgrid grid">
-                                <div className="field col">
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="name">
-                                        {t('RESELLER.FORM.INPUT.EMAIL')}
-                                    </label>
-                                    <InputText
-                                        id="email"
-                                        value={reseller?.email}
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                email: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        placeholder={t('RESELLER.FORM.PLACEHOLDER.EMAIL')}
-                                        style={{ fontSize: '0.8rem', height: '40px' }}
-                                        className={classNames({
-                                            'p-invalid': submitted && !reseller.email
-                                        })}
-                                    />
-                                    {submitted && !reseller.email && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
+                <FormSection title="تنظیمات مالی" description="ارز، گروه، سقف زیرفروشنده و وام">
+                    <FormField label={t('RESELLER.FORM.INPUT.CURRENCYPREFERENCE')} required error={submitted && !reseller.code ? t('THIS_FIELD_IS_REQUIRED') : null}>
+                        <SearchSelect
+                            value={(currencies || []).find((currency: Currency) => currency.code === reseller.code) || null}
+                            options={currencies || []}
+                            onChange={(selected: Currency | null) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    code: selected?.code ?? null
+                                }))
+                            }
+                            optionLabel="code"
+                            placeholder={t('RESELLER.FORM.PLACEHOLDER.CURRENCY')}
+                            disabled={!!reseller.id && reseller.id !== 0}
+                            error={submitted && !reseller.code}
+                            returnFullObject
+                        />
+                    </FormField>
+                    <FormField label={t('RESELLER.FORM.LABEL.RESELLERGROUP')}>
+                        <SearchSelect
+                            value={
+                                (reseller_groups || []).find((group: ResellerGroup) => group.id === reseller.reseller_group_id) ||
+                                null
+                            }
+                            options={reseller_groups || []}
+                            onChange={(selected: ResellerGroup | null) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    reseller_group_id: selected?.id ?? 0
+                                }))
+                            }
+                            optionLabel="name"
+                            optionValue="id"
+                            placeholder={t('RESELLER.FORM.PLACEHOLDER.RESELLERGROUP', { defaultValue: 'انتخاب گروه' })}
+                            returnFullObject
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('RESELLER.FORM.LABEL.SUBRESELLERLIMIT')}
+                        required
+                        error={submitted && !reseller.sub_reseller_limit ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <NumberInput
+                            id="sub_reseller_limit"
+                            value={
+                                typeof reseller.sub_reseller_limit === 'number'
+                                    ? reseller.sub_reseller_limit
+                                    : Number(reseller.sub_reseller_limit) || null
+                            }
+                            onValueChange={(v) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    sub_reseller_limit: v ?? 0
+                                }))
+                            }
+                            min={0}
+                            placeholder={t('RESELLER.FORM.PLACEHOLDER.SUBRESELLERLIMIT', { defaultValue: 'سقف زیرفروشنده' })}
+                            className={cn('w-full', submitted && !reseller.sub_reseller_limit && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField label={t('RESELLER.FORM.PLACEHOLDER.MAX_LOAN_BALANCE_REQUEST_AMOUNT')}>
+                        <NumberInput
+                            id="max_loan_balance_request_amount"
+                            value={
+                                typeof reseller.max_loan_balance_request_amount === 'number'
+                                    ? reseller.max_loan_balance_request_amount
+                                    : Number(reseller.max_loan_balance_request_amount) || null
+                            }
+                            onValueChange={(v) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    max_loan_balance_request_amount: v ?? 0
+                                }))
+                            }
+                            min={0}
+                            placeholder={t('RESELLER.FORM.PLACEHOLDER.MAX_LOAN_BALANCE_REQUEST_AMOUNT')}
+                            className="w-full"
+                        />
+                    </FormField>
+                    <FormField label={t('RESELLER.FORM.PLACEHOLDER.MIN_LOAN_BALANCE_REQUEST_AMOUNT')}>
+                        <NumberInput
+                            id="min_loan_balance_request_amount"
+                            value={
+                                typeof reseller.min_loan_balance_request_amount === 'number'
+                                    ? reseller.min_loan_balance_request_amount
+                                    : Number(reseller.min_loan_balance_request_amount) || null
+                            }
+                            onValueChange={(v) =>
+                                setReseller((prev: Reseller) => ({
+                                    ...prev,
+                                    min_loan_balance_request_amount: v ?? 0
+                                }))
+                            }
+                            min={0}
+                            placeholder={t('RESELLER.FORM.PLACEHOLDER.MIN_LOAN_BALANCE_REQUEST_AMOUNT')}
+                            className="w-full"
+                        />
+                    </FormField>
+                    <FormField label={t('RECHARGE_ADJUST_TYPE')}>
+                        <Select
+                            value={reseller.afg_custom_recharge_adjust_type}
+                            onValueChange={(v) =>
+                                setReseller((prev) => ({
+                                    ...prev,
+                                    afg_custom_recharge_adjust_type: v as Reseller['afg_custom_recharge_adjust_type']
+                                }))
+                            }
+                        >
+                            <SelectTrigger id="afg_custom_recharge_adjust_type" className="w-full">
+                                <SelectValue placeholder={t('SELECT_ADJUST_TYPE')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="decrease">{t('DECREASE')}</SelectItem>
+                                <SelectItem value="increase">{t('INCREASE')}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField label={t('RECHARGE_ADJUST_MODE')}>
+                        <Select
+                            value={reseller.afg_custom_recharge_adjust_mode}
+                            onValueChange={(v) =>
+                                setReseller((prev) => ({
+                                    ...prev,
+                                    afg_custom_recharge_adjust_mode: v as Reseller['afg_custom_recharge_adjust_mode']
+                                }))
+                            }
+                        >
+                            <SelectTrigger id="afg_custom_recharge_adjust_mode" className="w-full">
+                                <SelectValue placeholder={t('SELECT_ADJUST_MODE')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="percentage">{t('PERCENTAGE')}</SelectItem>
+                                <SelectItem value="fixed">{t('FIXED')}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField label={t('RECHARGE_ADJUST_VALUE')}>
+                        <NumberInput
+                            id="afg_custom_recharge_adjust_value"
+                            value={reseller.afg_custom_recharge_adjust_value ?? null}
+                            onValueChange={(v) =>
+                                setReseller((prev) => ({
+                                    ...prev,
+                                    afg_custom_recharge_adjust_value: v ?? 0
+                                }))
+                            }
+                            placeholder={t('ENTER_ADJUST_VALUE')}
+                            className="w-full"
+                        />
+                    </FormField>
+                </FormSection>
 
-                                <div className="field col">
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="name">
-                                        {t('RESELLER.FORM.INPUT.PHONE')}
-                                    </label>
-                                    <InputText
-                                        id="phone"
-                                        value={reseller.phone || ''}
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                phone: e.target.value
-                                            }))
-                                        }
-                                        placeholder={t('RESELLER.FORM.PLACEHOLDER.PHONE')}
-                                        style={{ fontSize: '0.8rem', height: '40px' }}
-                                        className={classNames({
-                                            'p-invalid': submitted && !reseller.phone
-                                        })}
-                                    />
-                                    {submitted && !reseller.phone && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
+                <FormSection title="دسترسی‌ها" description="مجوزهای عملیاتی و سلسله‌مراتب زیرفروشنده">
+                    <PermissionSwitch
+                        id="can_create_sub_resellers"
+                        label={t('RESELLER.FORM.LABEL.CANCREATESUBRESELLER')}
+                        checked={reseller.can_create_sub_resellers === 1}
+                        onChange={(value) =>
+                            setReseller((prev: Reseller) => ({
+                                ...prev,
+                                can_create_sub_resellers: value ? 1 : 0
+                            }))
+                        }
+                    />
+                    <PermissionSwitch
+                        id="sub_resellers_can_create_sub_resellers"
+                        label={t('RESELLER.FORM.LABEL.SUBRESELLERCANCREATESUBRESELLER')}
+                        checked={reseller.sub_resellers_can_create_sub_resellers === 1}
+                        onChange={(value) =>
+                            setReseller((prev: Reseller) => ({
+                                ...prev,
+                                sub_resellers_can_create_sub_resellers: value ? 1 : 0
+                            }))
+                        }
+                    />
+                    <PermissionSwitch
+                        id="can_set_commission_group"
+                        label={t('RESELLER.FORM.LABEL.CAN_SET_COMMISSION_GROUP')}
+                        checked={reseller.can_set_commission_group === true}
+                        onChange={(value) =>
+                            setReseller((prev: Reseller) => ({
+                                ...prev,
+                                can_set_commission_group: value
+                            }))
+                        }
+                    />
+                    <PermissionSwitch
+                        id="can_set_selling_price_group"
+                        label={t('RESELLER.FORM.LABEL.CAN_SET_SELLING_PRICE_GROUP')}
+                        checked={reseller.can_set_selling_price_group === true}
+                        onChange={(value) =>
+                            setReseller((prev: Reseller) => ({
+                                ...prev,
+                                can_set_selling_price_group: value
+                            }))
+                        }
+                    />
+                    <PermissionSwitch
+                        id="can_send_payment_request"
+                        label={t('RESELLER.FORM.LABEL.CAN_SEND_PAYMENT_REQUEST')}
+                        checked={reseller.can_send_payment_request === true}
+                        onChange={(value) =>
+                            setReseller((prev: Reseller) => ({
+                                ...prev,
+                                can_send_payment_request: value
+                            }))
+                        }
+                    />
+                    <PermissionSwitch
+                        id="can_ask_loan_balance"
+                        label={t('RESELLER.FORM.LABEL.CAN_ASK_LOAN_BALANCE')}
+                        checked={reseller.can_ask_loan_balance === true}
+                        onChange={(value) =>
+                            setReseller((prev: Reseller) => ({
+                                ...prev,
+                                can_ask_loan_balance: value
+                            }))
+                        }
+                    />
+                    <PermissionSwitch
+                        id="can_see_our_contact"
+                        label={t('RESELLER.FORM.LABEL.CAN_SEE_OUR_CONTACT')}
+                        checked={reseller.can_see_our_contact === true}
+                        onChange={(value) =>
+                            setReseller((prev: Reseller) => ({
+                                ...prev,
+                                can_see_our_contact: value
+                            }))
+                        }
+                    />
+                    <PermissionSwitch
+                        id="can_see_parent_contact"
+                        label={t('RESELLER.FORM.LABEL.CAN_SEE_PARENT_CONTACT')}
+                        checked={reseller.can_see_parent_contact === true}
+                        onChange={(value) =>
+                            setReseller((prev: Reseller) => ({
+                                ...prev,
+                                can_see_parent_contact: value
+                            }))
+                        }
+                    />
+                    <PermissionSwitch
+                        id="can_send_hawala"
+                        label={t('RESELLER.FORM.LABEL.CAN_SEND_HAWALA')}
+                        checked={reseller.can_send_hawala === true}
+                        onChange={(value) =>
+                            setReseller((prev: Reseller) => ({
+                                ...prev,
+                                can_send_hawala: value
+                            }))
+                        }
+                    />
+                </FormSection>
 
-                            <div className="formgrid grid">
-                                <div className="field col-6 md:col-6">
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="name">
-                                        {t('RESELLER.FORM.INPUT.COUNTRY')}
-                                    </label>
-                                    <Dropdown
-                                        id="country_id"
-                                        value={reseller.country_id}
-                                        options={countries}
-                                        onChange={(e: DropdownChangeEvent) => {
-                                            const selectedCountry = countries.find((country: Country) => country.id === e.value);
+                <FormSection title="مدارک" description="مدرک هویتی و مدرک اختیاری">
+                    <FormField label={t('RESELLER.FORM.LABEL.IDENTITY_PROOF')}>
+                        <FileDrop
+                            value={reseller.reseller_identity_attachment instanceof File ? reseller.reseller_identity_attachment : null}
+                            previewUrl={
+                                typeof reseller.reseller_identity_attachment === 'string' && reseller.reseller_identity_attachment
+                                    ? reseller.reseller_identity_attachment
+                                    : null
+                            }
+                            onChange={(file) =>
+                                setReseller((prev) => ({
+                                    ...prev,
+                                    reseller_identity_attachment:
+                                        file ??
+                                        (prev.reseller_identity_attachment instanceof File
+                                            ? ''
+                                            : prev.reseller_identity_attachment)
+                                }))
+                            }
+                            accept="image/*,.pdf"
+                            label={t('UPLOAD')}
+                        />
+                    </FormField>
+                    <FormField label={t('RESELLER.FORM.LABEL.OPTIONAL_PROOF')}>
+                        <FileDrop
+                            value={reseller.extra_optional_proof instanceof File ? reseller.extra_optional_proof : null}
+                            previewUrl={
+                                typeof reseller.extra_optional_proof === 'string' && reseller.extra_optional_proof
+                                    ? reseller.extra_optional_proof
+                                    : null
+                            }
+                            onChange={(file) =>
+                                setReseller((prev) => ({
+                                    ...prev,
+                                    extra_optional_proof:
+                                        file ?? (prev.extra_optional_proof instanceof File ? '' : prev.extra_optional_proof)
+                                }))
+                            }
+                            accept="image/*,.pdf"
+                            label={t('UPLOAD')}
+                        />
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                country_id: e.value,
-                                                country: selectedCountry?.country_name || ''
-                                            }));
-                                        }}
-                                        optionLabel="country_name"
-                                        optionValue="id"
-                                        placeholder="Choose a country"
-                                        style={{ fontSize: '0.8rem', height: '40px' }}
-                                    />
-
-                                    {submitted && !reseller.country_id && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                                <div className="field col-6 md:col-6">
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="name">
-                                        {t('RESELLER.FORM.INPUT.PROVINCE')}
-                                    </label>
-                                    <Dropdown
-                                        id="province_id"
-                                        value={reseller.province_id}
-                                        options={provinces}
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                province_id: e.value
-                                            }))
-                                        }
-                                        filter
-                                        filterBy="province_name"
-                                        optionLabel="province_name"
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        optionValue="id"
-                                        placeholder="Choose a province"
-                                        style={{
-                                            fontSize: '0.8rem',
-                                            padding: '0.4rem 0.6rem', // Horizontal padding for better text display
-                                            height: '40px',
-                                            lineHeight: '1.5', // Ensures text is vertically centered
-                                            display: 'flex',
-                                            alignItems: 'center'
-                                        }}
-                                    />
-                                    {submitted && !reseller.province_id && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="formgrid grid ">
-                                <div className="field col-6 md:col-6">
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="name">
-                                        {t('RESELLER.FORM.INPUT.DISTRICT')}
-                                    </label>
-                                    <Dropdown
-                                        id="districts_id"
-                                        value={reseller.districts_id}
-                                        options={districts}
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                districts_id: e.value
-                                            }))
-                                        }
-                                        filter
-                                        filterBy="district_name"
-                                        optionLabel="district_name"
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        optionValue="id"
-                                        placeholder="Choose a district"
-                                        style={{ fontSize: '0.8rem', height: '40px' }}
-                                    />
-                                    {submitted && !reseller.districts_id && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                                <div className="field col-6 md:col-6">
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="name">
-                                        {t('RESELLER.FORM.INPUT.CURRENCYPREFERENCE')}
-                                    </label>
-                                    <Dropdown
-                                        id="code"
-                                        value={reseller.code}
-                                        options={currencies}
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                code: e.value
-                                            }))
-                                        }
-                                        optionLabel="code"
-                                        placeholder={t('RESELLER.FORM.PLACEHOLDER.CURRENCY')}
-                                        style={{ fontSize: '0.8rem', height: '40px' }}
-                                        disabled={!!reseller.id && reseller.id !== 0}
-                                    />
-                                    {submitted && !reseller.code && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="formgrid grid">
-                                <div className="field col-6 md:col-6">
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="name">
-                                        {t('RESELLER.FORM.LABEL.RESELLERGROUP')}
-                                    </label>
-                                    <Dropdown
-                                        id="reseller_group_id"
-                                        value={reseller.reseller_group_id}
-                                        options={reseller_groups}
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                reseller_group_id: e.value
-                                            }))
-                                        }
-                                        optionLabel="name"
-                                        optionValue="id"
-                                        placeholder="Choose a group"
-                                        style={{ fontSize: '0.8rem', height: '40px' }}
-                                        className="w-full"
-                                    />
-                                    {/* {submitted && !reseller.reseller_group_id && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )} */}
-                                </div>
-                                <div className="field col-6 md:col-6">
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="name">
-                                        {t('RESELLER.FORM.LABEL.SUBRESELLERLIMIT')}
-                                    </label>
-                                    <InputText
-                                        id="sub_reseller_limit"
-                                        value={reseller.sub_reseller_limit.toString()}
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                sub_reseller_limit: e.target.value
-                                            }))
-                                        }
-                                        placeholder="Sub Reseller limit"
-                                        style={{ fontSize: '0.8rem', height: '40px' }}
-                                        className={classNames({
-                                            'p-invalid': submitted && !reseller.phone
-                                        })}
-                                    />
-                                    {submitted && !reseller.sub_reseller_limit && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
-
-                            {reseller.id === 0 && (
-                                <div className="formgrid grid">
-                                    <div className="field col-6 md:col-12">
-                                        <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="password">
-                                            Password
-                                        </label>
-                                        <Password
-                                            id="account_password"
-                                            value={reseller?.account_password}
-                                            onChange={(e) =>
-                                                setReseller((prev: Reseller) => ({
-                                                    ...prev,
-                                                    account_password: e.target.value
-                                                }))
-                                            }
-                                            required
-                                            autoFocus
-                                            className={classNames({
-                                                'p-invalid': submitted && !reseller.account_password
-                                            })}
-                                        />
-                                        {submitted && !reseller.account_password && (
-                                            <small className="p-invalid" style={{ color: 'red' }}>
-                                                {t('THIS_FIELD_IS_REQUIRED')}
-                                            </small>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="formgrid grid">
-                                <div className="field col">
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="name">
-                                        {t('RESELLER.FORM.PLACEHOLDER.MAX_LOAN_BALANCE_REQUEST_AMOUNT')}
-                                    </label>
-                                    <InputText
-                                        id="max_loan_balance_request_amount"
-                                        value={reseller?.max_loan_balance_request_amount?.toString()}
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                max_loan_balance_request_amount: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        placeholder={t('RESELLER.FORM.PLACEHOLDER.MAX_LOAN_BALANCE_REQUEST_AMOUNT')}
-                                        style={{ fontSize: '0.8rem', height: '40px' }}
-                                        className={classNames({
-                                            'p-invalid': submitted && !reseller.max_loan_balance_request_amount
-                                        })}
-                                    />
-                                </div>
-
-                                <div className="field col">
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem' }} htmlFor="name">
-                                        {t('RESELLER.FORM.PLACEHOLDER.MIN_LOAN_BALANCE_REQUEST_AMOUNT')}
-                                    </label>
-                                    <InputText
-                                        id="min_loan_balance_request_amount"
-                                        value={reseller.min_loan_balance_request_amount?.toString()}
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                min_loan_balance_request_amount: e.target.value
-                                            }))
-                                        }
-                                        placeholder={t('RESELLER.FORM.PLACEHOLDER.MIN_LOAN_BALANCE_REQUEST_AMOUNT')}
-                                        style={{ fontSize: '0.8rem', height: '40px' }}
-                                        className={classNames({
-                                            'p-invalid': submitted && !reseller.min_loan_balance_request_amount
-                                        })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className='formgrid grid'>
-                                <div className="field col">
-                                    <label htmlFor="afg_custom_recharge_adjust_type" style={{ fontWeight: 'bold' }}>
-                                        {t('RECHARGE_ADJUST_TYPE')}
-                                    </label>
-                                    <Dropdown
-                                        id="afg_custom_recharge_adjust_type"
-                                        value={reseller.afg_custom_recharge_adjust_type}
-                                        options={[
-                                            { label: t('DECREASE'), value: 'decrease' },
-                                            { label: t('INCREASE'), value: 'increase' }
-                                        ]}
-                                        onChange={(e) =>
-                                            setReseller((prev) => ({
-                                                ...prev,
-                                                afg_custom_recharge_adjust_type: e.value
-                                            }))
-                                        }
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        placeholder={t('SELECT_ADJUST_TYPE')}
-                                        className="w-full"
-                                    />
-                                </div>
-
-                                <div className="field col">
-                                    <label htmlFor="afg_custom_recharge_adjust_mode" style={{ fontWeight: 'bold' }}>
-                                        {t('RECHARGE_ADJUST_MODE')}
-                                    </label>
-                                    <Dropdown
-                                        id="afg_custom_recharge_adjust_mode"
-                                        value={reseller.afg_custom_recharge_adjust_mode}
-                                        options={[
-                                            { label: t('PERCENTAGE'), value: 'percentage' },
-                                            { label: t('FIXED'), value: 'fixed' }
-                                        ]}
-                                        onChange={(e) =>
-                                            setReseller((prev) => ({
-                                                ...prev,
-                                                afg_custom_recharge_adjust_mode: e.value
-                                            }))
-                                        }
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        placeholder={t('SELECT_ADJUST_MODE')}
-                                        className="w-full"
-                                    />
-                                </div>
-
-                                <div className="field col">
-                                    <label htmlFor="afg_custom_recharge_adjust_value" style={{ fontWeight: 'bold' }}>
-                                        {t('RECHARGE_ADJUST_VALUE')}
-                                    </label>
-                                    <InputText
-                                        id="afg_custom_recharge_adjust_value"
-                                        value={reseller.afg_custom_recharge_adjust_value?.toString() || ''}
-                                        onChange={(e) =>
-                                            setReseller((prev) => ({
-                                                ...prev,
-                                                afg_custom_recharge_adjust_value: parseFloat(e.target.value) || 0
-                                            }))
-                                        }
-                                        placeholder={t('ENTER_ADJUST_VALUE')}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="formgrid grid">
-                                <div className="field col-12 md:col-6 flex align-items-center gap-2">
-                                    <InputSwitch
-                                        id="can_create_sub_resellers"
-                                        checked={reseller.can_create_sub_resellers === 1} // Replace logic as needed
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                can_create_sub_resellers: e.value ? 1 : 0 // Adjust values based on your requirements
-                                            }))
-                                        }
-                                        className="w-small"
-                                        style={{
-                                            transform: 'scale(0.8)', // Scales down the switch
-                                            marginLeft: '-4px' // Adjust alignment if needed
-                                        }}
-                                    />
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem', marginTop: '5px' }} htmlFor="inputSwitch1">
-                                        {t('RESELLER.FORM.LABEL.CANCREATESUBRESELLER')}
-                                    </label>
-                                </div>
-
-                                <div className="field col-12 md:col-6 flex align-items-center gap-2">
-                                    <InputSwitch
-                                        id="sub_resellers_can_create_sub_resellers"
-                                        checked={reseller.sub_resellers_can_create_sub_resellers === 1} // Replace logic as needed
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                sub_resellers_can_create_sub_resellers: e.value ? 1 : 0 // Adjust values based on your requirements
-                                            }))
-                                        }
-                                        className="w-small"
-                                        style={{
-                                            transform: 'scale(0.8)', // Scales down the switch
-                                            marginLeft: '-4px' // Adjust alignment if needed
-                                        }}
-                                    />
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem', marginTop: '5px' }} htmlFor="inputSwitch1">
-                                        {t('RESELLER.FORM.LABEL.SUBRESELLERCANCREATESUBRESELLER')}
-                                    </label>
-                                </div>
-                            </div>
-
-                            {/* new fields */}
-                            <div className="formgrid grid">
-                                <div className="field col-12 md:col-6 flex align-items-center gap-2">
-                                    <InputSwitch
-                                        id="can_set_commission_group"
-                                        checked={reseller.can_set_commission_group === true} // Replace logic as needed
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                can_set_commission_group: e.value ? true : false // Adjust values based on your requirements
-                                            }))
-                                        }
-                                        className="w-small"
-                                        style={{
-                                            transform: 'scale(0.8)', // Scales down the switch
-                                            marginLeft: '-4px' // Adjust alignment if needed
-                                        }}
-                                    />
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem', marginTop: '5px' }} htmlFor="inputSwitch1">
-                                        {t('RESELLER.FORM.LABEL.CAN_SET_COMMISSION_GROUP')}
-                                    </label>
-                                </div>
-
-                                <div className="field col-12 md:col-6 flex align-items-center gap-2">
-                                    <InputSwitch
-                                        id="can_set_selling_price_group"
-                                        checked={reseller.can_set_selling_price_group === true} // Replace logic as needed
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                can_set_selling_price_group: e.value ? true : false // Adjust values based on your requirements
-                                            }))
-                                        }
-                                        className="w-small"
-                                        style={{
-                                            transform: 'scale(0.8)', // Scales down the switch
-                                            marginLeft: '-4px' // Adjust alignment if needed
-                                        }}
-                                    />
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem', marginTop: '5px' }} htmlFor="inputSwitch1">
-                                        {t('RESELLER.FORM.LABEL.CAN_SET_SELLING_PRICE_GROUP')}
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className="formgrid grid">
-                                <div className="field col-12 md:col-6 flex align-items-center gap-2">
-                                    <InputSwitch
-                                        id="can_send_payment_request"
-                                        checked={reseller.can_send_payment_request === true} // Replace logic as needed
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                can_send_payment_request: e.value ? true : false // Adjust values based on your requirements
-                                            }))
-                                        }
-                                        className="w-small"
-                                        style={{
-                                            transform: 'scale(0.8)', // Scales down the switch
-                                            marginLeft: '-4px' // Adjust alignment if needed
-                                        }}
-                                    />
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem', marginTop: '5px' }} htmlFor="inputSwitch1">
-                                        {t('RESELLER.FORM.LABEL.CAN_SEND_PAYMENT_REQUEST')}
-                                    </label>
-                                </div>
-
-                                <div className="field col-12 md:col-6 flex align-items-center gap-2">
-                                    <InputSwitch
-                                        id="can_ask_loan_balance"
-                                        checked={reseller.can_ask_loan_balance === true} // Replace logic as needed
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                can_ask_loan_balance: e.value ? true : false // Adjust values based on your requirements
-                                            }))
-                                        }
-                                        className="w-small"
-                                        style={{
-                                            transform: 'scale(0.8)', // Scales down the switch
-                                            marginLeft: '-4px' // Adjust alignment if needed
-                                        }}
-                                    />
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem', marginTop: '5px' }} htmlFor="inputSwitch1">
-                                        {t('RESELLER.FORM.LABEL.CAN_ASK_LOAN_BALANCE')}
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className="formgrid grid">
-                                <div className="field col-12 md:col-6 flex align-items-center gap-2">
-                                    <InputSwitch
-                                        id="can_see_our_contact"
-                                        checked={reseller.can_see_our_contact === true} // Replace logic as needed
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                can_see_our_contact: e.value ? true : false // Adjust values based on your requirements
-                                            }))
-                                        }
-                                        className="w-small"
-                                        style={{
-                                            transform: 'scale(0.8)', // Scales down the switch
-                                            marginLeft: '-4px' // Adjust alignment if needed
-                                        }}
-                                    />
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem', marginTop: '5px' }} htmlFor="inputSwitch1">
-                                        {t('RESELLER.FORM.LABEL.CAN_SEE_OUR_CONTACT')}
-                                    </label>
-                                </div>
-
-                                <div className="field col-12 md:col-6 flex align-items-center gap-2">
-                                    <InputSwitch
-                                        id="can_see_parent_contact"
-                                        checked={reseller.can_see_parent_contact === true} // Replace logic as needed
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                can_see_parent_contact: e.value ? true : false // Adjust values based on your requirements
-                                            }))
-                                        }
-                                        className="w-small"
-                                        style={{
-                                            transform: 'scale(0.8)', // Scales down the switch
-                                            marginLeft: '-4px' // Adjust alignment if needed
-                                        }}
-                                    />
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem', marginTop: '5px' }} htmlFor="inputSwitch1">
-                                        {t('RESELLER.FORM.LABEL.CAN_SEE_PARENT_CONTACT')}
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className="formgrid grid">
-                                <div className="field col-12 md:col-6 flex align-items-center gap-2">
-                                    <InputSwitch
-                                        id="can_send_hawala"
-                                        checked={reseller.can_send_hawala === true} // Replace logic as needed
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                can_send_hawala: e.value ? true : false // Adjust values based on your requirements
-                                            }))
-                                        }
-                                        className="w-small"
-                                        style={{
-                                            transform: 'scale(0.8)', // Scales down the switch
-                                            marginLeft: '-4px' // Adjust alignment if needed
-                                        }}
-                                    />
-                                    <label style={{ fontWeight: 'bold', fontSize: '0.8rem', marginTop: '5px' }} htmlFor="inputSwitch1">
-                                        {t('RESELLER.FORM.LABEL.CAN_SEND_HAWALA')}
-                                    </label>
-                                </div>
-
-                                {/* <div className="field col-12 md:col-6 flex align-items-center gap-2">
-                                    <InputSwitch
-                                        id="sub_resellers_can_create_sub_resellers"
-                                        checked={reseller.sub_resellers_can_create_sub_resellers === 1} // Replace logic as needed
-                                        onChange={(e) =>
-                                            setReseller((prev: Reseller) => ({
-                                                ...prev,
-                                                sub_resellers_can_create_sub_resellers: e.value ? 1 : 0 // Adjust values based on your requirements
-                                            }))
-                                        }
-                                        className="w-small"
-                                        style={{
-                                            transform: 'scale(0.8)', // Scales down the switch
-                                            marginLeft: '-4px' // Adjust alignment if needed
-                                        }}
-                                    />
-                                    <label style={{ fontWeight: 'bold',fontSize: '0.8rem', fontSize: '12px',marginTop:'5px' }} htmlFor="inputSwitch1">
-                                        {t('RESELLER.FORM.LABEL.SUBRESELLERCANCREATESUBRESELLER')}
-                                    </label>
-                                </div> */}
-                            </div>
-
-                            <div className="formgrid grid">
-                                <div className="field col-12 md:col-6">
-                                    <div className="file-upload-card flex flex-column align-items-start p-3 border-round" style={{ border: '1px dashed #ccc' }}>
-                                        <label className="font-bold mb-2" style={{ fontSize: '0.8rem' }}>
-                                            {t('RESELLER.FORM.LABEL.IDENTITY_PROOF')}
-                                        </label>
-                                        {reseller.reseller_identity_attachment ? (
-                                            <div className="preview-container relative">
-                                                <img
-                                                    src={reseller.reseller_identity_attachment instanceof File ? URL.createObjectURL(reseller.reseller_identity_attachment) : reseller.reseller_identity_attachment}
-                                                    alt="Identity Proof Preview"
-                                                    className="border-round shadow-2"
-                                                    style={{
-                                                        maxWidth: '100%',
-                                                        maxHeight: '150px',
-                                                        objectFit: 'contain'
-                                                    }}
-                                                />
-                                                <Button
-                                                    icon="pi pi-times"
-                                                    className="p-button-rounded p-button-danger p-button-sm absolute"
-                                                    style={{ top: '-10px', right: '-10px' }}
-                                                    onClick={() => setReseller((prev) => ({ ...prev, reseller_identity_attachment: null }))}
-                                                />
-                                            </div>
-                                        ) : (
-                                            <FileUpload
-                                                mode="basic"
-                                                name="reseller_identity_attachment"
-                                                accept="image/*,.pdf"
-                                                maxFileSize={1000000}
-                                                customUpload
-                                                onSelect={(e) => {
-                                                    setReseller((prev) => ({ ...prev, reseller_identity_attachment: e.files[0] }));
-                                                }}
-                                                chooseLabel={t('UPLOAD')}
-                                                className="w-full"
-                                                style={{
-                                                    width: '100%',
-                                                    fontSize: '0.8rem'
-                                                }}
-                                            />
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="field col-12 md:col-6 mt-3 md:mt-0">
-                                    <div className="file-upload-card flex flex-column align-items-start p-3 border-round" style={{ border: '1px dashed #ccc' }}>
-                                        <label className="font-bold mb-2" style={{ fontSize: '0.8rem' }}>
-                                            {t('RESELLER.FORM.LABEL.OPTIONAL_PROOF')}
-                                        </label>
-                                        {reseller.extra_optional_proof ? (
-                                            <div className="preview-container relative">
-                                                <img
-                                                    src={reseller.extra_optional_proof instanceof File ? URL.createObjectURL(reseller.extra_optional_proof) : reseller.extra_optional_proof}
-                                                    alt="Optional Proof Preview"
-                                                    className="border-round shadow-2"
-                                                    style={{
-                                                        maxWidth: '100%',
-                                                        maxHeight: '150px',
-                                                        objectFit: 'contain'
-                                                    }}
-                                                />
-                                                <Button
-                                                    icon="pi pi-times"
-                                                    className="p-button-rounded p-button-danger p-button-sm absolute"
-                                                    style={{ top: '-10px', right: '-10px' }}
-                                                    onClick={() => setReseller((prev) => ({ ...prev, extra_optional_proof: null }))}
-                                                />
-                                            </div>
-                                        ) : (
-                                            <FileUpload
-                                                mode="basic"
-                                                name="extra_optional_proof"
-                                                accept="image/*,.pdf"
-                                                maxFileSize={1000000}
-                                                customUpload
-                                                onSelect={(e) => {
-                                                    setReseller((prev) => ({ ...prev, extra_optional_proof: e.files[0] }));
-                                                }}
-                                                chooseLabel={t('UPLOAD')}
-                                                className="w-full"
-                                                style={{
-                                                    width: '100%',
-                                                    fontSize: '0.8rem'
-                                                }}
-                                            />
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </Dialog>
-
-                    <Dialog visible={deleteResellerDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteResellerDialogFooter} onHide={hideDeleteResellerDialog}>
+            <Dialog visible={deleteResellerDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteResellerDialogFooter} onHide={hideDeleteResellerDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {reseller && (
@@ -1689,9 +1178,9 @@ useEffect(() => {
                                 </span>
                             )}
                         </div>
-                    </Dialog>
+            </Dialog>
 
-                    <Dialog visible={statusResellerDialog} style={{ width: '450px' }} header="Confirm" modal footer={statusResellerDialogFooter} onHide={hideStatusResellerDialog}>
+            <Dialog visible={statusResellerDialog} style={{ width: '450px' }} header="Confirm" modal footer={statusResellerDialogFooter} onHide={hideStatusResellerDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {reseller && (
@@ -1700,18 +1189,38 @@ useEffect(() => {
                                 </span>
                             )}
                         </div>
-                    </Dialog>
+            </Dialog>
 
-                    <Dialog visible={deleteResellersDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteResellersDialogFooter} onHide={hideDeleteResellersDialog}>
+            <Dialog visible={deleteResellersDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteResellersDialogFooter} onHide={hideDeleteResellersDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
                             {reseller && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
-                    </Dialog>
-                </div>
-            </div>
+            </Dialog>
         </div>
     );
 };
+
+function PermissionSwitch({
+    id,
+    label,
+    checked,
+    onChange
+}: {
+    id: string;
+    label: string;
+    checked: boolean;
+    onChange: (value: boolean) => void;
+}) {
+    return (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-100 bg-emerald-50/40 px-3 py-2.5">
+            <label htmlFor={id} className="text-sm font-medium leading-snug text-foreground">
+                {label}
+            </label>
+            <Switch id={id} checked={checked} onCheckedChange={onChange} />
+        </div>
+    );
+}
+
 
 export default withAuth(ResellerPage);

@@ -1,82 +1,88 @@
 'use client';
+
 import { useRouter } from 'next/navigation';
-import React, { useContext, useEffect, useRef, useState } from 'react';
-import { Checkbox } from 'primereact/checkbox';
-import { Button } from 'primereact/button';
-import { Password } from 'primereact/password';
-import { LayoutContext } from '../../../../layout/context/layoutcontext';
-import { InputText } from 'primereact/inputtext';
-import { classNames } from 'primereact/utils';
+import React, { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { _login } from '../../../../app/redux/actions/authActions';
-import { Toast } from 'primereact/toast';
-import Swal from 'sweetalert2';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
+import { Eye, EyeOff, Languages, Loader2 } from 'lucide-react';
+import Swal from 'sweetalert2';
+import { _login } from '../../../../app/redux/actions/authActions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { LANGUAGE_OPTIONS, DEFAULT_LOCALE, isRtlLocale } from '@/lib/locale';
 
 const LoginPage = () => {
     const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [checked, setChecked] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const dispatch = useDispatch();
-    const toast = useRef<Toast>(null);
-
-    const language = i18n.language;
-    let title;
-    if (language === 'en') {
-        title = process.env.NEXT_PUBLIC_PROJECT_WELCOME_NAME_ENGLISH;
-    } else if (language === 'fa') {
-        title = process.env.NEXT_PUBLIC_PROJECT_WELCOME_NAME_FARSI;
-    } else if (language === 'ps') {
-        title = process.env.NEXT_PUBLIC_PROJECT_WELCOME_NAME_PASHTO;
-    } else {
-        title = "Welcome to the application"
-    }
-
-    const { layoutConfig } = useContext(LayoutContext);
     const router = useRouter();
 
-    const containerClassName = classNames('surface-ground flex align-items-center justify-content-center min-h-screen min-w-screen overflow-hidden', { 'p-input-filled': layoutConfig.inputStyle === 'filled' });
+    const language = i18n.language || DEFAULT_LOCALE;
+    const title =
+        language === 'en'
+            ? process.env.NEXT_PUBLIC_PROJECT_WELCOME_NAME_ENGLISH
+            : language === 'ps'
+              ? process.env.NEXT_PUBLIC_PROJECT_WELCOME_NAME_PASHTO
+              : process.env.NEXT_PUBLIC_PROJECT_WELCOME_NAME_FARSI || 'به وصلت خوش آمدید';
+
+    const projectName = process.env.NEXT_PUBLIC_PROJECT_NAME || 'Waslat';
+    const logo = process.env.NEXT_PUBLIC_PROJECT_LOGO;
 
     useEffect(() => {
         const savedEmail = localStorage.getItem('rememberedEmail');
-        const savePassword = localStorage.getItem('rememberedPassword');
+        const savedPassword = localStorage.getItem('rememberedPassword');
         if (savedEmail) {
             setEmail(savedEmail);
             setChecked(true);
         }
-        if (savePassword) {
-            setPassword(savePassword);
+        if (savedPassword) {
+            setPassword(savedPassword);
             setChecked(true);
         }
     }, []);
 
-    const handleLogin = async () => {
+    const changeLanguage = (code: string) => {
+        i18n.changeLanguage(code).then(() => {
+            const dir = isRtlLocale(code) ? 'rtl' : 'ltr';
+            document.documentElement.lang = code;
+            document.documentElement.dir = dir;
+            document.body.dir = dir;
+            router.refresh();
+        });
+    };
+
+    const handleLogin = async (e?: React.FormEvent) => {
+        e?.preventDefault();
         setError(null);
         setLoading(true);
 
         try {
-            const result = await dispatch<any>(_login(email, password, toast));
+            const result = await dispatch<any>(_login(email, password));
             if (result.success) {
-
                 const userInfo = result?.payload?.user_info || JSON.parse(localStorage.getItem('user_info') || '{}');
 
-                // 🚫 Check user type
                 if (userInfo.user_type != 1) {
-                    // Remove token and user info if unauthorized
                     localStorage.removeItem('api_token');
                     localStorage.removeItem('user_info');
-
                     Swal.fire({
                         title: t('login.login_fail'),
                         text: t('login.no_permission'),
-                        icon: 'error',
-                        draggable: true
+                        icon: 'error'
                     });
-
                     setError(t('login.no_permission'));
                     setLoading(false);
                     return;
@@ -93,79 +99,183 @@ const LoginPage = () => {
                 Swal.fire({
                     title: t('login.login_success'),
                     icon: 'success',
-                    draggable: true
+                    timer: 1200,
+                    showConfirmButton: false
                 });
 
                 router.push('/');
             } else {
                 Swal.fire({
                     title: t('login.login_fail'),
-                    icon: 'error',
-                    draggable: true
+                    icon: 'error'
                 });
                 setError(result.error || t('login.login_fail'));
             }
-        } catch (err) {
+        } catch {
             Swal.fire({
                 title: t('login.login_fail'),
-                icon: 'error',
-                draggable: true
+                icon: 'error'
             });
             setError(t('login.unexpected_error'));
         } finally {
             setLoading(false);
         }
     };
-    const projectName = process.env.NEXT_PUBLIC_PROJECT_NAME;
 
     return (
-        <div className={containerClassName}>
-            <div className="flex flex-column align-items-center justify-content-center">
-                <img src={`/layout/images/logo-${layoutConfig.colorScheme === 'light' ? 'dark' : 'white'}.svg`} alt="Sakai logo" className="mb-5 w-6rem flex-shrink-0" />
-                <div
-                    style={{
-                        borderRadius: '56px',
-                        padding: '0.3rem',
-                        background: 'linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)'
-                    }}
-                >
-                    <div className="w-full surface-card py-8 px-5 sm:px-8" style={{ borderRadius: '53px' }}>
-                        <div className="text-center mb-5">
-                            {/* <img src="/layout/images/tak_telecom.jpeg" alt="Image" height="50" className="mb-3" /> */}
-                            <img src={process.env.NEXT_PUBLIC_PROJECT_LOGO} alt="Image" height="50" className="mb-3" />
-                            <div className="text-900 text-3xl font-medium mb-3">{title}</div>
-                            {/* <div className="text-900 text-3xl font-medium mb-3">{t('login.welcome')}</div> */}
-                            {/* <div className="text-900 text-3xl font-medium mb-3">
-                                {t('login.welcome', { projectName: process.env.NEXT_PUBLIC_PROJECT_NAME })}
-                            </div> */}
-                            <span className="text-600 font-medium">{t('login.signin_continue')}</span>
-                        </div>
+        <div className="relative flex min-h-screen overflow-hidden waslat-grid-bg">
+            {/* Ambient green glow */}
+            <div className="pointer-events-none absolute -start-24 top-10 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl" />
+            <div className="pointer-events-none absolute -end-16 bottom-0 h-80 w-80 rounded-full bg-teal-500/15 blur-3xl" />
 
+            <div className="absolute end-4 top-4 z-20 sm:end-6 sm:top-6">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2 bg-card/80 backdrop-blur">
+                            <Languages className="h-4 w-4" />
+                            زبان
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[12rem]">
+                        <DropdownMenuLabel>انتخاب زبان</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {LANGUAGE_OPTIONS.map((lang) => (
+                            <DropdownMenuItem key={lang.language_code} onClick={() => changeLanguage(lang.language_code)} className="gap-2">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={lang.flag} alt="" className="h-4 w-5 rounded-sm object-cover" />
+                                <span>{lang.name}</span>
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+
+            <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-6xl items-center gap-8 px-4 py-10 lg:grid-cols-2 lg:gap-12 lg:px-8">
+                {/* Brand panel — desktop */}
+                <div className="hidden animate-fade-in text-start lg:block">
+                    <div className="inline-flex items-center gap-3 rounded-2xl border border-emerald-200/70 bg-white/70 px-4 py-3 shadow-panel backdrop-blur">
+                        {logo ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={logo} alt={projectName} className="h-10 w-auto object-contain" />
+                        ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-700 text-sm font-bold text-white">W</div>
+                        )}
                         <div>
-                            {error && <div className="text-red-500 text-center mb-4">{error}</div>}
-                            <label htmlFor="email1" className="block text-900 text-xl font-medium mb-2">
-                                {t('login.email_label')}
-                            </label>
-                            <InputText id="email1" type="text" placeholder={t('login.email_placeholder')} value={email} onChange={(e) => setEmail(e.target.value)} className="w-full md:w-30rem mb-5" style={{ padding: '1rem' }} />
-
-                            <label htmlFor="password1" className="block text-900 font-medium text-xl mb-2">
-                                {t('login.password_label')}
-                            </label>
-                            <Password inputId="password1" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t('login.password_placeholder')}  className="w-full mb-5" inputClassName="w-full p-3 md:w-30rem"/>
-
-                            <div className="flex align-items-center justify-content-between mb-5 gap-5">
-                                <div className="flex align-items-center gap-2">
-                                    <Checkbox inputId="rememberme1" checked={checked} onChange={(e) => setChecked(e.checked ?? false)} className="mr-2" />
-                                    <label htmlFor="rememberme1">{t('login.remember_me')}</label>
-                                </div>
-                                <a className="font-medium no-underline ml-2 text-right cursor-pointer" style={{ color: 'var(--primary-color)' }}>
-                                    {t('login.forgot_password')}
-                                </a>
-                            </div>
-
-                            <Button label={loading ? t('login.signing_in') : t('login.sign_in')} className="w-full p-3 text-xl" onClick={() => handleLogin()} disabled={loading} />
+                            <div className="text-sm font-semibold text-foreground">{projectName}</div>
+                            <div className="text-xs text-muted-foreground">پنل مدیریت</div>
                         </div>
                     </div>
+
+                    <h1 className="mt-8 max-w-lg text-3xl font-semibold leading-relaxed tracking-tight text-foreground xl:text-4xl">
+                        مدیریت سریع عملیات، مالی و نمایندگان
+                    </h1>
+                    <p className="mt-4 max-w-md text-sm leading-7 text-muted-foreground">
+                        ورود امن به داشبورد وصلات. طراحی فارسی‌محور با پشتیبانی کامل راست‌به‌چپ.
+                    </p>
+
+                    <div className="mt-8 grid max-w-md grid-cols-2 gap-3">
+                        <div className="waslat-panel p-4">
+                            <div className="text-2xl font-semibold text-emerald-700">RTL</div>
+                            <div className="mt-1 text-xs text-muted-foreground">راست‌چین کامل</div>
+                        </div>
+                        <div className="waslat-panel p-4">
+                            <div className="text-2xl font-semibold text-emerald-700">FA</div>
+                            <div className="mt-1 text-xs text-muted-foreground">فارسی پیش‌فرض</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Login card */}
+                <div className="mx-auto w-full max-w-md animate-fade-in lg:ms-auto lg:me-0">
+                    <div className="waslat-panel overflow-hidden border-emerald-100/80 p-6 sm:p-8">
+                        <div className="mb-7 text-center md:text-start">
+                            <div className="mb-4 flex justify-center md:hidden">
+                                {logo ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={logo} alt={projectName} className="h-12 w-auto object-contain" />
+                                ) : null}
+                            </div>
+                            <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{title}</h2>
+                            <p className="mt-2 text-sm text-muted-foreground">{t('login.signin_continue', { defaultValue: 'برای ادامه وارد شوید' })}</p>
+                        </div>
+
+                        <form className="space-y-4" onSubmit={handleLogin}>
+                            {error ? (
+                                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 text-start">{error}</div>
+                            ) : null}
+
+                            <div className="space-y-2 text-start">
+                                <label htmlFor="email" className="text-sm font-medium text-foreground">
+                                    {t('login.email_label', { defaultValue: 'ایمیل' })}
+                                </label>
+                                <Input
+                                    id="email"
+                                    type="text"
+                                    autoComplete="username"
+                                    placeholder={t('login.email_placeholder', { defaultValue: 'آدرس ایمیل' })}
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <div className="space-y-2 text-start">
+                                <label htmlFor="password" className="text-sm font-medium text-foreground">
+                                    {t('login.password_label', { defaultValue: 'رمز عبور' })}
+                                </label>
+                                <div className="relative">
+                                    <Input
+                                        id="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        autoComplete="current-password"
+                                        placeholder={t('login.password_placeholder', { defaultValue: 'رمز عبور' })}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="pe-11"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        className="absolute end-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-emerald-50 hover:text-foreground"
+                                        onClick={() => setShowPassword((v) => !v)}
+                                        aria-label={showPassword ? 'مخفی کردن رمز' : 'نمایش رمز'}
+                                    >
+                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                                <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={(e) => setChecked(e.target.checked)}
+                                        className="h-4 w-4 rounded border-emerald-300 accent-emerald-700"
+                                    />
+                                    <span>{t('login.remember_me', { defaultValue: 'مرا به خاطر بسپار' })}</span>
+                                </label>
+                                <span className="text-sm font-medium text-emerald-700">
+                                    {t('login.forgot_password', { defaultValue: 'رمز عبور را فراموش کرده‌اید؟' })}
+                                </span>
+                            </div>
+
+                            <Button type="submit" className="mt-2 h-11 w-full text-base" disabled={loading}>
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        {t('login.signing_in', { defaultValue: 'در حال ورود...' })}
+                                    </>
+                                ) : (
+                                    t('login.sign_in', { defaultValue: 'ورود' })
+                                )}
+                            </Button>
+                        </form>
+                    </div>
+
+                    <p className="mt-4 text-center text-xs text-muted-foreground">
+                        {projectName} · پنل مدیریت
+                    </p>
                 </div>
             </div>
         </div>

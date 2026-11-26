@@ -2,24 +2,27 @@
 'use client';
 import { _addHawalaBranch, _deleteHawalaBranch, _editHawalaBranch, _fetchHawalaBranchList } from '@/app/redux/actions/hawalaBranchActions';
 import { AppDispatch } from '@/app/redux/store';
-import i18n from '@/i18n';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ListPage } from '@/components/admin/list-page';
+import { RowActions } from '@/components/admin/row-actions';
+import { Badge } from '@/components/ui/badge';
+import { Button as UiButton } from '@/components/ui/button';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { HawalaBranch } from '@/types/interface';
+import { cn } from '@/lib/utils';
+import { Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from 'primereact/button';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { InputText } from 'primereact/inputtext';
-import { InputTextarea } from 'primereact/inputtextarea';
-import { Paginator } from 'primereact/paginator';
-import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { customCellStyle } from '../../utilities/customRow';
+import { useRouter } from 'next/navigation';
+import withAuth from '../../authGuard';
 import { isRTL } from '../../utilities/rtlUtil';
 
 const HawalaBranchPage = () => {
@@ -39,15 +42,15 @@ const HawalaBranchPage = () => {
     const [deleteHawalaBranchDialog, setDeleteHawalaBranchDialog] = useState(false);
     const [deleteHawalaBranchesDialog, setDeleteHawalaBranchesDialog] = useState(false);
     const [hawalaBranch, setHawalaBranch] = useState<HawalaBranch>(emptyHawalaBranch);
-    const [selectedHawalaBranches, setSelectedHawalaBranches] = useState(null);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
-    const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
+    const router = useRouter();
     const { hawalaBranches, loading, pagination } = useSelector((state: any) => state.hawalaBranchReducer);
     const { t } = useTranslation();
-    const [searchTag, setSearchTag] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const searchTag = useDebouncedValue(searchInput, 350);
+    const [refreshing, setRefreshing] = useState(false);
 
     const commissionTypes = [
         { label: t('HAWALA.FORM.PERCENTAGE'), value: 'percentage' },
@@ -62,6 +65,8 @@ const HawalaBranchPage = () => {
     useEffect(() => {
         dispatch(_fetchHawalaBranchList(1, searchTag));
     }, [dispatch, searchTag]);
+
+    const totalPages = Math.max(1, Math.ceil((pagination?.total || 0) / (pagination?.items_per_page || 20)));
 
     const openNew = () => {
         setHawalaBranch(emptyHawalaBranch);
@@ -125,168 +130,33 @@ const HawalaBranchPage = () => {
         setDeleteHawalaBranchDialog(false);
     };
 
-    const confirmDeleteSelected = () => {
-        setDeleteHawalaBranchesDialog(true);
+    const onPageChange = (page: number) => {
+        dispatch(_fetchHawalaBranchList(page, searchTag));
     };
 
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('HAWALA.CREATE_NEW')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                    {/* <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedHawalaBranches || !(selectedHawalaBranches as any).length}
-                    /> */}
-                </div>
-            </React.Fragment>
-        );
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await dispatch(_fetchHawalaBranchList(pagination?.page || 1, searchTag) as any);
+        setRefreshing(false);
     };
 
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <div className="flex items-center">
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-    //                 <i className="pi pi-search" />
-    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
-    //             </span>
-    //         </div>
-    //     );
-    // };
+    const commissionLabel = (type?: string) => (type === 'percentage' ? t('HAWALA.FORM.PERCENTAGE') : t('HAWALA.FORM.FIXED'));
 
-    const [localSearchTerm, setLocalSearchTerm] = useState('');
-
-    const leftToolbarTemplate = () => {
-
-        const handleSearch = () => {
-            setSearchTag(localSearchTerm);
-        };
-
-        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        };
-
-        return (
-            <React.Fragment>
-                <div className="flex align-items-center gap-2">
-                    <span className="p-input-icon-left">
-                        <i className="pi pi-search" />
-                        <InputText
-                            type="search"
-                            value={localSearchTerm}
-                            onChange={(e) => setLocalSearchTerm(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        />
-                    </span>
-                    <Button
-                        label={t('SEARCH')}
-                        onClick={handleSearch}
-                        className="p-button-sm"
-                    />
-                    {localSearchTerm && (
-                        <Button
-                            icon="pi pi-times"
-                            onClick={() => {
-                                setLocalSearchTerm('');
-                                setSearchTag('');
-                            }}
-                            className="p-button-sm p-button-secondary p-button-text"
-
-                        />
-                    )}
-                </div>
-            </React.Fragment>
-        );
-    };
-
-    const nameBodyTemplate = (rowData: HawalaBranch) => {
-        return (
-            <>
-                <span className="p-column-title">{t('HAWALA.TABLE.NAME')}</span>
-                {rowData.name}
-            </>
-        );
-    };
-
-    const emailBodyTemplate = (rowData: HawalaBranch) => {
-        return (
-            <>
-                <span className="p-column-title">{t('HAWALA.TABLE.EMAIL')}</span>
-                {rowData.email}
-            </>
-        );
-    };
-
-    const phoneBodyTemplate = (rowData: HawalaBranch) => {
-        return (
-            <>
-                <span className="p-column-title">{t('HAWALA.TABLE.PHONE')}</span>
-                {rowData.phone_number}
-            </>
-        );
-    };
-
-    const commissionTypeBodyTemplate = (rowData: HawalaBranch) => {
-        const typeLabel = rowData.commission_type === 'percentage' ? t('HAWALA.FORM.PERCENTAGE') : t('HAWALA.FORM.FIXED');
-
-        return (
-            <>
-                <span className="p-column-title">{t('HAWALA.TABLE.COMMISSION_TYPE')}</span>
-                {typeLabel}
-            </>
-        );
-    };
-
-    const amountBodyTemplate = (rowData: HawalaBranch) => {
-        return (
-            <>
-                <span className="p-column-title">{t('HAWALA.TABLE.AMOUNT')}</span>
-                {rowData.amount}
-            </>
-        );
-    };
-
-    const statusBodyTemplate = (rowData: HawalaBranch) => {
-        const statusClass = rowData.status === 'active' ? 'text-green-500' : 'text-red-500';
-        const statusLabel = rowData.status === 'active' ? t('APP.GENERAL.ACTIVE') : t('APP.GENERAL.INACTIVE');
-
-        return (
-            <>
-                <span className="p-column-title">{t('HAWALA.TABLE.STATUS')}</span>
-                <span className={statusClass}>{statusLabel}</span>
-            </>
-        );
-    };
-
-    const actionBodyTemplate = (rowData: HawalaBranch) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editHawalaBranch(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteHawalaBranch(rowData)} />
-            </>
-        );
-    };
-
-    const hawalaBranchDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveHawalaBranch} />
-        </>
-    );
+    const getRowActions = (row: HawalaBranch) => [
+        {
+            label: t('TABLE.GENERAL.VIEW', { defaultValue: 'مشاهده' }),
+            icon: <Eye className="h-4 w-4" />,
+            onClick: () => router.push(`/pages/hawala-branches/${row.id}`)
+        },
+        { label: t('TABLE.GENERAL.EDIT'), icon: <Pencil className="h-4 w-4" />, onClick: () => editHawalaBranch(row) },
+        {
+            label: t('TABLE.GENERAL.DELETE'),
+            icon: <Trash2 className="h-4 w-4" />,
+            danger: true,
+            separatorBefore: true,
+            onClick: () => confirmDeleteHawalaBranch(row)
+        }
+    ];
 
     const deleteHawalaBranchDialogFooter = (
         <>
@@ -302,281 +172,306 @@ const HawalaBranchPage = () => {
         </>
     );
 
-    const onPageChange = (event: any) => {
-        const page = event.page + 1;
-        dispatch(_fetchHawalaBranchList(page, searchTag));
-    };
-
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={hawalaBranches}
-                        selection={selectedHawalaBranches}
-                        onSelectionChange={(e) => setSelectedHawalaBranches(e.value as any)}
-                        dataKey="id"
-                        paginator={false} // Disable PrimeReact's built-in paginator
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        className="datatable-responsive"
-                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                        globalFilter={globalFilter}
-                        responsiveLayout="scroll"
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                    >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="name" header={t('HAWALA.TABLE.NAME')} sortable body={nameBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="email" header={t('HAWALA.TABLE.EMAIL')} body={emailBodyTemplate} sortable></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="phone_number" header={t('HAWALA.TABLE.PHONE')} body={phoneBodyTemplate} sortable></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="commission_type"
-                            header={t('HAWALA.TABLE.COMMISSION_TYPE')}
-                            body={commissionTypeBodyTemplate}
-                            sortable
-                        ></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="amount" header={t('HAWALA.TABLE.AMOUNT')} body={amountBodyTemplate} sortable></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="status" header={t('HAWALA.TABLE.STATUS')} body={statusBodyTemplate} sortable></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
-                    </DataTable>
-
-                    <Paginator
-                        first={(pagination?.page - 1) * pagination?.items_per_page}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        onPageChange={(e) => onPageChange(e)}
-                        template={
-                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        firstPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-right"
-                                : "pi pi-angle-double-left"
-                        }
-                        lastPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-left"
-                                : "pi pi-angle-double-right"
-                        }
+        <div className="space-y-4">
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.HAWALA_BRANCHES', { defaultValue: 'شعب حواله' })}
+                description={t('HAWALA.BRANCHES.DESCRIPTION', { defaultValue: 'مدیریت شعب و کارمزد حواله' })}
+                loading={loading}
+                actions={
+                    <>
+                        <UiButton variant="default" size="sm" onClick={openNew}>
+                            <Plus className="h-4 w-4" />
+                            {t('HAWALA.CREATE_NEW')}
+                        </UiButton>
+                        <UiButton variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-4 w-4', (refreshing || loading) && 'animate-spin')} />
+                            {t('REFRESH', { defaultValue: 'بروزرسانی' })}
+                        </UiButton>
+                    </>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو در شعب...' })}
                     />
-
-                    <Dialog visible={hawalaBranchDialog} style={{ width: '900px', padding: '5px' }} header={t('HAWALA.DETAILS')} modal className="p-fluid" footer={hawalaBranchDialogFooter} onHide={hideDialog}>
-                        <div className="card flex flex-wrap p-fluid mt-3 gap-4">
-                            <div className="flex-1 col-12 lg:col-6">
-                                <div className="field">
-                                    <label htmlFor="name" style={{ fontWeight: 'bold' }}>
-                                        {t('HAWALA.FORM.NAME')}
-                                    </label>
-                                    <InputText
-                                        id="name"
-                                        value={hawalaBranch.name}
-                                        onChange={(e) =>
-                                            setHawalaBranch((prev: any) => ({
-                                                ...prev,
-                                                name: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        placeholder={t('HAWALA.FORM.NAME_PLACEHOLDER')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !hawalaBranch.name
-                                        })}
-                                    />
-                                    {submitted && !hawalaBranch.name && <small style={{ color: 'red', fontSize: '12px' }}>{t('APP.VALIDATION.REQUIRED_NAME')}</small>}
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="email" style={{ fontWeight: 'bold' }}>
-                                        {t('HAWALA.FORM.EMAIL')}
-                                    </label>
-                                    <InputText
-                                        id="email"
-                                        value={hawalaBranch.email}
-                                        onChange={(e) =>
-                                            setHawalaBranch((prev: any) => ({
-                                                ...prev,
-                                                email: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        placeholder={t('HAWALA.FORM.EMAIL_PLACEHOLDER')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !hawalaBranch.email
-                                        })}
-                                    />
-                                    {submitted && !hawalaBranch.email && <small style={{ color: 'red', fontSize: '12px' }}>{t('APP.VALIDATION.REQUIRED_EMAIL')}</small>}
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="password" style={{ fontWeight: 'bold' }}>
-                                        {t('HAWALA.FORM.PASSWORD')}
-                                    </label>
-                                    <InputText
-                                        id="password"
-                                        type="password"
-                                        value={hawalaBranch.password}
-                                        onChange={(e) =>
-                                            setHawalaBranch((prev: any) => ({
-                                                ...prev,
-                                                password: e.target.value
-                                            }))
-                                        }
-                                        required={!hawalaBranch.id}
-                                        placeholder={t('HAWALA.FORM.PASSWORD_PLACEHOLDER')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !hawalaBranch.password && !hawalaBranch.id
-                                        })}
-                                    />
-                                    {submitted && !hawalaBranch.password && !hawalaBranch.id && <small style={{ color: 'red', fontSize: '12px' }}>{t('APP.VALIDATION.REQUIRED_PASSWORD')}</small>}
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="address" style={{ fontWeight: 'bold' }}>
-                                        {t('HAWALA.FORM.ADDRESS')}
-                                    </label>
-                                    <InputTextarea
-                                        id="address"
-                                        value={hawalaBranch.address}
-                                        onChange={(e) =>
-                                            setHawalaBranch((prev: any) => ({
-                                                ...prev,
-                                                address: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        rows={3}
-                                        placeholder={t('HAWALA.FORM.ADDRESS_PLACEHOLDER')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !hawalaBranch.address
-                                        })}
-                                    />
-                                    {submitted && !hawalaBranch.address && <small style={{ color: 'red', fontSize: '12px' }}>{t('APP.VALIDATION.REQUIRED_ADDRESS')}</small>}
-                                </div>
-                            </div>
-
-                            <div className="flex-1 col-12 lg:col-6">
-                                <div className="field">
-                                    <label htmlFor="phone_number" style={{ fontWeight: 'bold' }}>
-                                        {t('HAWALA.FORM.PHONE')}
-                                    </label>
-                                    <InputText
-                                        id="phone_number"
-                                        value={hawalaBranch.phone_number}
-                                        onChange={(e) =>
-                                            setHawalaBranch((prev: any) => ({
-                                                ...prev,
-                                                phone_number: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        placeholder={t('HAWALA.FORM.PHONE_PLACEHOLDER')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !hawalaBranch.phone_number
-                                        })}
-                                    />
-                                    {submitted && !hawalaBranch.phone_number && <small style={{ color: 'red', fontSize: '12px' }}>{t('APP.VALIDATION.REQUIRED_PHONE')}</small>}
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="commission_type" style={{ fontWeight: 'bold' }}>
-                                        {t('HAWALA.FORM.COMMISSION_TYPE')}
-                                    </label>
-                                    <Dropdown
-                                        id="commission_type"
-                                        value={hawalaBranch.commission_type}
-                                        options={commissionTypes}
-                                        onChange={(e) =>
-                                            setHawalaBranch((prev: any) => ({
-                                                ...prev,
-                                                commission_type: e.value
-                                            }))
-                                        }
-                                        placeholder={t('HAWALA.FORM.SELECT_COMMISSION_TYPE')}
-                                        className="w-full"
-                                    />
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="amount" style={{ fontWeight: 'bold' }}>
-                                        {hawalaBranch.commission_type === 'percentage' ? t('HAWALA.FORM.COMMISSION_PERCENTAGE') : t('HAWALA.FORM.COMMISSION_AMOUNT')}
-                                    </label>
-                                    <InputText
-                                        id="amount"
-                                        value={hawalaBranch.amount?.toString()}
-                                        onChange={(e) =>
-                                            setHawalaBranch((prev: any) => ({
-                                                ...prev,
-                                                amount: Number(e.target.value)
-                                            }))
-                                        }
-                                        required
-                                        keyfilter="num"
-                                        placeholder={hawalaBranch.commission_type === 'percentage' ? t('HAWALA.FORM.PERCENTAGE_PLACEHOLDER') : t('HAWALA.FORM.AMOUNT_PLACEHOLDER')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !hawalaBranch.amount
-                                        })}
-                                    />
-                                    {submitted && !hawalaBranch.amount && <small style={{ color: 'red', fontSize: '12px' }}>{t('APP.VALIDATION.REQUIRED_AMOUNT')}</small>}
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="status" style={{ fontWeight: 'bold' }}>
-                                        {t('HAWALA.FORM.STATUS')}
-                                    </label>
-                                    <Dropdown
-                                        id="status"
-                                        value={hawalaBranch.status}
-                                        options={statusOptions}
-                                        onChange={(e) =>
-                                            setHawalaBranch((prev: any) => ({
-                                                ...prev,
-                                                status: e.value
-                                            }))
-                                        }
-                                        placeholder={t('HAWALA.FORM.SELECT_STATUS')}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
+                }
+                footer={
+                    <div className="flex flex-col gap-2 border-t border-emerald-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-xs text-muted-foreground">
+                            {t('DATA_TABLE.TABLE.PAGINATOR.SHOWING', { defaultValue: 'صفحه' })}{' '}
+                            {pagination?.page || 1} / {totalPages} · {pagination?.total || 0}
                         </div>
-                    </Dialog>
-
-                    <Dialog visible={deleteHawalaBranchDialog} style={{ width: '450px' }} header={t('APP.GENERAL.CONFIRM')} modal footer={deleteHawalaBranchDialogFooter} onHide={hideDeleteHawalaBranchDialog}>
-                        <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
-                            {hawalaBranch && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE', { name: hawalaBranch.name })}</span>}
+                        <div className="flex items-center gap-2">
+                            <UiButton variant="outline" size="sm" disabled={(pagination?.page || 1) <= 1} onClick={() => onPageChange((pagination?.page || 1) - 1)}>
+                                {t('PREVIOUS', { defaultValue: 'قبلی' })}
+                            </UiButton>
+                            <UiButton variant="outline" size="sm" disabled={(pagination?.page || 1) >= totalPages} onClick={() => onPageChange((pagination?.page || 1) + 1)}>
+                                {t('NEXT', { defaultValue: 'بعدی' })}
+                            </UiButton>
                         </div>
-                    </Dialog>
+                    </div>
+                }
+            >
+                <table className="w-full min-w-[960px] border-collapse text-xs">
+                    <thead>
+                        <tr className="border-b border-emerald-100 bg-emerald-50/70 text-start">
+                            <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">{t('TABLE.GENERAL.ACTIONS', { defaultValue: 'عملیات' })}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('HAWALA.TABLE.NAME')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('HAWALA.TABLE.EMAIL')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('HAWALA.TABLE.PHONE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('HAWALA.TABLE.COMMISSION_TYPE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('HAWALA.TABLE.AMOUNT')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('HAWALA.TABLE.STATUS')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {(hawalaBranches || []).length === 0 ? (
+                            <tr>
+                                <td colSpan={7} className="px-2 py-12 text-center text-muted-foreground">
+                                    {t('DATA_TABLE.TABLE.NO_DATA', { defaultValue: 'داده‌ای یافت نشد' })}
+                                </td>
+                            </tr>
+                        ) : (
+                            (hawalaBranches || []).map((row: HawalaBranch) => (
+                                <tr key={row.id} className="border-b border-emerald-50 transition hover:bg-emerald-50/50">
+                                    <td className="px-2 py-1.5 align-middle">
+                                        <RowActions items={getRowActions(row)} />
+                                    </td>
+                                    <td className="px-2 py-1.5 text-start font-medium">
+                                        <button
+                                            type="button"
+                                            className="text-start font-medium text-emerald-800 hover:underline"
+                                            onClick={() => router.push(`/pages/hawala-branches/${row.id}`)}
+                                        >
+                                            {row.name || '—'}
+                                        </button>
+                                    </td>
+                                    <td className="px-2 py-1.5 text-start text-muted-foreground">{row.email || '—'}</td>
+                                    <td className="px-2 py-1.5 tabular-nums">{row.phone_number || '—'}</td>
+                                    <td className="px-2 py-1.5">{commissionLabel(row.commission_type)}</td>
+                                    <td className="px-2 py-1.5 tabular-nums">{row.amount ?? '—'}</td>
+                                    <td className="px-2 py-1.5">
+                                        <Badge variant={row.status === 'active' ? 'success' : 'danger'} className="text-[10px]">
+                                            {row.status === 'active' ? t('APP.GENERAL.ACTIVE') : t('APP.GENERAL.INACTIVE')}
+                                        </Badge>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </ListPage>
 
-                    <Dialog visible={deleteHawalaBranchesDialog} style={{ width: '450px' }} header={t('APP.GENERAL.CONFIRM')} modal footer={deleteHawalaBranchesDialogFooter} onHide={hideDeleteHawalaBranchesDialog}>
-                        <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
-                            {hawalaBranch && <span>{t('APP.DELETE_SELECTED_CONFIRMATION')}</span>}
-                        </div>
-                    </Dialog>
+            <FormSheet
+                open={hawalaBranchDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                size="xl"
+                side="left"
+                title={t('HAWALA.DETAILS')}
+                description={
+                    hawalaBranch.id
+                        ? t('HAWALA.FORM.EDIT_HINT', { defaultValue: 'ویرایش اطلاعات شعبه حواله' })
+                        : t('HAWALA.FORM.CREATE_HINT', { defaultValue: 'ثبت شعبه حواله جدید' })
+                }
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveHawalaBranch}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection title={t('HAWALA.FORM.SECTION.IDENTITY', { defaultValue: 'هویت و تماس' })}>
+                    <FormField
+                        label={t('HAWALA.FORM.NAME')}
+                        required
+                        error={submitted && !hawalaBranch.name ? t('APP.VALIDATION.REQUIRED_NAME') : null}
+                    >
+                        <Input
+                            id="name"
+                            value={hawalaBranch.name}
+                            onChange={(e) =>
+                                setHawalaBranch((prev: any) => ({
+                                    ...prev,
+                                    name: e.target.value
+                                }))
+                            }
+                            required
+                            autoFocus
+                            placeholder={t('HAWALA.FORM.NAME_PLACEHOLDER')}
+                            className={cn('w-full', submitted && !hawalaBranch.name && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('HAWALA.FORM.EMAIL')}
+                        required
+                        error={submitted && !hawalaBranch.email ? t('APP.VALIDATION.REQUIRED_EMAIL') : null}
+                    >
+                        <Input
+                            id="email"
+                            value={hawalaBranch.email}
+                            onChange={(e) =>
+                                setHawalaBranch((prev: any) => ({
+                                    ...prev,
+                                    email: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('HAWALA.FORM.EMAIL_PLACEHOLDER')}
+                            className={cn('w-full', submitted && !hawalaBranch.email && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('HAWALA.FORM.PHONE')}
+                        required
+                        error={submitted && !hawalaBranch.phone_number ? t('APP.VALIDATION.REQUIRED_PHONE') : null}
+                    >
+                        <Input
+                            id="phone_number"
+                            value={hawalaBranch.phone_number}
+                            onChange={(e) =>
+                                setHawalaBranch((prev: any) => ({
+                                    ...prev,
+                                    phone_number: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('HAWALA.FORM.PHONE_PLACEHOLDER')}
+                            className={cn('w-full', submitted && !hawalaBranch.phone_number && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('HAWALA.FORM.PASSWORD')}
+                        required={!hawalaBranch.id}
+                        error={submitted && !hawalaBranch.password && !hawalaBranch.id ? t('APP.VALIDATION.REQUIRED_PASSWORD') : null}
+                    >
+                        <Input
+                            id="password"
+                            type="password"
+                            value={hawalaBranch.password}
+                            onChange={(e) =>
+                                setHawalaBranch((prev: any) => ({
+                                    ...prev,
+                                    password: e.target.value
+                                }))
+                            }
+                            required={!hawalaBranch.id}
+                            placeholder={t('HAWALA.FORM.PASSWORD_PLACEHOLDER')}
+                            className={cn('w-full', submitted && !hawalaBranch.password && !hawalaBranch.id && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('HAWALA.FORM.ADDRESS')}
+                        required
+                        fullWidth
+                        error={submitted && !hawalaBranch.address ? t('APP.VALIDATION.REQUIRED_ADDRESS') : null}
+                    >
+                        <Textarea
+                            id="address"
+                            value={hawalaBranch.address}
+                            onChange={(e) =>
+                                setHawalaBranch((prev: any) => ({
+                                    ...prev,
+                                    address: e.target.value
+                                }))
+                            }
+                            required
+                            rows={3}
+                            placeholder={t('HAWALA.FORM.ADDRESS_PLACEHOLDER')}
+                            className={cn('w-full', submitted && !hawalaBranch.address && 'border-rose-300')}
+                        />
+                    </FormField>
+                </FormSection>
+                <FormSection title={t('HAWALA.FORM.SECTION.COMMISSION', { defaultValue: 'کارمزد و وضعیت' })}>
+                    <FormField label={t('HAWALA.FORM.COMMISSION_TYPE')} required>
+                        <Select
+                            value={hawalaBranch.commission_type || undefined}
+                            onValueChange={(v) =>
+                                setHawalaBranch((prev: any) => ({
+                                    ...prev,
+                                    commission_type: v
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('HAWALA.FORM.SELECT_COMMISSION_TYPE')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {commissionTypes.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField
+                        label={hawalaBranch.commission_type === 'percentage' ? t('HAWALA.FORM.COMMISSION_PERCENTAGE') : t('HAWALA.FORM.COMMISSION_AMOUNT')}
+                        required
+                        error={submitted && !hawalaBranch.amount ? t('APP.VALIDATION.REQUIRED_AMOUNT') : null}
+                    >
+                        <Input
+                            id="amount"
+                            value={hawalaBranch.amount?.toString()}
+                            onChange={(e) =>
+                                setHawalaBranch((prev: any) => ({
+                                    ...prev,
+                                    amount: Number(e.target.value)
+                                }))
+                            }
+                            required
+                            type="number"
+                            inputMode="decimal"
+                            placeholder={hawalaBranch.commission_type === 'percentage' ? t('HAWALA.FORM.PERCENTAGE_PLACEHOLDER') : t('HAWALA.FORM.AMOUNT_PLACEHOLDER')}
+                            className={cn('w-full', submitted && !hawalaBranch.amount && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField label={t('HAWALA.FORM.STATUS')}>
+                        <Select
+                            value={hawalaBranch.status || undefined}
+                            onValueChange={(v) =>
+                                setHawalaBranch((prev: any) => ({
+                                    ...prev,
+                                    status: v
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('HAWALA.FORM.SELECT_STATUS')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {statusOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                </FormSection>
+            </FormSheet>
+
+            <Dialog visible={deleteHawalaBranchDialog} style={{ width: '450px' }} header={t('APP.GENERAL.CONFIRM')} modal footer={deleteHawalaBranchDialogFooter} onHide={hideDeleteHawalaBranchDialog}>
+                <div className="flex align-items-center justify-content-center">
+                    <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
+                    {hawalaBranch && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE', { name: hawalaBranch.name })}</span>}
                 </div>
-            </div>
+            </Dialog>
+
+            <Dialog visible={deleteHawalaBranchesDialog} style={{ width: '450px' }} header={t('APP.GENERAL.CONFIRM')} modal footer={deleteHawalaBranchesDialogFooter} onHide={hideDeleteHawalaBranchesDialog}>
+                <div className="flex align-items-center justify-content-center">
+                    <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
+                    {hawalaBranch && <span>{t('APP.DELETE_SELECTED_CONFIRMATION')}</span>}
+                </div>
+            </Dialog>
         </div>
     );
 };
 
-export default HawalaBranchPage;
+export default withAuth(HawalaBranchPage);

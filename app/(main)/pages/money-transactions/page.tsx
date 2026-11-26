@@ -7,25 +7,51 @@ import { _deleteSelectedTransactions, _fetchMoneyTransactionsList } from '@/app/
 import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
 import { AppDispatch } from '@/app/redux/store';
-import i18n from '@/i18n';
 import { Bundle, MoneyTransaction } from '@/types/interface';
 import { Button } from 'primereact/button';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { InputText } from 'primereact/inputtext';
-import { Paginator } from 'primereact/paginator';
-import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
-import { customCellStyle } from '../../utilities/customRow';
 import { generateTransactionExcelFile } from '../../utilities/generateExcel';
 import { isRTL } from '../../utilities/rtlUtil';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { FilterField, FILTER_SHEET_BODY_CLASS } from '@/components/admin/filter-field';
+import { Button as UiButton } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { Download, RefreshCw } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+type TransactionFilters = {
+    filter_transactiontype: string | null;
+    filter_transactioncategory: string | null;
+    filter_transactionpurpose: string | null;
+    filter_startdate: string | null;
+    filter_enddate: string | null;
+};
+
+const emptyTransactionFilters: TransactionFilters = {
+    filter_transactiontype: null,
+    filter_transactioncategory: null,
+    filter_transactionpurpose: null,
+    filter_startdate: null,
+    filter_enddate: null
+};
+
+function compactTransactionFilters(filters: TransactionFilters) {
+    const out: Record<string, string> = {};
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') out[key] = value as string;
+    });
+    return out;
+}
 
 const TransactionPage = () => {
     let emptyBundle: Bundle = {
@@ -58,11 +84,13 @@ const TransactionPage = () => {
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
-    const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { transactions, loading, pagination } = useSelector((state: any) => state.moneyTransactionReducer);
     const { t } = useTranslation();
-    const [searchTag, setSearchTag] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const searchTag = useDebouncedValue(searchInput, 350);
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [draftFilters, setDraftFilters] = useState<TransactionFilters>(emptyTransactionFilters);
 
     const [filterDialogVisible, setFilterDialogVisible] = useState(false);
     const [filters, setFilters] = useState({
@@ -72,7 +100,7 @@ const TransactionPage = () => {
         filter_startdate: null as string | null,
         filter_enddate: null as string | null
     });
-    const [activeFilters, setActiveFilters] = useState({});
+    const [activeFilters, setActiveFilters] = useState<TransactionFilters>(emptyTransactionFilters);
     const [refreshing, setRefreshing] = useState(false);
     const filterRef = useRef<HTMLDivElement>(null);
 
@@ -187,381 +215,84 @@ const TransactionPage = () => {
         setDeleteServicesDialog(false);
     };
 
-    const rightToolbarTemplate = () => {
-        const hasSelectedTransactions = selectedTransactions && (selectedTransactions as any).length > 0;
-        return (
-            <React.Fragment>
-                <div className="my-2 flex items-center gap-2">
-                    <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
-                        <Button style={{ gap: '8px' }} className="p-button-info" label={t('FILTER')} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
-                        {filterDialogVisible && (
-                            <div
-                                className="p-card p-fluid"
-                                style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    left: isRTL() ? 0 : '',
-                                    right: isRTL() ? '' : 0,
-                                    width: '300px',
-                                    zIndex: 1000,
-                                    marginTop: '0.5rem',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                }}
-                            >
-                                <div className="p-card-body" style={{ padding: '1rem' }}>
-                                    <div className="grid">
-                                        {/* Transaction Type Filter */}
-                                        <div className="col-12">
-                                            <label htmlFor="transactionTypeFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('TRANSACTION.TABLE.COLUMN.TYPE')}
-                                            </label>
-                                            <Dropdown
-                                                id="transactionTypeFilter"
-                                                options={[
-                                                    { label: t('CREDIT'), value: 'credit' },
-                                                    { label: t('DEBIT'), value: 'debit' }
-                                                ]}
-                                                value={filters.filter_transactiontype}
-                                                onChange={(e) => setFilters({ ...filters, filter_transactiontype: e.value })}
-                                                placeholder={t('SELECT_TYPE')}
-                                                style={{ width: '100%' }}
-                                            />
-                                        </div>
+    const chips = useMemo(() => {
+        const list: { key: string; label: string }[] = [];
+        if (activeFilters.filter_transactiontype) {
+            list.push({
+                key: 'filter_transactiontype',
+                label: `${t('TRANSACTION.TABLE.COLUMN.TYPE')}: ${activeFilters.filter_transactiontype === 'credit' ? t('CREDIT') : t('DEBIT')}`
+            });
+        }
+        if (activeFilters.filter_transactioncategory) {
+            list.push({ key: 'filter_transactioncategory', label: `${t('TRANSACTION.TABLE.COLUMN.CATEGORY')}: ${activeFilters.filter_transactioncategory}` });
+        }
+        if (activeFilters.filter_transactionpurpose) {
+            list.push({ key: 'filter_transactionpurpose', label: `${t('TRANSACTION.TABLE.COLUMN.PURPOSE')}: ${activeFilters.filter_transactionpurpose}` });
+        }
+        if (activeFilters.filter_startdate) {
+            list.push({ key: 'filter_startdate', label: `${t('START_DATE', { defaultValue: 'از تاریخ' })}: ${activeFilters.filter_startdate}` });
+        }
+        if (activeFilters.filter_enddate) {
+            list.push({ key: 'filter_enddate', label: `${t('END_DATE', { defaultValue: 'تا تاریخ' })}: ${activeFilters.filter_enddate}` });
+        }
+        return list;
+    }, [activeFilters, t]);
 
-                                        {/* Transaction Category Filter */}
-                                        <div className="col-12">
-                                            <label htmlFor="transactionCategoryFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('TRANSACTION.TABLE.COLUMN.CATEGORY')}
-                                            </label>
-                                            <Dropdown
-                                                id="transactionCategoryFilter"
-                                                options={[
-                                                    { label: t('ADMIN_TO_RESELLER'), value: 'admin-reseller' },
-                                                    { label: t('RESELLER_TO_SUBRESELLER'), value: 'reseller-subreseller' }
-                                                ]}
-                                                value={filters.filter_transactioncategory}
-                                                onChange={(e) => setFilters({ ...filters, filter_transactioncategory: e.value })}
-                                                placeholder={t('SELECT_CATEGORY')}
-                                                style={{ width: '100%' }}
-                                            />
-                                        </div>
-
-                                        {/* Transaction Purpose Filter */}
-                                        <div className="col-12">
-                                            <label htmlFor="transactionPurposeFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('TRANSACTION.TABLE.COLUMN.PURPOSE')}
-                                            </label>
-                                            <Dropdown
-                                                id="transactionPurposeFilter"
-                                                options={[
-                                                    { label: t('FILTER.ORDER'), value: 'order' },
-                                                    { label: t('MONEY_TRANSFER'), value: 'money' }
-                                                ]}
-                                                value={filters.filter_transactionpurpose}
-                                                onChange={(e) => setFilters({ ...filters, filter_transactionpurpose: e.value })}
-                                                placeholder={t('SELECT_PURPOSE')}
-                                                style={{ width: '100%' }}
-                                            />
-                                        </div>
-
-                                        {/* Date Range Filters */}
-                                        <div className="col-12">
-                                            <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('START_DATE')}
-                                            </label>
-                                            <InputText type="date" id="startDateFilter" value={filters.filter_startdate || ''} onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })} style={{ width: '100%' }} />
-                                        </div>
-
-                                        <div className="col-12">
-                                            <label htmlFor="endDateFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('END_DATE')}
-                                            </label>
-                                            <InputText type="date" id="endDateFilter" value={filters.filter_enddate || ''} onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })} style={{ width: '100%' }} />
-                                        </div>
-
-                                        {/* Action Buttons */}
-                                        <div className="col-12 mt-3 flex justify-content-between gap-2">
-                                            <Button
-                                                label={t('RESET')}
-                                                icon="pi pi-times"
-                                                className="p-button-secondary p-button-sm"
-                                                onClick={() => {
-                                                    setFilters({
-                                                        filter_transactiontype: null,
-                                                        filter_transactioncategory: null,
-                                                        filter_transactionpurpose: null,
-                                                        filter_startdate: null,
-                                                        filter_enddate: null
-                                                    });
-                                                }}
-                                            />
-                                            <Button
-                                                label={t('APPLY')}
-                                                icon="pi pi-check"
-                                                className="p-button-sm"
-                                                onClick={() => {
-                                                    handleSubmitFilter(filters);
-                                                    setFilterDialogVisible(false);
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    {/* <Button
-                    style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                    label={t('APP.GENERAL.DELETE')}
-                    icon="pi pi-trash"
-                    severity="danger"
-                    onClick={confirmDeleteSelected}
-                    disabled={!selectedTransactions || !(selectedTransactions as any).length}
-                /> */}
-                    <Button style={{ gap: '8px' }} className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
-                    {/* <Button
-                            style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                            label={t('APP.GENERAL.DELETE')}
-                            icon="pi pi-trash"
-                            severity="danger"
-                            onClick={confirmDeleteSelected}
-                            disabled={!selectedTransactions || !(selectedTransactions as any).length}
-                        /> */}
-
-                </div>
-            </React.Fragment>
-        );
+    const applyFilters = () => {
+        setActiveFilters(draftFilters);
+        setFilterOpen(false);
     };
 
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <React.Fragment>
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left">
-    //                 <i className="pi pi-search" />
-    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} />
-    //             </span>
-    //         </React.Fragment>
-    //     );
-    // };
-
-    const [localSearchTerm, setLocalSearchTerm] = useState('');
-
-    const leftToolbarTemplate = () => {
-
-        const handleSearch = () => {
-            setSearchTag(localSearchTerm);
-        };
-
-        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        };
-
-        return (
-            <React.Fragment>
-                <div className="flex align-items-center gap-2">
-                    <span className="p-input-icon-left">
-                        <i className="pi pi-search" />
-                        <InputText
-                            type="search"
-                            value={localSearchTerm}
-                            onChange={(e) => setLocalSearchTerm(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        />
-                    </span>
-                    <Button
-                        label={t('SEARCH')}
-                        onClick={handleSearch}
-                        className="p-button-sm"
-                    />
-                    {localSearchTerm && (
-                        <Button
-                            icon="pi pi-times"
-                            onClick={() => {
-                                setLocalSearchTerm('');
-                                setSearchTag('');
-                            }}
-                            className="p-button-sm p-button-secondary p-button-text"
-
-                        />
-                    )}
-                </div>
-            </React.Fragment>
-        );
+    const clearFilters = () => {
+        setDraftFilters(emptyTransactionFilters);
+        setActiveFilters(emptyTransactionFilters);
+        setFilterOpen(false);
     };
 
-    const resellerBodyTemplate = (rowData: MoneyTransaction) => {
-        return (
-            <>
-                <span className="p-column-title">Reseller</span>
-                <span style={{ fontSize: '0.9rem' }}>{rowData.reseller?.reseller_name}</span>
-            </>
-        );
+    const removeChip = (key: string) => {
+        const next = { ...activeFilters, [key]: null } as TransactionFilters;
+        setActiveFilters(next);
+        setDraftFilters(next);
     };
 
-    // const amountBodyTemplate = (rowData: MoneyTransaction) => {
-    //     return (
-    //         <>
-    //             <span className="p-column-title">Amount</span>
-    //             <span style={{ fontSize: '0.9rem' }}>{parseInt(rowData.amount).toFixed(2)}</span>
-    //         </>
-    //     );
-    // };
+    const isOrderStatusValid = (row: MoneyTransaction) => row.order?.status === 1 || row.order?.status === '1';
 
-    const amountBodyTemplate = (rowData: MoneyTransaction) => {
-        return (
-            <>
-                <span className="p-column-title">Amount</span>
-                <span style={{ fontSize: '0.9rem' }}>{rowData.amount}</span>
-            </>
-        );
+    const transactionStatusVariant = (status?: string | null): 'success' | 'danger' | 'muted' => {
+        if (status === 'credit') return 'success';
+        if (status === 'debit') return 'danger';
+        return 'muted';
     };
 
-    const currencyBodyTemplate = (rowData: MoneyTransaction) => {
-        return (
-            <>
-                <span className="p-column-title">Currency</span>
-                <span style={{ fontSize: '0.9rem' }}>{rowData?.reseller?.user?.currency?.code}</span>
-            </>
-        );
+    const transactionStatusLabel = (row: MoneyTransaction) => {
+        if (row.status === 'credit') return `${t('CREDIT', { defaultValue: 'واریز' })} → ${row.initiator_type || ''}`;
+        if (row.status === 'debit') return `${t('DEBIT', { defaultValue: 'برداشت' })} ← ${row.initiator_type || ''}`;
+        return t('UNKNOWN', { defaultValue: 'نامشخص' });
     };
 
-    const remainingBalanceBodyTemplate = (rowData: MoneyTransaction) => {
-        return (
-            <>
-                <span className="p-column-title">Remaining Balance</span>
-                <span style={{ fontSize: '0.9rem' }}>{rowData.remaining_balance}</span>
-            </>
-        );
+    const formatTransactionDate = (value?: string) => {
+        if (!value) return '—';
+        try {
+            return new Date(value).toLocaleString('fa-IR', { dateStyle: 'short', timeStyle: 'short' });
+        } catch {
+            return value;
+        }
     };
 
-    const bundleTitleBodyTemplate = (rowData: MoneyTransaction) => {
-        const isStatusValid = rowData.order?.status === 1 || rowData.order?.status === "1";
-
-        return (
-            <>
-                <span className="p-column-title">Bundle Title</span>
-                <span style={{ fontSize: '0.9rem' }}>
-                    {isStatusValid ? rowData.order?.bundle?.bundle_title : "X"}
-                </span>
-            </>
-        );
+    const capitalizeInitiator = (text: string | null) => {
+        if (!text) return '—';
+        return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
     };
 
-    const recharableAmountBodyTemplate = (rowData: MoneyTransaction) => {
-        const isStatusValid = rowData.order?.status === 1 || rowData.order?.status === "1";
+    const totalPages = Math.max(1, Math.ceil((pagination?.total || 0) / (pagination?.items_per_page || 20)));
 
-        return (
-            <>
-                <span className="p-column-title">Rechargeable Amount</span>
-                <span style={{ fontSize: '0.9rem' }}>
-                    {isStatusValid ? rowData.order?.rechargeble_account : "X"}
-                </span>
-            </>
-        );
+    const onPageChange = (page: number) => {
+        dispatch(_fetchMoneyTransactionsList(page, searchTag, compactTransactionFilters(activeFilters)));
     };
 
-    const transactionDateBodyTemplate = (rowData: MoneyTransaction) => {
-        const formatDate = (dateString: string) => {
-            const date = new Date(dateString);
-            const optionsDate: Intl.DateTimeFormatOptions = {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            };
-            const optionsTime: Intl.DateTimeFormatOptions = {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            };
-            const formattedDate = date.toLocaleDateString('en-US', optionsDate);
-            const formattedTime = date.toLocaleTimeString('en-US', optionsTime);
-
-            return { formattedDate, formattedTime };
-        };
-
-        const { formattedDate, formattedTime } = formatDate(rowData.created_at);
-
-        return (
-            <>
-                <span className="p-column-title">Created At</span>
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedDate}</span>
-                <br />
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedTime}</span>
-            </>
-        );
-    };
-
-    const statusBodyTemplate = (rowData: MoneyTransaction) => {
-        // Define background color based on transaction type
-        const getBackgroundColor = (type: string | null) => {
-            switch (type) {
-                case 'credit':
-                    return 'bg-green-500'; // Tailwind CSS class for green background
-                case 'debit':
-                    return 'bg-red-500'; // Tailwind CSS class for red background
-                default:
-                    return 'bg-gray-500'; // Default gray background for other or null types
-            }
-        };
-
-        // Define message based on transaction type
-        const getTransactionMessage = (data: MoneyTransaction) => {
-            switch (data.status) {
-                case 'credit':
-                    return `Amount Credited To ${data.initiator_type}`;
-                case 'debit':
-                    return `Amount Debited From ${data.initiator_type}`;
-                default:
-                    return 'Unknown Transaction';
-            }
-        };
-
-        return (
-            <>
-                <span className="p-column-title">Status (Type)</span>
-                <span style={{ fontSize: '0.7rem', borderRadius: '5px' }} className={`inline-block p-1 text-white ${getBackgroundColor(rowData.status)}`}>
-                    {getTransactionMessage(rowData)}
-                </span>
-            </>
-        );
-    };
-
-    const initiatorTypeBodyTemplate = (rowData: MoneyTransaction) => {
-        // Function to capitalize the first letter
-        const capitalizeFirstLetter = (text: string | null) => {
-            if (!text) return ''; // Handle null or empty string
-            //if (text == 'App\\Models\\User') return 'Reseller';
-            return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
-        };
-
-        return (
-            <>
-                <span className="p-column-title">Initiator Type</span>
-                <span style={{ fontSize: '0.9rem' }}>{capitalizeFirstLetter(rowData.initiator_type)}</span>
-            </>
-        );
-    };
-
-    const descriptionBodyTemplate = (rowData: MoneyTransaction) => {
-        return (
-            <>
-                <span className="p-column-title">Description</span>
-                <span style={{ fontSize: '0.9rem' }}>{rowData.transaction_reason}</span>
-            </>
-        );
-    };
-
-    const onPageChange = (event: any) => {
-        const page = event.page + 1;
-        dispatch(_fetchMoneyTransactionsList(page, searchTag, activeFilters));
-    };
-
-    const handleSubmitFilter = (filters: any) => {
-        const cleanedFilters = Object.fromEntries(Object.entries(filters).filter(([_, value]) => value !== null && value !== ''));
-        setActiveFilters(cleanedFilters);
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await dispatch(_fetchMoneyTransactionsList(pagination?.page || 1, searchTag, compactTransactionFilters(activeFilters)) as any);
+        setRefreshing(false);
     };
 
     const exportToExcel = async () => {
@@ -581,115 +312,187 @@ const TransactionPage = () => {
     );
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={transactions}
-                        selection={selectedTransactions}
-                        onSelectionChange={(e) => setSelectedTransactions(e.value as any)}
-                        dataKey="id"
-                        className="datatable-responsive"
-                        globalFilter={globalFilter}
-                        // header={header}
-                        responsiveLayout="scroll"
-                        paginator={false} // Disable PrimeReact's built-in paginator
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                    >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Reseller" header={t('TRANSACTION.TABLE.COLUMN.RESELLERNAME')} body={resellerBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '120px' }}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Amount" header={t('TRANSACTION.TABLE.COLUMN.AMOUNT')} body={amountBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Currency" header={t('TRANSACTION.TABLE.COLUMN.CURRENCY')} body={currencyBodyTemplate}></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="Remaining Balance"
-                            header={t('TRANSACTION.TABLE.COLUMN.REMAININGBALANCE')}
-                            body={remainingBalanceBodyTemplate}
-
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="Bundle Title"
-                            header={t('TRANSACTION.TABLE.COLUMN.BUNDLETITLE')}
-                            body={bundleTitleBodyTemplate}
-                        ></Column>
-
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="Bundle Title"
-                            header={t('RECHARGEABLE_ACCOUNT')}
-                            body={recharableAmountBodyTemplate}
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="Transaction Date"
-                            header={t('TRANSACTION.TABLE.COLUMN.TRANSACTIONEDDATE')}
-                            body={transactionDateBodyTemplate}
-                            headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}
-                        ></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="Status" header={t('TRANSACTION.TABLE.COLUMN.STATUS')} body={statusBodyTemplate} headerStyle={{ whiteSpace: 'nowrap', minWidth: '100px' }}></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="Initiator"
-                            header={t('TRANSACTION.TABLE.COLUMN.INITIATORTYPE')}
-                            body={initiatorTypeBodyTemplate}
-                        ></Column>
-                        <Column
-                            style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
-                            field="Description"
-                            header={t('TRANSACTION.TABLE.COLUMN.DESCRIPTION')}
-                            body={descriptionBodyTemplate}
-                        ></Column>
-                        {/* <Column body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column> */}
-                    </DataTable>
-                    <Paginator
-                        first={(pagination?.page - 1) * pagination?.items_per_page}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        onPageChange={(e) => onPageChange(e)}
-                        template={
-                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        firstPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-right"
-                                : "pi pi-angle-double-left"
-                        }
-                        lastPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-left"
-                                : "pi pi-angle-double-right"
-                        }
+        <div className="space-y-4">
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.MONEYTRANSACTIONS', { defaultValue: 'تراکنش‌های مالی' })}
+                description={t('TRANSACTION.PAGE.DESCRIPTION', { defaultValue: 'گزارش تراکنش‌های اعتبار و بدهی نمایندگان' })}
+                loading={loading}
+                actions={
+                    <>
+                        <UiButton variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-4 w-4', (refreshing || loading) && 'animate-spin')} />
+                            {t('REFRESH', { defaultValue: 'بروزرسانی' })}
+                        </UiButton>
+                        <UiButton variant="outline" size="sm" onClick={exportToExcel}>
+                            <Download className="h-4 w-4" />
+                            {t('EXPORT.EXPORT', { defaultValue: 'خروجی اکسل' })}
+                        </UiButton>
+                    </>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو در تراکنش‌ها...' })}
+                        chips={chips}
+                        onRemoveChip={removeChip}
+                        onClearAll={clearFilters}
+                        onOpenFilters={() => {
+                            setDraftFilters(activeFilters);
+                            setFilterOpen(true);
+                        }}
                     />
-                    <Dialog visible={deleteServicesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteServicesDialog}>
-                        <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
-                            {<span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
+                }
+                footer={
+                    <div className="flex flex-col gap-2 border-t border-emerald-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-xs text-muted-foreground">
+                            {t('DATA_TABLE.TABLE.PAGINATOR.SHOWING', { defaultValue: 'صفحه' })}{' '}
+                            {pagination?.page || 1} / {totalPages} · {pagination?.total || 0}
                         </div>
-                    </Dialog>
+                        <div className="flex items-center gap-2">
+                            <UiButton variant="outline" size="sm" disabled={(pagination?.page || 1) <= 1} onClick={() => onPageChange((pagination?.page || 1) - 1)}>
+                                قبلی
+                            </UiButton>
+                            <UiButton variant="outline" size="sm" disabled={(pagination?.page || 1) >= totalPages} onClick={() => onPageChange((pagination?.page || 1) + 1)}>
+                                بعدی
+                            </UiButton>
+                        </div>
+                    </div>
+                }
+            >
+                <table className="w-full min-w-[1400px] border-collapse text-xs">
+                    <thead>
+                        <tr className="border-b border-emerald-100 bg-emerald-50/70 text-start">
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('TRANSACTION.TABLE.COLUMN.RESELLERNAME')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('TRANSACTION.TABLE.COLUMN.AMOUNT')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('TRANSACTION.TABLE.COLUMN.CURRENCY')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('TRANSACTION.TABLE.COLUMN.REMAININGBALANCE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('TRANSACTION.TABLE.COLUMN.BUNDLETITLE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('RECHARGEABLE_ACCOUNT')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">{t('TRANSACTION.TABLE.COLUMN.TRANSACTIONEDDATE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('TRANSACTION.TABLE.COLUMN.STATUS')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('TRANSACTION.TABLE.COLUMN.INITIATORTYPE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950 max-w-[12rem]">{t('TRANSACTION.TABLE.COLUMN.DESCRIPTION')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {(transactions || []).length === 0 ? (
+                            <tr>
+                                <td colSpan={10} className="px-2 py-12 text-center text-muted-foreground">
+                                    {t('DATA_TABLE.TABLE.NO_DATA', { defaultValue: 'داده‌ای یافت نشد' })}
+                                </td>
+                            </tr>
+                        ) : (
+                            (transactions || []).map((row: MoneyTransaction) => (
+                                <tr key={row.id} className="border-b border-emerald-50 transition hover:bg-emerald-50/50">
+                                    <td className="px-2 py-1.5 text-start">{row.reseller?.reseller_name || '—'}</td>
+                                    <td className="px-2 py-1.5 tabular-nums">{row.amount ?? '—'}</td>
+                                    <td className="px-2 py-1.5">{row?.reseller?.user?.currency?.code || '—'}</td>
+                                    <td className="px-2 py-1.5 tabular-nums">{row.remaining_balance ?? '—'}</td>
+                                    <td className="px-2 py-1.5 text-start">{isOrderStatusValid(row) ? row.order?.bundle?.bundle_title || '—' : 'X'}</td>
+                                    <td className="px-2 py-1.5">{isOrderStatusValid(row) ? row.order?.rechargeble_account || '—' : 'X'}</td>
+                                    <td className="px-2 py-1.5 whitespace-nowrap tabular-nums text-muted-foreground">{formatTransactionDate(row.created_at)}</td>
+                                    <td className="px-2 py-1.5">
+                                        <Badge variant={transactionStatusVariant(row.status)} className="text-[10px]">
+                                            {transactionStatusLabel(row)}
+                                        </Badge>
+                                    </td>
+                                    <td className="px-2 py-1.5 text-start">{capitalizeInitiator(row.initiator_type)}</td>
+                                    <td className="max-w-[12rem] truncate px-2 py-1.5 text-start text-muted-foreground" title={row.transaction_reason || ''}>
+                                        {row.transaction_reason || '—'}
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </ListPage>
+
+            <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                <SheetContent side="left" className="w-full sm:max-w-md">
+                    <SheetHeader>
+                        <SheetTitle>{t('FILTER', { defaultValue: 'فیلتر تراکنش‌ها' })}</SheetTitle>
+                        <SheetDescription>{t('TRANSACTION.FILTER.HINT', { defaultValue: 'فیلترها روی نتایج سرور اعمال می‌شوند.' })}</SheetDescription>
+                    </SheetHeader>
+                    <div className={FILTER_SHEET_BODY_CLASS}>
+                        <FilterField label={t('TRANSACTION.TABLE.COLUMN.TYPE')}>
+                            <Select
+                                value={draftFilters.filter_transactiontype || undefined}
+                                onValueChange={(v) => setDraftFilters((p) => ({ ...p, filter_transactiontype: v }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_TYPE', { defaultValue: 'نوع تراکنش' })} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="credit">{t('CREDIT')}</SelectItem>
+                                    <SelectItem value="debit">{t('DEBIT')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+                        <FilterField label={t('TRANSACTION.TABLE.COLUMN.CATEGORY')}>
+                            <Select
+                                value={draftFilters.filter_transactioncategory || undefined}
+                                onValueChange={(v) => setDraftFilters((p) => ({ ...p, filter_transactioncategory: v }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_CATEGORY', { defaultValue: 'دسته' })} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="admin-reseller">{t('ADMIN_TO_RESELLER')}</SelectItem>
+                                    <SelectItem value="reseller-subreseller">{t('RESELLER_TO_SUBRESELLER')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+                        <FilterField label={t('TRANSACTION.TABLE.COLUMN.PURPOSE')}>
+                            <Select
+                                value={draftFilters.filter_transactionpurpose || undefined}
+                                onValueChange={(v) => setDraftFilters((p) => ({ ...p, filter_transactionpurpose: v }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_PURPOSE', { defaultValue: 'هدف' })} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="order">{t('FILTER.ORDER')}</SelectItem>
+                                    <SelectItem value="money">{t('MONEY_TRANSFER')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+                        <FilterField label={t('START_DATE', { defaultValue: 'از تاریخ' })}>
+                            <Input
+                                type="date"
+                                value={draftFilters.filter_startdate || ''}
+                                onChange={(e) => setDraftFilters((p) => ({ ...p, filter_startdate: e.target.value || null }))}
+                            />
+                        </FilterField>
+                        <FilterField label={t('END_DATE', { defaultValue: 'تا تاریخ' })}>
+                            <Input
+                                type="date"
+                                value={draftFilters.filter_enddate || ''}
+                                onChange={(e) => setDraftFilters((p) => ({ ...p, filter_enddate: e.target.value || null }))}
+                            />
+                        </FilterField>
+                        <div className="flex gap-2 pt-2">
+                            <UiButton className="flex-1" onClick={applyFilters}>
+                                {t('APPLY', { defaultValue: 'اعمال' })}
+                            </UiButton>
+                            <UiButton className="flex-1" variant="secondary" onClick={clearFilters}>
+                                {t('RESET', { defaultValue: 'بازنشانی' })}
+                            </UiButton>
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            <Dialog visible={deleteServicesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteServicesDialog}>
+                <div className="flex align-items-center justify-content-center">
+                    <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
+                    {<span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                 </div>
-            </div>
+            </Dialog>
         </div>
     );
 };
+
 
 export default withAuth(TransactionPage);

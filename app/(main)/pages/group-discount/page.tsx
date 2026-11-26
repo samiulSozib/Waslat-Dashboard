@@ -4,24 +4,27 @@ import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { SearchSelect } from '@/components/admin/search-select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { RowActions } from '@/components/admin/row-actions';
+import { Button as UiButton } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { GroupDiscount, ResellerGroup } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
 import { _addResellerGroup, _deleteResellerGroup, _editResellerGroup, _fetchResellerGroups } from '@/app/redux/actions/resellerGroupActions';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import { _fetchLanguages } from '@/app/redux/actions/languageActions';
-import { FileUpload } from 'primereact/fileupload';
 import { resellerGroupReducer } from '../../../redux/reducers/resellerGroupReducer';
-import { InputTextarea } from 'primereact/inputtextarea';
 import { useTranslation } from 'react-i18next';
 import { _addGroupDiscount, _deleteGroupDiscount, _editGroupDiscount, _fetchGroupDiscounts } from '@/app/redux/actions/groupDiscountActions';
 import { groupDiscountReducer } from '../../../redux/reducers/groupDiscountReducer';
@@ -163,31 +166,6 @@ const ResellerGroupPage = () => {
         setDeleteResellerGroupsDialog(true);
     };
 
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('GROUP.DISCOUNT.CREATENEW')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                    {/* <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    /> */}
-                </div>
-            </React.Fragment>
-        );
-    };
-
     // const leftToolbarTemplate = () => {
     //     return (
     //         <div className="flex items-center">
@@ -269,14 +247,24 @@ const ResellerGroupPage = () => {
         );
     };
 
-    const actionBodyTemplate = (rowData: GroupDiscount) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editResellerGroup(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteResellerGroup(rowData)} />
-            </>
-        );
-    };
+    const actionBodyTemplate = (rowData: GroupDiscount) => (
+        <RowActions
+            items={[
+                {
+                    label: t('TABLE.GENERAL.EDIT', { defaultValue: 'ویرایش' }),
+                    icon: <Pencil className="h-4 w-4" />,
+                    onClick: () => editResellerGroup(rowData)
+                },
+                {
+                    label: t('TABLE.GENERAL.DELETE', { defaultValue: 'حذف' }),
+                    icon: <Trash2 className="h-4 w-4" />,
+                    danger: true,
+                    separatorBefore: true,
+                    onClick: () => confirmDeleteResellerGroup(rowData)
+                }
+            ]}
+        />
+    );
 
     // const header = (
     //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
@@ -288,12 +276,8 @@ const ResellerGroupPage = () => {
     //     </div>
     // );
 
-    const resellerGroupDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveResellerGroup} />
-        </>
-    );
+    const isEditGroupDiscount = Boolean(groupDiscount.id && groupDiscount.id !== 0);
+
     const deleteResellerGroupDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteResellerGroupDialog} />
@@ -308,13 +292,26 @@ const ResellerGroupPage = () => {
     );
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" right={rightToolbarTemplate}></Toolbar>
-
+        <div className="space-y-4">
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.GROUP_DISCOUNT', { defaultValue: 'تخفیف گروه' })}
+                description={t('GROUP.DISCOUNT.PAGE.DESCRIPTION', { defaultValue: 'مدیریت تخفیف‌های گروه نمایندگان روی بسته‌ها' })}
+                loading={loading}
+                actions={
+                    <UiButton type="button" size="sm" onClick={openNew}>
+                        <Plus className="h-4 w-4" />
+                        {t('GROUP.DISCOUNT.CREATENEW')}
+                    </UiButton>
+                }
+                toolbar={
+                    <FilterBar
+                        search={globalFilter}
+                        onSearchChange={setGlobalFilter}
+                        searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو...' })}
+                    />
+                }
+            >
                     <DataTable
                         ref={dt}
                         value={group_discounts}
@@ -358,134 +355,142 @@ const ResellerGroupPage = () => {
                         ></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="guard_name" header={t('GROUP.DISCOUNT.TABLE.STATUS')} body={statusBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="guard_name" header={t('GROUP.DISCOUNT.TABLE.NOTE')} body={notesBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
+                        <Column
+                            header={t('TABLE.GENERAL.ACTIONS', { defaultValue: 'عملیات' })}
+                            style={{ ...customCellStyle, textAlign: 'start' }}
+                            body={actionBodyTemplate}
+                            headerStyle={{ minWidth: '5rem' }}
+                        />
                     </DataTable>
+            </ListPage>
 
-                    <Dialog visible={resellerGroupDialog} style={{ width: '900px', padding: '5px' }} header={t('GROUP.DISCOUNT.DETAILS')} modal className="p-fluid" footer={resellerGroupDialogFooter} onHide={hideDialog}>
-                        <div className="card flex flex-wrap p-fluid mt-3 gap-4">
-                            <div className="flex-1 col-12 lg:col-6">
-                                <div className="field">
-                                    <label htmlFor="supplier" style={{ fontWeight: 'bold' }}>
-                                        {t('GROUP.DISCOUNT.LABEL.GROUPNAME')}
-                                    </label>
-                                    <Dropdown
-                                        id=""
-                                        value={groupDiscount.reseller_group}
-                                        options={reseller_groups}
-                                        onChange={(e) =>
-                                            setGroupDiscount((prev) => ({
-                                                ...prev,
-                                                reseller_group: e.value
-                                            }))
-                                        }
-                                        optionLabel="name"
-                                        placeholder={t('GROUP.DISCOUNT.PLACEHOLDER.GROUPNAME')}
-                                        className="w-full"
-                                    />
+            <FormSheet
+                open={resellerGroupDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                size="xl"
+                side="left"
+                title={t('GROUP.DISCOUNT.DETAILS')}
+                description={
+                    isEditGroupDiscount
+                        ? t('GROUP.DISCOUNT.FORM.EDIT_HINT', { defaultValue: 'ویرایش تخفیف گروه' })
+                        : t('GROUP.DISCOUNT.FORM.CREATE_HINT', { defaultValue: 'تعریف تخفیف جدید برای گروه، خدمت و بسته' })
+                }
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveResellerGroup}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection title={t('GROUP.DISCOUNT.FORM.SECTION.TARGET', { defaultValue: 'هدف تخفیف' })}>
+                    <FormField label={t('GROUP.DISCOUNT.LABEL.GROUPNAME')} required fullWidth>
+                        <SearchSelect
+                            value={groupDiscount.reseller_group}
+                            options={reseller_groups || []}
+                            onChange={(selected) =>
+                                setGroupDiscount((prev) => ({
+                                    ...prev,
+                                    reseller_group: selected,
+                                    reseller_group_id: selected?.id || 0
+                                }))
+                            }
+                            optionLabel="name"
+                            placeholder={t('GROUP.DISCOUNT.PLACEHOLDER.GROUPNAME')}
+                            returnFullObject
+                        />
+                    </FormField>
+                    <FormField label={t('GROUP.DISCOUNT.LABEL.SERVICE')}>
+                        <SearchSelect
+                            value={groupDiscount.service}
+                            options={services || []}
+                            onChange={(selected) =>
+                                setGroupDiscount((prev) => ({
+                                    ...prev,
+                                    service: selected,
+                                    service_id: selected?.id || 0
+                                }))
+                            }
+                            optionLabel="company_name"
+                            placeholder={t('GROUP.DISCOUNT.PLACEHOLDER.SERVICE')}
+                            returnFullObject
+                            itemTemplate={(option) => (
+                                <div className="flex gap-2">
+                                    <div>{option.service_category?.category_name}</div>
+                                    <div>{option.company?.company_name}</div>
                                 </div>
+                            )}
+                        />
+                    </FormField>
+                    <FormField label={t('GROUP.DISCOUNT.LABEL.BUNDLE')}>
+                        <SearchSelect
+                            value={groupDiscount.bundle}
+                            options={bundles || []}
+                            onChange={(selected) =>
+                                setGroupDiscount((prev) => ({
+                                    ...prev,
+                                    bundle: selected,
+                                    bundle_id: selected?.id || 0
+                                }))
+                            }
+                            optionLabel="bundle_title"
+                            placeholder={t('GROUP.DISCOUNT.PLACEHOLDER.BUNDLE')}
+                            returnFullObject
+                            itemTemplate={(option) => (
+                                <div className="flex gap-2">
+                                    <div>{option?.bundle_title}</div>
+                                    <div>{option.service?.company?.company_name}</div>
+                                </div>
+                            )}
+                        />
+                    </FormField>
+                </FormSection>
 
-                                <div className="field">
-                                    <label htmlFor="service" style={{ fontWeight: 'bold' }}>
-                                        {t('GROUP.DISCOUNT.LABEL.SERVICE')}
-                                    </label>
-                                    <Dropdown
-                                        id=""
-                                        value={groupDiscount.service}
-                                        options={services}
-                                        onChange={(e) =>
-                                            setGroupDiscount((prev) => ({
-                                                ...prev,
-                                                service: e.value
-                                            }))
-                                        }
-                                        optionLabel="service_category.category_name"
-                                        placeholder={t('GROUP.DISCOUNT.PLACEHOLDER.SERVICE')}
-                                        className="w-full"
-                                        itemTemplate={(option) => (
-                                            <div style={{ display: 'flex', gap: '5px' }}>
-                                                <div>{option.service_category?.category_name}</div>
-                                                <div>{option.company?.company_name}</div>
-                                            </div>
-                                        )}
-                                    />
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="bundle" style={{ fontWeight: 'bold' }}>
-                                        {t('GROUP.DISCOUNT.LABEL.BUNDLE')}
-                                    </label>
-                                    <Dropdown
-                                        id=""
-                                        value={groupDiscount.bundle}
-                                        options={bundles}
-                                        onChange={(e) =>
-                                            setGroupDiscount((prev) => ({
-                                                ...prev,
-                                                bundle: e.value
-                                            }))
-                                        }
-                                        optionLabel="bundle_title"
-                                        placeholder={t('GROUP.DISCOUNT.PLACEHOLDER.BUNDLE')}
-                                        className="w-full"
-                                        itemTemplate={(option) => (
-                                            <div style={{ display: 'flex', gap: '5px' }}>
-                                                <div>{option?.bundle_title}</div>
-                                                <div>{option.service?.company?.company_name}</div>
-                                            </div>
-                                        )}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex-1 col-12 lg:col-6">
-                                <div className="field">
-                                    <label htmlFor="discount_type" style={{ fontWeight: 'bold' }}>
-                                        {t('GROUP.DISCOUNT.LABEL.DISCOUNTTYPE')}
-                                    </label>
-                                    <Dropdown
-                                        id="discount_type"
-                                        value={groupDiscount.discount_type}
-                                        options={[
-                                            { label: 'Percentage', value: 'percentage' },
-                                            { label: 'Fixed', value: 'fixed' }
-                                        ]}
-                                        onChange={(e) =>
-                                            setGroupDiscount((prev) => ({
-                                                ...prev,
-                                                discount_type: e.value
-                                            }))
-                                        }
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        placeholder={t('GROUP.DISCOUNT.PLACEHOLDER.DISCOUNTTYPE')}
-                                        className="w-full"
-                                    />
-                                </div>
-
-                                <div className="field">
-                                    <label htmlFor="discount_value" style={{ fontWeight: 'bold' }}>
-                                        {t('GROUP.DISCOUNT.LABEL.DISCOUNTVALUE')}
-                                    </label>
-                                    <InputText
-                                        id="discount_value"
-                                        value={groupDiscount.discount_value}
-                                        onChange={(e) =>
-                                            setGroupDiscount((prev) => ({
-                                                ...prev,
-                                                discount_value: e.target.value
-                                            }))
-                                        }
-                                        required
-                                        autoFocus
-                                        placeholder={t('GROUP.DISCOUNT.PLACEHOLDER.DISCOUNTVALUE')}
-                                        className={classNames({
-                                            'p-invalid': submitted && !groupDiscount.discount_value
-                                        })}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </Dialog>
+                <FormSection title={t('GROUP.DISCOUNT.FORM.SECTION.AMOUNT', { defaultValue: 'مقدار تخفیف' })}>
+                    <FormField label={t('GROUP.DISCOUNT.LABEL.DISCOUNTTYPE')}>
+                        <Select
+                            value={groupDiscount.discount_type || undefined}
+                            onValueChange={(v) =>
+                                setGroupDiscount((prev) => ({
+                                    ...prev,
+                                    discount_type: v
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('GROUP.DISCOUNT.PLACEHOLDER.DISCOUNTTYPE')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="percentage">Percentage</SelectItem>
+                                <SelectItem value="fixed">Fixed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+                    <FormField
+                        label={t('GROUP.DISCOUNT.LABEL.DISCOUNTVALUE')}
+                        required
+                        error={submitted && !groupDiscount.discount_value ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="discount_value"
+                            value={groupDiscount.discount_value}
+                            onChange={(e) =>
+                                setGroupDiscount((prev) => ({
+                                    ...prev,
+                                    discount_value: e.target.value
+                                }))
+                            }
+                            required
+                            autoFocus={!isEditGroupDiscount}
+                            placeholder={t('GROUP.DISCOUNT.PLACEHOLDER.DISCOUNTVALUE')}
+                            className={cn('w-full', submitted && !groupDiscount.discount_value && 'border-rose-300')}
+                        />
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
                     <Dialog visible={deleteResellerGroupDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteResellerGroupDialogFooter} onHide={hideDeleteResellerGroupDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -504,8 +509,6 @@ const ResellerGroupPage = () => {
                             {groupDiscount && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>
-                </div>
-            </div>
         </div>
     );
 };

@@ -1,28 +1,33 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
-import { Button } from 'primereact/button';
+import { Button as PrimeButton } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { RowActions } from '@/components/admin/row-actions';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { FileDrop } from '@/components/ui/file-drop';
+import { cn } from '@/lib/utils';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
 import { _fetchCountries } from '@/app/redux/actions/countriesActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Currency } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
 import { _addCurrency, _deleteCurrency, _editCurrency, _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
 import { customCellStyle } from '../../utilities/customRow';
 import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
+import { CURRENCY_FLAG_OPTIONS, flagForCurrencyCode, isPresetFlag, resolveCurrencyFlag } from '@/lib/currency-flags';
 
 const CurrencyPage = () => {
     let emptyCurrency: Currency = {
@@ -30,6 +35,7 @@ const CurrencyPage = () => {
         name: '',
         code: '',
         symbol: '',
+        flag_image_url: '',
         ignore_digits_count: '',
         exchange_rate_per_usd: '',
         deleted_at: '',
@@ -113,31 +119,6 @@ const CurrencyPage = () => {
         setDeleteCurrencysDialog(true);
     };
 
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('CURRENCY.TABLE.CREATECURRENCY')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                    {/* <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('APP.GENERAL.DELETE')}
-                        icon="pi pi-trash"
-                        severity="danger"
-                        onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    /> */}
-                </div>
-            </React.Fragment>
-        );
-    };
-
     // const leftToolbarTemplate = () => {
     //     return (
     //         <div className="flex items-center">
@@ -153,6 +134,20 @@ const CurrencyPage = () => {
     //         </div>
     //     );
     // };
+
+    const flagBodyTemplate = (rowData: Currency) => {
+        const src = resolveCurrencyFlag(rowData);
+        return (
+            <>
+                <span className="p-column-title">Flag</span>
+                {src ? (
+                    <img src={src} alt={rowData.name?.toString() || rowData.code} className="h-8 w-10 rounded-sm object-cover shadow-sm" />
+                ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                )}
+            </>
+        );
+    };
 
     const currencyCodeBodyTemplate = (rowData: Currency) => {
         return (
@@ -190,14 +185,24 @@ const CurrencyPage = () => {
         );
     };
 
-    const actionBodyTemplate = (rowData: Currency) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editCurrency(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteCurrency(rowData)} />
-            </>
-        );
-    };
+    const actionBodyTemplate = (rowData: Currency) => (
+        <RowActions
+            items={[
+                {
+                    label: t('TABLE.GENERAL.EDIT'),
+                    icon: <Pencil className="h-4 w-4" />,
+                    onClick: () => editCurrency(rowData)
+                },
+                {
+                    label: t('TABLE.GENERAL.DELETE'),
+                    icon: <Trash2 className="h-4 w-4" />,
+                    danger: true,
+                    separatorBefore: true,
+                    onClick: () => confirmDeleteCurrency(rowData)
+                }
+            ]}
+        />
+    );
 
     // const header = (
     //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
@@ -209,59 +214,73 @@ const CurrencyPage = () => {
     //     </div>
     // );
 
-    const currencyDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveCurrency} />
-        </>
-    );
     const deleteCurrencyDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCurrencyDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteCurrency} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCurrencyDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteCurrency} />
         </>
     );
     const deleteCompaniesDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCurrencysDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCurrencysDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
         </>
     );
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={currencies}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedCurrency(e.value as any)}
-                        dataKey="id"
-                        paginator
-                        rows={10}
-                        rowsPerPageOptions={[5, 10, 25]}
-                        className="datatable-responsive"
-                        paginatorTemplate={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        globalFilter={globalFilter}
-                        // header={header}
-                        responsiveLayout="scroll"
-                    >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
+        <>
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.CURRENCY', { defaultValue: 'ارز' })}
+                description="مدیریت ارزها و نرخ تبدیل"
+                loading={loading}
+                actions={
+                    <Button type="button" size="sm" onClick={openNew}>
+                        <Plus className="h-4 w-4" />
+                        {t('CURRENCY.TABLE.CREATECURRENCY')}
+                    </Button>
+                }
+                toolbar={
+                    <FilterBar
+                        search={globalFilter}
+                        onSearchChange={setGlobalFilter}
+                        searchPlaceholder={t('TABLE.GENERAL.SEARCH', { defaultValue: 'جستجو...' })}
+                    />
+                }
+            >
+                <DataTable
+                    ref={dt}
+                    value={currencies}
+                    selection={selectedCompanies}
+                    onSelectionChange={(e) => setSelectedCurrency(e.value as any)}
+                    dataKey="id"
+                    paginator
+                    rows={10}
+                    rowsPerPageOptions={[5, 10, 25]}
+                    size="small"
+                    className="datatable-responsive p-datatable-sm"
+                    paginatorTemplate={
+                        isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
+                    }
+                    currentPageReportTemplate={t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}
+                    emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
+                    dir={isRTL() ? 'rtl' : 'ltr'}
+                    style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                    globalFilter={globalFilter}
+                    responsiveLayout="scroll"
+                >
+                        <Column
+                            header={t('TABLE.GENERAL.ACTION')}
+                            body={actionBodyTemplate}
+                            headerStyle={{ width: '4.5rem' }}
+                            style={{ ...customCellStyle, textAlign: 'start' }}
+                        />
+                        <Column
+                            header={t('CURRENCY.TABLE.COLUMN.FLAG', { defaultValue: 'پرچم' })}
+                            body={flagBodyTemplate}
+                            headerStyle={{ width: '5rem' }}
+                            style={{ ...customCellStyle, textAlign: 'start' }}
+                        />
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="name"
@@ -290,149 +309,182 @@ const CurrencyPage = () => {
                             sortable
                             body={ignoreDigitsCountBodyTemplate}
                         ></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
+            </ListPage>
 
-                    <Dialog visible={currencyDialog} style={{ width: '900px', padding: '5px' }} header={t('CURRENCY.DETAILS')} modal className="p-fluid" footer={currencyDialogFooter} onHide={hideDialog}>
-                        <div className="card" style={{ padding: '40px' }}>
-                            <div className="field">
-                                <small className="p-text-muted" style={{ fontSize: '14px', fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>
-                                    <b>Hints:</b>
-                                    <br />
-                                    <hr />
-                                    AFN, IRR, INR, PKR: ؋, ﷼, ₹, Rs USD: $, EUR: €, JPY: ¥, GBP: £ AUD, CAD: $, CHF: Fr, CNY: ¥ SEK: kr, NZD: $, MXN: $, SGD, HKD: $, NOK: kr KRW: ₩, TRY: ₺, BRL: R$, ZAR: R
-                                </small>
-                            </div>
-                            <div className="field">
-                                <label htmlFor="name" style={{ fontWeight: 'bold' }}>
-                                    {t('CURRENCY.FORM.INPUT.CURRENCYNAME')}
-                                </label>
-                                <InputText
-                                    id="name"
-                                    value={currency.name}
-                                    onChange={(e) =>
-                                        setCurrency((prevCurrency) => ({
-                                            ...prevCurrency,
-                                            name: e.target.value
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('CURRENCY.FORM.PLACEHOLDER.CURRENCYNAME')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !currency.name
-                                    })}
-                                />
-                                {submitted && !currency.name && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            <div className="field">
-                                <label htmlFor="code" style={{ fontWeight: 'bold' }}>
-                                    {t('CURRENCY.FORM.INPUT.CURRENCYCODE')}
-                                </label>
-                                <InputText
-                                    id="code"
-                                    value={currency.code}
-                                    onChange={(e) =>
-                                        setCurrency((prevCurrency) => ({
-                                            ...prevCurrency,
-                                            code: e.target.value
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('CURRENCY.FORM.PLACEHOLDER.CURRENCYCODE')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !currency.code
-                                    })}
-                                />
-                                {submitted && !currency.code && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            <div className="field">
-                                <label htmlFor="symbol" style={{ fontWeight: 'bold' }}>
-                                    {t('CURRENCY.FORM.INPUT.SYMBOL')}
-                                </label>
-                                <InputText
-                                    id="symbol"
-                                    value={currency.symbol}
-                                    onChange={(e) =>
-                                        setCurrency((prevCurrency) => ({
-                                            ...prevCurrency,
-                                            symbol: e.target.value
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('CURRENCY.FORM.PLACEHOLDER.SYMBOL')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !currency.symbol
-                                    })}
-                                />
-                                {submitted && !currency.symbol && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-
-                            <div className="field">
-                                <label htmlFor="exchange_rate_per_usd" style={{ fontWeight: 'bold' }}>
-                                    {t('CURRENCY.FORM.INPUT.EXCHANGERATE')}
-                                </label>
-                                <InputText
-                                    id="exchange_rate_per_usd"
-                                    value={currency.exchange_rate_per_usd}
-                                    onChange={(e) =>
-                                        setCurrency((prevCurrency) => ({
-                                            ...prevCurrency,
-                                            exchange_rate_per_usd: e.target.value
-                                        }))
-                                    }
-                                    required
-                                    autoFocus
-                                    placeholder={t('CURRENCY.FORM.PLACEHOLDER.EXCHANGERATE')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !currency.exchange_rate_per_usd
-                                    })}
-                                />
-                                {submitted && !currency.exchange_rate_per_usd && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-                            <div className="field">
-                                <label htmlFor="exchange_rate_per_usd" style={{ fontWeight: 'bold' }}>
-                                    {t('CURRENCY.FORM.INPUT.IGNOREDIGITSCOUNT')}
-                                </label>
-                                <InputText
-                                    id="ignore_digits_count"
-                                    value={currency.ignore_digits_count?.toString()}
-                                    onChange={(e) =>
-                                        setCurrency((prevCurrency) => ({
-                                            ...prevCurrency,
-                                            ignore_digits_count: e.target.value
-                                        }))
-                                    }
-                                    autoFocus
-                                    placeholder={t('CURRENCY.FORM.INPUT.IGNOREDIGITSCOUNT')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !currency.ignore_digits_count
-                                    })}
-                                />
-                                
-                            </div>
+            <FormSheet
+                open={currencyDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                title={t('CURRENCY.DETAILS')}
+                description={currency.id ? 'ویرایش ارز' : 'ثبت ارز جدید'}
+                size="xl"
+                side="left"
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveCurrency}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                <FormSection
+                    title={t('CURRENCY.DETAILS')}
+                    description="AFN, IRR, INR, PKR: ؋, ﷼, ₹, Rs — USD: $, EUR: €, JPY: ¥, GBP: £ و سایر نمادها"
+                >
+                    <FormField label={t('CURRENCY.FORM.FLAG_PICK', { defaultValue: 'انتخاب پرچم' })} fullWidth>
+                        <div className="flex flex-wrap gap-2">
+                            {CURRENCY_FLAG_OPTIONS.map((option) => {
+                                const selected = currency.flag_image_url === option.flag;
+                                return (
+                                    <button
+                                        key={option.code}
+                                        type="button"
+                                        title={option.name}
+                                        onClick={() =>
+                                            setCurrency((prev) => ({
+                                                ...prev,
+                                                flag_image_url: option.flag,
+                                                code: prev.code?.trim() ? prev.code : option.code
+                                            }))
+                                        }
+                                        className={cn(
+                                            'flex items-center gap-2 rounded-lg border px-2 py-1.5 text-xs transition-colors',
+                                            selected
+                                                ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
+                                                : 'border-emerald-200 bg-white hover:bg-emerald-50'
+                                        )}
+                                    >
+                                        <img src={option.flag} alt="" className="h-4 w-6 rounded-sm object-cover" />
+                                        <span>{option.code}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
-                    </Dialog>
+                    </FormField>
+                    <FormField label={t('CURRENCY.FORM.FLAG_UPLOAD', { defaultValue: 'آپلود پرچم ارز' })} fullWidth>
+                        <FileDrop
+                            value={currency.flag_image_url instanceof File ? currency.flag_image_url : null}
+                            previewUrl={
+                                typeof currency.flag_image_url === 'string' && currency.flag_image_url
+                                    ? currency.flag_image_url
+                                    : null
+                            }
+                            onChange={(file) =>
+                                setCurrency((prev) => ({
+                                    ...prev,
+                                    flag_image_url:
+                                        file ?? (prev.flag_image_url instanceof File ? '' : prev.flag_image_url)
+                                }))
+                            }
+                            label={t('CURRENCY.FORM.FLAG_UPLOAD', { defaultValue: 'آپلود پرچم ارز' })}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('CURRENCY.FORM.INPUT.CURRENCYNAME')}
+                        required
+                        error={submitted && !currency.name ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="name"
+                            value={currency.name}
+                            onChange={(e) =>
+                                setCurrency((prevCurrency) => ({
+                                    ...prevCurrency,
+                                    name: e.target.value
+                                }))
+                            }
+                            required
+                            autoFocus
+                            placeholder={t('CURRENCY.FORM.PLACEHOLDER.CURRENCYNAME')}
+                            className={cn('w-full', submitted && !currency.name && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('CURRENCY.FORM.INPUT.CURRENCYCODE')}
+                        required
+                        error={submitted && !currency.code ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="code"
+                            value={currency.code}
+                            onChange={(e) => {
+                                const nextCode = e.target.value;
+                                setCurrency((prevCurrency) => {
+                                    const suggested = flagForCurrencyCode(nextCode);
+                                    const keepCustom =
+                                        prevCurrency.flag_image_url instanceof File ||
+                                        (typeof prevCurrency.flag_image_url === 'string' &&
+                                            prevCurrency.flag_image_url &&
+                                            !isPresetFlag(prevCurrency.flag_image_url));
+                                    return {
+                                        ...prevCurrency,
+                                        code: nextCode,
+                                        flag_image_url: !keepCustom && suggested ? suggested : prevCurrency.flag_image_url
+                                    };
+                                });
+                            }}
+                            required
+                            placeholder={t('CURRENCY.FORM.PLACEHOLDER.CURRENCYCODE')}
+                            className={cn('w-full', submitted && !currency.code && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('CURRENCY.FORM.INPUT.SYMBOL')}
+                        required
+                        error={submitted && !currency.symbol ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="symbol"
+                            value={currency.symbol}
+                            onChange={(e) =>
+                                setCurrency((prevCurrency) => ({
+                                    ...prevCurrency,
+                                    symbol: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('CURRENCY.FORM.PLACEHOLDER.SYMBOL')}
+                            className={cn('w-full', submitted && !currency.symbol && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('CURRENCY.FORM.INPUT.EXCHANGERATE')}
+                        required
+                        error={submitted && !currency.exchange_rate_per_usd ? t('THIS_FIELD_IS_REQUIRED') : null}
+                    >
+                        <Input
+                            id="exchange_rate_per_usd"
+                            value={currency.exchange_rate_per_usd}
+                            onChange={(e) =>
+                                setCurrency((prevCurrency) => ({
+                                    ...prevCurrency,
+                                    exchange_rate_per_usd: e.target.value
+                                }))
+                            }
+                            required
+                            placeholder={t('CURRENCY.FORM.PLACEHOLDER.EXCHANGERATE')}
+                            className={cn('w-full', submitted && !currency.exchange_rate_per_usd && 'border-rose-300')}
+                        />
+                    </FormField>
+                    <FormField label={t('CURRENCY.FORM.INPUT.IGNOREDIGITSCOUNT')}>
+                        <Input
+                            id="ignore_digits_count"
+                            value={currency.ignore_digits_count?.toString()}
+                            onChange={(e) =>
+                                setCurrency((prevCurrency) => ({
+                                    ...prevCurrency,
+                                    ignore_digits_count: e.target.value
+                                }))
+                            }
+                            placeholder={t('CURRENCY.FORM.INPUT.IGNOREDIGITSCOUNT')}
+                            className="w-full"
+                        />
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
                     <Dialog visible={deleteCurrencyDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCurrencyDialogFooter} onHide={hideDeleteCurrencyDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -451,9 +503,7 @@ const CurrencyPage = () => {
                             {currency && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>
-                </div>
-            </div>
-        </div>
+        </>
     );
 };
 

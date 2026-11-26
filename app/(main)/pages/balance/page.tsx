@@ -1,40 +1,50 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
-import { Button } from 'primereact/button';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
+import { Button as PrimeButton } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
-import React, { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { Dropdown } from 'primereact/dropdown';
-import { _fetchCountries } from '@/app/redux/actions/countriesActions';
-import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
+import { Check, Download, Pencil, Plus, RefreshCw, RotateCcw, X } from 'lucide-react';
 import { AppDispatch } from '@/app/redux/store';
 import { Balance, Currency } from '@/types/interface';
-import { ProgressBar } from 'primereact/progressbar';
 import { _addBalance, _deleteBalance, _editBalance, _fetchBalances, _rejectBalance, _rollbackedBalance, _verifyBalance } from '@/app/redux/actions/balanceActions';
-import withAuth from '../../authGuard';
-import { useTranslation } from 'react-i18next';
-import { resellerReducer } from '../../../redux/reducers/resellerReducer';
 import { _fetchResellers } from '@/app/redux/actions/resellerActions';
-import { currenciesReducer } from '../../../redux/reducers/currenciesReducer';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
-import { paymentMethodsReducer } from '../../../redux/reducers/paymentMethodReducer';
 import { _fetchPaymentMethods } from '@/app/redux/actions/paymentMethodActions';
-import { Calendar } from 'primereact/calendar';
-import { customCellStyle } from '../../utilities/customRow';
-import i18n from '@/i18n';
+import withAuth from '../../authGuard';
 import { isRTL } from '../../utilities/rtlUtil';
 import { generateBalanceExcelFile } from '../../utilities/generateExcel';
-import { Paginator } from 'primereact/paginator';
-import { SplitButton } from 'primereact/splitbutton';
-import { useRouter, useSearchParams } from 'next/navigation';
 import CustomDropdownWithSearch from '@/app/(main)/components/customDropDownWithSearch';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { FilterField, FILTER_SHEET_BODY_CLASS } from '@/components/admin/filter-field';
+import { RowActions } from '@/components/admin/row-actions';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { DateField } from '@/components/ui/date-field';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { cn } from '@/lib/utils';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+
+type BalanceFilters = {
+    filter_transaction_type: string | null;
+    filter_startdate: string | null;
+    filter_enddate: string | null;
+};
+
+const emptyFilters: BalanceFilters = {
+    filter_transaction_type: null,
+    filter_startdate: null,
+    filter_enddate: null
+};
 
 const BalancePage = () => {
     let emptyBalance: Balance = {
@@ -62,27 +72,20 @@ const BalancePage = () => {
     const [deleteBalanceDialog, setDeleteBalanceDialog] = useState(false);
     const [deleteBalancesDialog, setDeleteBalancesDialog] = useState(false);
     const [balance, setBalance] = useState<Balance>(emptyBalance);
-    const [selectedCompanies, setSelectedBalance] = useState(null);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
-    const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { balances, loading, pagination } = useSelector((state: any) => state.balanceReducer);
     const { currencies } = useSelector((state: any) => state.currenciesReducer);
     const { resellers } = useSelector((state: any) => state.resellerReducer);
     const { paymentMethods } = useSelector((state: any) => state.paymentMethodsReducer);
     const { t } = useTranslation();
-    const [searchTag, setSearchTag] = useState('');
-    const [filterDialogVisible, setFilterDialogVisible] = useState(false);
-    const [filters, setFilters] = useState({
-        filter_transaction_type: null as string | null,
-        filter_startdate: null as string | null,
-        filter_enddate: null as string | null
-    });
-    const [activeFilters, setActiveFilters] = useState({});
+    const [searchInput, setSearchInput] = useState('');
+    const searchTag = useDebouncedValue(searchInput, 350);
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [draftFilters, setDraftFilters] = useState<BalanceFilters>(emptyFilters);
+    const [activeFilters, setActiveFilters] = useState<BalanceFilters>(emptyFilters);
     const [refreshing, setRefreshing] = useState(false);
-    const filterRef = useRef<HTMLDivElement>(null);
     const [resellerSearchTerm, setResellerSearchTerm] = useState('');
     const [rollbackDialog, setRollbackDialog] = useState(false);
     const [verifyDialog, setVerifyDialog] = useState(false);
@@ -109,12 +112,11 @@ const BalancePage = () => {
 
     // Near your other useEffect hooks (around line 95-105)
 
-    // 1. Always fetch balances when search or filters change
     useEffect(() => {
-        dispatch(_fetchBalances(1, searchTag, activeFilters));
+        dispatch(_fetchBalances(1, searchTag, compactFilters(activeFilters)));
     }, [dispatch, searchTag, activeFilters]);
 
-    // 2. Fetch dropdown data when add/edit dialog opens
+    // Fetch dropdown data when add/edit dialog opens
     useEffect(() => {
         if (balanceDialog) {
             // Fetch all required dropdown data
@@ -130,18 +132,11 @@ const BalancePage = () => {
         }
     }, [balanceDialog, dispatch, currencies.length, resellers.length, paymentMethods.length]);
 
-    // 3. Fetch filter dropdown data when filter dialog opens (if needed)
     useEffect(() => {
-        if (filterDialogVisible) {
-            // Only need currencies for filter dropdown (if you add currency filter later)
-            if (currencies.length === 0) {
-                dispatch(_fetchCurrencies());
-            }
-            // Transaction types are static - no API call needed
+        if (filterOpen && currencies.length === 0) {
+            dispatch(_fetchCurrencies());
         }
-    }, [filterDialogVisible, dispatch, currencies.length]);
-
-    // Keep the existing reseller search debounce
+    }, [filterOpen, dispatch, currencies.length]);
     useEffect(() => {
         const timer = setTimeout(() => {
             if (resellerSearchTerm) {
@@ -155,21 +150,7 @@ const BalancePage = () => {
         return () => clearTimeout(timer);
     }, [resellerSearchTerm, dispatch, balanceDialog]);
 
-    // Keep the click outside detection
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            if (target.closest('.p-dropdown-panel')) return;
-            if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
-                setFilterDialogVisible(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [filterDialogVisible]);
-
-    // Add this useEffect to handle auto-opening the dialog
+    // Auto-open add dialog from ?action=add
     const searchParams = useSearchParams(); // Add this
     const router = useRouter()
 
@@ -317,406 +298,114 @@ const BalancePage = () => {
         setRejectDialog(true);
     };
 
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="-m-1 my-2 flex flex-wrap gap-1 w-full">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('RESELLER.BALANCETRANSACTION.ADDBALANCE')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
-                    <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
-                        <Button className="p-button-info w-full" label={t('FILTER')} style={{ gap: '8px' }} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
-                        {filterDialogVisible && (
-                            <div
-                                className="p-card p-fluid"
-                                style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    left: isRTL() ? 0 : '',
-                                    right: isRTL() ? '' : 0,
-                                    width: '300px',
-                                    zIndex: 1000,
-                                    marginTop: '0.5rem',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                }}
-                            >
-                                <div className="p-card-body" style={{ padding: '1rem' }}>
-                                    <div className="grid">
-                                        {/* Transaction Type Filter */}
-                                        <div className="col-12">
-                                            <label htmlFor="transactionTypeFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('BALANCE.FORM.INPUT.TRANSACTIONTYPE')}
-                                            </label>
-                                            <Dropdown
-                                                id="transactionTypeFilter"
-                                                options={[
-                                                    { label: t('CREDIT'), value: 'credit' },
-                                                    { label: t('DEBIT'), value: 'debit' }
-                                                ]}
-                                                value={filters.filter_transaction_type}
-                                                onChange={(e) => setFilters({ ...filters, filter_transaction_type: e.value })}
-                                                placeholder={t('SELECT_TRANSACTION_TYPE')}
-                                                style={{ width: '100%' }}
-                                            />
-                                        </div>
-
-                                        {/* Date Range Filters */}
-                                        <div className="col-12">
-                                            <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('START_DATE')}
-                                            </label>
-                                            <InputText type="date" id="startDateFilter" value={filters.filter_startdate || ''} onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })} style={{ width: '100%' }} />
-                                        </div>
-
-                                        <div className="col-12">
-                                            <label htmlFor="endDateFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('END_DATE')}
-                                            </label>
-                                            <InputText type="date" id="endDateFilter" value={filters.filter_enddate || ''} onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })} style={{ width: '100%' }} />
-                                        </div>
-
-                                        {/* Action Buttons */}
-                                        <div className="col-12 mt-3 flex justify-content-between gap-2">
-                                            <Button
-                                                label={t('RESET')}
-                                                icon="pi pi-times"
-                                                className="p-button-secondary p-button-sm"
-                                                onClick={() => {
-                                                    setFilters({
-                                                        filter_transaction_type: null,
-                                                        filter_startdate: null,
-                                                        filter_enddate: null
-                                                    });
-                                                }}
-                                            />
-                                            <Button
-                                                label={t('APPLY')}
-                                                icon="pi pi-check"
-                                                className="p-button-sm"
-                                                onClick={() => {
-                                                    handleSubmitFilter(filters);
-                                                    setFilterDialogVisible(false);
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} style={{ gap: '8px' }} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
-                </div>
-            </React.Fragment>
-        );
-    };
-    const [searchValue, setSearchValue] = useState('');
-
-const leftToolbarTemplate = () => {
-
-    const handleSearch = () => {
-        setSearchTag(searchValue);
-    };
-
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            handleSearch();
+    const chips = useMemo(() => {
+        const list: { key: string; label: string }[] = [];
+        if (activeFilters.filter_transaction_type) {
+            const typeLabel =
+                activeFilters.filter_transaction_type === 'credit'
+                    ? t('CREDIT', { defaultValue: 'واریز' })
+                    : t('DEBIT', { defaultValue: 'برداشت' });
+            list.push({ key: 'filter_transaction_type', label: `${t('BALANCE.FORM.INPUT.TRANSACTIONTYPE', { defaultValue: 'نوع تراکنش' })}: ${typeLabel}` });
         }
+        if (activeFilters.filter_startdate) {
+            list.push({ key: 'filter_startdate', label: `${t('START_DATE', { defaultValue: 'از تاریخ' })}: ${activeFilters.filter_startdate}` });
+        }
+        if (activeFilters.filter_enddate) {
+            list.push({ key: 'filter_enddate', label: `${t('END_DATE', { defaultValue: 'تا تاریخ' })}: ${activeFilters.filter_enddate}` });
+        }
+        return list;
+    }, [activeFilters, t]);
+
+    const applyFilters = () => {
+        setActiveFilters(draftFilters);
+        setFilterOpen(false);
     };
 
-    return (
-        <React.Fragment>
-            <div className="flex align-items-center gap-2">
-                <span className="p-input-icon-left">
-                    <i className="pi pi-search" />
-                    <InputText
-                        type="search"
-                        value={searchValue}
-                        onChange={(e) => setSearchValue(e.currentTarget.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                    />
-                </span>
-                <Button
-                    severity="info"
-                    onClick={handleSearch}
-                    label={t('ECOMMERCE.COMMON.SEARCH')}
-                    className="p-button-sm"
-                />
-                {searchTag && (
-                    <Button
-                        severity="secondary"
-                        onClick={() => {
-                            setSearchTag('');
-                            setSearchValue('');
-                        }}
-                        className="p-button-sm p-button-outlined"
-                        label={t('CLEAR_FILTERS')}
-                    />
-                )}
-            </div>
-        </React.Fragment>
-    );
-};
-
-    const resellerNameBodyTemplate = (rowData: Balance) => {
-        return (
-            <>
-                <span className="p-column-title">Reseller</span>
-                {rowData.reseller?.reseller_name}
-            </>
-        );
+    const clearFilters = () => {
+        setDraftFilters(emptyFilters);
+        setActiveFilters(emptyFilters);
+        setFilterOpen(false);
     };
 
-    const amountBodyTemplate = (rowData: Balance) => {
-        return (
-            <>
-                <span className="p-column-title">Amount</span>
-                {rowData.amount}
-            </>
-        );
+    const removeChip = (key: string) => {
+        const next = { ...activeFilters, [key]: null } as BalanceFilters;
+        setActiveFilters(next);
+        setDraftFilters(next);
     };
 
-    const currencyBodyTemplate = (rowData: Balance) => {
-        return (
-            <>
-                <span className="p-column-title">Currency</span>
-                {rowData.currency?.code}
-            </>
-        );
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await dispatch(_fetchBalances(pagination?.page || 1, searchTag, compactFilters(activeFilters)) as any);
+        setRefreshing(false);
     };
 
-    const remainingBalanceBodyTemplate = (rowData: Balance) => {
-        return (
-            <>
-                <span className="p-column-title">Remaining Balance</span>
-                {rowData.remaining_balance}
-            </>
-        );
-    };
-
-    const statusBodyTemplate = (rowData: Balance) => {
-        const status = rowData.status?.toLowerCase() || 'unknown';
-
-        const getStatusClass = (status: string) => {
-            switch (status) {
-                case 'rollbacked':
-                    return 'bg-yellow-100 text-yellow-800';
-                case 'completed':
-                    return 'bg-green-100 text-green-800';
-                case 'rejected':
-                    return 'bg-red-100 text-red-800';
-                default:
-                    return 'bg-gray-300 text-gray-800';
-            }
-        };
-
-        const displayStatus = status !== 'unknown' ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
-
-        return (
-            <>
-                <span className="p-column-title">Status</span>
-                <span className={`px-2 py-1  border-round-xl text-xs font-semibold ${getStatusClass(status)} w-5rem inline-block text-center`}>{displayStatus}</span>
-
-            </>
-        );
-    };
-
-    const typeBodyTemplate = (rowData: Balance) => {
-        const type = rowData.transaction_type?.toLowerCase() || 'unknown';
-
-        const getTypeClass = (type: string) => {
-            switch (type) {
-                case 'debit':
-                    return 'bg-red-100 text-red-800';
-                case 'credit':
-                    return 'bg-blue-100 text-blue-800';
-                default:
-                    return 'bg-gray-100 text-gray-800';
-            }
-        };
-
-        const displayType = type !== 'unknown' ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown';
-
-        return (
-            <>
-                <span className="p-column-title">Type</span>
-                <span className={`px-2 py-1 text-xs font-semibold border-round-xl ${getTypeClass(type)}`}>{displayType}</span>
-            </>
-        );
-    };
-
-    const descriptionBodyTemplate = (rowData: Balance) => {
-        return (
-            <>
-                <span className="p-column-title">Description</span>
-                {rowData.description}
-            </>
-        );
-    };
-
-    const performedByBodyTemplate = (rowData: Balance) => {
-        return (
-            <>
-                <span className="p-column-title">Performed By</span>
-                {rowData.performed_by_name}
-            </>
-        );
-    };
-
-    const createdAtBodyTemplate = (rowData: Balance) => {
-        const formatDate = (dateString: string) => {
-            const date = new Date(dateString);
-            const optionsDate: Intl.DateTimeFormatOptions = {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            };
-            const optionsTime: Intl.DateTimeFormatOptions = {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            };
-            const formattedDate = date.toLocaleDateString('en-US', optionsDate);
-            const formattedTime = date.toLocaleTimeString('en-US', optionsTime);
-
-            return { formattedDate, formattedTime };
-        };
-
-        const { formattedDate, formattedTime } = formatDate(rowData.created_at);
-
-        return (
-            <>
-                <span className="p-column-title">Created At</span>
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedDate}</span>
-                <br />
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>{formattedTime}</span>
-            </>
-        );
-    };
-
-    // const actionBodyTemplate = (rowData: Balance) => {
-    //     return (
-    //         <>
-    //             <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editBalance(rowData)} />
-    //             <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteBalance(rowData)} />
-    //         </>
-    //     );
-    // };
-
-    const loanRequestByBodyTemplate = (rowData: Balance) => {
-        // Convert to Boolean safely
-        const isLoan = rowData.is_reseller_loan_request == "1"
-
-        return (
-            <>
-                <span className="p-column-title">Performed By</span>
-
-                {isLoan ? (
-                    <span className="text-blue-600 font-medium">
-                        {t('VERIFIED_BY')} <span>{rowData.performed_by_name}</span>
-                    </span>
-                ) : (
-                    <span className="text-green-600 font-medium">
-                        {t('PERFORMED_BY')} <span>{rowData.performed_by_name}</span>
-                    </span>
-                )}
-            </>
-        );
-    };
-
-
-    const actionBodyTemplate = (rowData: Balance) => {
+    const getRowActions = (rowData: Balance) => {
         const items = [
-            // {
-            //     label: t('DELETE'),
-            //     icon: 'pi pi-trash',
-            //     command: () => confirmDeleteBalance(rowData)
-            // },
-
             {
-                label: t('VERIFY'),
-                icon: 'pi pi-trash',
-                command: () => confirmVerifyBalance(rowData)
+                label: t('VERIFY', { defaultValue: 'تأیید' }),
+                icon: <Check className="h-4 w-4" />,
+                onClick: () => confirmVerifyBalance(rowData)
             },
-
             {
-                label: t('REJECT'),
-                icon: 'pi pi-trash',
-                command: () => confirmRejectBalance(rowData)
+                label: t('REJECT', { defaultValue: 'رد' }),
+                icon: <X className="h-4 w-4" />,
+                onClick: () => confirmRejectBalance(rowData),
+                danger: true
             }
         ];
 
         if (rowData.status !== 'rollbacked') {
             items.push(
                 {
-                    label: t('ROLLBACK'),
-                    icon: 'pi pi-refresh',
-                    command: () => confirmRollbackBalance(rowData)
+                    label: t('ROLLBACK', { defaultValue: 'برگشت' }),
+                    icon: <RotateCcw className="h-4 w-4" />,
+                    onClick: () => confirmRollbackBalance(rowData),
+                    separatorBefore: true
                 },
                 {
-                    label: t('EDIT'),
-                    icon: 'pi pi-pencil',
-                    command: () => editBalance(rowData)
+                    label: t('EDIT', { defaultValue: 'ویرایش' }),
+                    icon: <Pencil className="h-4 w-4" />,
+                    onClick: () => editBalance(rowData)
                 }
             );
         }
 
-        return <SplitButton label="" model={items} className="p-button-rounded" severity="info" dir="ltr" icon="pi pi-cog" />;
+        return items;
     };
 
-    // const header = (
-    //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-    //         <h5 className="m-0">Manage Products</h5>
-    //         <span className="block mt-2 md:mt-0 p-input-icon-left">
-    //             <i className="pi pi-search" />
-    //             <InputText type="search" onInput={(e) => setGlobalFilter(e.currentTarget.value)} placeholder="Search..." />
-    //         </span>
-    //     </div>
-    // );
+    const totalPages = Math.max(1, Math.ceil((pagination?.total || 0) / (pagination?.items_per_page || 20)));
 
-    const balanceDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveBalance} />
-        </>
-    );
     const deleteBalanceDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteBalanceDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteBalance} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteBalanceDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteBalance} />
         </>
     );
     const deleteCompaniesDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteBalancesDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteBalancesDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
         </>
     );
 
     const rollbackDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideRollbackDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={rollbackBalance} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideRollbackDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={rollbackBalance} />
         </>
     );
 
-    // Add these dialog footers
     const verifyDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideVerifyDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={verifyBalance} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideVerifyDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={verifyBalance} />
         </>
     );
 
     const rejectDialogFooter = (
         <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideRejectDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={rejectBalance} />
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideRejectDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={rejectBalance} />
         </>
     );
 
@@ -758,29 +447,8 @@ const leftToolbarTemplate = () => {
         }
     }, [balance.reseller, balance.currency?.code]);
 
-    const onPageChange = (event: any) => {
-        const page = event.page + 1;
-        dispatch(_fetchBalances(page, searchTag));
-    };
-
-    // Add this useEffect for click outside detection
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            if (target.closest('.p-dropdown-panel')) return;
-            if (filterDialogVisible && filterRef.current && !filterRef.current.contains(target)) {
-                setFilterDialogVisible(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [filterDialogVisible]);
-
-    // Add these helper functions
-    const handleSubmitFilter = (filters: any) => {
-        const cleanedFilters = Object.fromEntries(Object.entries(filters).filter(([_, value]) => value !== null && value !== ''));
-        setActiveFilters(cleanedFilters);
+    const onPageChange = (page: number) => {
+        dispatch(_fetchBalances(page, searchTag, compactFilters(activeFilters)));
     };
 
     const exportToExcel = async () => {
@@ -793,436 +461,471 @@ const leftToolbarTemplate = () => {
     };
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={balances}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedBalance(e.value as any)}
-                        dataKey="id"
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        className="datatable-responsive"
-                        paginatorTemplate={
-                            isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        globalFilter={globalFilter}
-                        // header={header}
-                        responsiveLayout="scroll"
-                    >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
-                        <Column headerStyle={{ whiteSpace: 'nowrap', minWidth: '120px' }} style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.RESELLER')} body={resellerNameBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.AMOUNT')} body={amountBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.CURRENCY')} body={currencyBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.REMAINING_BALANCE')} body={remainingBalanceBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.STATUS')} body={statusBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TYPE')} body={typeBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.DESCRIPTIONS')} body={descriptionBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PERFORMED_BY')} body={performedByBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('VERIFIED_OR_PERFORMED')} body={loanRequestByBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.BALANCEDATE')} body={createdAtBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate}></Column>
-                    </DataTable>
-
-                    <Paginator
-                        first={(pagination?.page - 1) * pagination?.items_per_page}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
-                        onPageChange={(e) => onPageChange(e)}
-                        template={
-                            isRTL() ? 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        firstPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-right"
-                                : "pi pi-angle-double-left"
-                        }
-                        lastPageLinkIcon={
-                            isRTL()
-                                ? "pi pi-angle-double-left"
-                                : "pi pi-angle-double-right"
-                        }
+        <>
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.BALANCE', { defaultValue: 'موجودی' })}
+                description={t('RESELLER.BALANCETRANSACTION.YOUCANCREDIT', { defaultValue: 'مدیریت تراکنش‌های موجودی فروشندگان' })}
+                loading={loading}
+                actions={
+                    <>
+                        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-4 w-4', (refreshing || loading) && 'animate-spin')} />
+                            {t('REFRESH', { defaultValue: 'بروزرسانی' })}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={exportToExcel}>
+                            <Download className="h-4 w-4" />
+                            {t('EXPORT.EXPORT', { defaultValue: 'خروجی اکسل' })}
+                        </Button>
+                        <Button size="sm" onClick={openNew}>
+                            <Plus className="h-4 w-4" />
+                            {t('RESELLER.BALANCETRANSACTION.ADDBALANCE', { defaultValue: 'افزایش موجودی' })}
+                        </Button>
+                    </>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو...' })}
+                        chips={chips}
+                        onRemoveChip={removeChip}
+                        onClearAll={chips.length > 0 ? clearFilters : undefined}
+                        onOpenFilters={() => {
+                            setDraftFilters(activeFilters);
+                            setFilterOpen(true);
+                        }}
                     />
-
-                    <Dialog visible={balanceDialog} style={{ width: '900px', padding: '5px' }} header={t('BALANCE.DETAILS.TITLE')} modal className="p-fluid" footer={balanceDialogFooter} onHide={hideDialog}>
-                        {resellerBalance !== null && resellerPayment !== null && (
-                            <div
-                                className="flex flex-wrap justify-between items-center"
-                                style={{
-                                    borderRadius: '10px',
-                                    background: '#ffffff',
-                                    border: '1px solid #e5e7eb', // Tailwind gray-200
-                                    boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
-                                }}
-                            >
-                                {/* Reseller Balance */}
-                                <div className="flex-1 col-12 lg:col-4 text-center p-4 bg-green-50 rounded-xl shadow-sm">
-                                    <p className="text-gray-600 font-medium">{t('BALANCE.FORM.RESELLER.BALANCE')}</p>
-                                    <p className="text-xl font-bold text-green-600 mt-2">{resellerBalance}</p>
-                                </div>
-
-                                {/* Reseller Payment */}
-                                <div className="flex-1 col-12 lg:col-4 text-center p-4 bg-red-50 rounded-xl shadow-sm">
-                                    <p className="text-gray-600 font-medium">{t('RESELLER.TABLE.COLUMN.AVAILABLEPAYMENT')}</p>
-                                    <p className="text-xl font-bold text-red-600 mt-2">{resellerPayment}</p>
-                                </div>
-
-                                {/* Reseller Loan */}
-                                <div className="flex-1 col-12 lg:col-4 text-center p-4 bg-purple-50 rounded-xl shadow-sm">
-                                    <p className="text-gray-600 font-medium">{t('BALANCE.FORM.RESELLER.LOAN')}</p>
-                                    <p className="text-xl font-bold text-purple-600 mt-2">{resellerLoan}</p>
-                                </div>
-                            </div>
+                }
+                footer={
+                    <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-xs text-muted-foreground">
+                            {t('DATA_TABLE.TABLE.PAGINATOR.SHOWING', { defaultValue: 'نمایش' })} — {t('PAGE', { defaultValue: 'صفحه' })} {pagination?.page || 1}{' '}
+                            {t('OF', { defaultValue: 'از' })} {totalPages} · {t('TOTAL', { defaultValue: 'مجموع' })} {pagination?.total || 0}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" disabled={(pagination?.page || 1) <= 1} onClick={() => onPageChange((pagination?.page || 1) - 1)}>
+                                {t('PREVIOUS', { defaultValue: 'قبلی' })}
+                            </Button>
+                            <Button variant="outline" size="sm" disabled={(pagination?.page || 1) >= totalPages} onClick={() => onPageChange((pagination?.page || 1) + 1)}>
+                                {t('NEXT', { defaultValue: 'بعدی' })}
+                            </Button>
+                        </div>
+                    </div>
+                }
+            >
+                <table className="w-full min-w-[1280px] border-collapse text-sm">
+                    <thead>
+                        <tr className="border-b border-border bg-muted/40 text-start">
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('OPERATIONS', { defaultValue: 'عملیات' })}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('BALANCE.TABLE.COLUMN.RESELLER')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('BALANCE.TABLE.COLUMN.AMOUNT')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('BALANCE.TABLE.COLUMN.CURRENCY')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('BALANCE.TABLE.COLUMN.REMAINING_BALANCE')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('BALANCE.TABLE.COLUMN.STATUS')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('TYPE')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap min-w-[10rem]">{t('BALANCE.TABLE.COLUMN.DESCRIPTIONS')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('PERFORMED_BY')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('VERIFIED_OR_PERFORMED')}</th>
+                            <th className="px-2 py-2 font-semibold whitespace-nowrap">{t('BALANCE.TABLE.COLUMN.BALANCEDATE')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {(balances || []).length === 0 ? (
+                            <tr>
+                                <td colSpan={11} className="px-3 py-12 text-center text-muted-foreground">
+                                    {t('DATA_TABLE.TABLE.NO_DATA', { defaultValue: 'داده‌ای یافت نشد' })}
+                                </td>
+                            </tr>
+                        ) : (
+                            (balances || []).map((row: Balance) => {
+                                const isLoan = row.is_reseller_loan_request == '1';
+                                return (
+                                    <tr key={row.id} className="border-b border-border/70 transition hover:bg-emerald-50/40">
+                                        <td className="px-2 py-2">
+                                            <RowActions items={getRowActions(row)} />
+                                        </td>
+                                        <td className="px-2 py-2 text-start">{row.reseller?.reseller_name || '—'}</td>
+                                        <td className="px-2 py-2 tabular-nums">{row.amount || '—'}</td>
+                                        <td className="px-2 py-2">{row.currency?.code || '—'}</td>
+                                        <td className="px-2 py-2 tabular-nums">{row.remaining_balance || '—'}</td>
+                                        <td className="px-2 py-2">
+                                            <Badge variant={statusBadgeVariant(row.status)}>{formatStatusLabel(row.status)}</Badge>
+                                        </td>
+                                        <td className="px-2 py-2">
+                                            <Badge variant={typeBadgeVariant(row.transaction_type)}>{formatTypeLabel(row.transaction_type, t)}</Badge>
+                                        </td>
+                                        <td className="px-2 py-2 max-w-[14rem] truncate text-start" title={row.description || ''}>
+                                            {row.description || '—'}
+                                        </td>
+                                        <td className="px-2 py-2 text-start">{row.performed_by_name || '—'}</td>
+                                        <td className="px-2 py-2 text-start text-xs">
+                                            {isLoan ? (
+                                                <span className="text-blue-600">
+                                                    {t('VERIFIED_BY')} {row.performed_by_name}
+                                                </span>
+                                            ) : (
+                                                <span className="text-emerald-700">
+                                                    {t('PERFORMED_BY')} {row.performed_by_name}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-2 py-2 tabular-nums text-muted-foreground whitespace-nowrap">{formatBalanceDate(row.created_at)}</td>
+                                    </tr>
+                                );
+                            })
                         )}
-                        {/* Balance Details */}
+                    </tbody>
+                </table>
+            </ListPage>
 
-                        <div className="card flex flex-wrap p-fluid mt-3 gap-4">
-                            <div className="flex-1 col-12 lg:col-6">
-                                <div className="">
-                                    <h5 className="mb-4">{t('BALANCE.DETAILS.TITLE')}</h5>
+            <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                <SheetContent side="left" className="w-full sm:max-w-md">
+                    <SheetHeader>
+                        <SheetTitle>{t('FILTER', { defaultValue: 'فیلتر' })}</SheetTitle>
+                        <SheetDescription>{t('FILTER_APPLY_SERVER', { defaultValue: 'فیلترها روی نتایج سرور اعمال می‌شوند.' })}</SheetDescription>
+                    </SheetHeader>
+                    <div className={FILTER_SHEET_BODY_CLASS}>
+                        <FilterField label={t('BALANCE.FORM.INPUT.TRANSACTIONTYPE', { defaultValue: 'نوع تراکنش' })}>
+                            <Select
+                                value={draftFilters.filter_transaction_type || undefined}
+                                onValueChange={(v) => setDraftFilters((p) => ({ ...p, filter_transaction_type: v }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('SELECT_TRANSACTION_TYPE', { defaultValue: 'انتخاب نوع' })} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="credit">{t('CREDIT', { defaultValue: 'واریز' })}</SelectItem>
+                                    <SelectItem value="debit">{t('DEBIT', { defaultValue: 'برداشت' })}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+                        <FilterField label={t('START_DATE', { defaultValue: 'از تاریخ' })}>
+                            <Input
+                                type="date"
+                                value={draftFilters.filter_startdate || ''}
+                                onChange={(e) => setDraftFilters((p) => ({ ...p, filter_startdate: e.target.value || null }))}
+                            />
+                        </FilterField>
+                        <FilterField label={t('END_DATE', { defaultValue: 'تا تاریخ' })}>
+                            <Input
+                                type="date"
+                                value={draftFilters.filter_enddate || ''}
+                                onChange={(e) => setDraftFilters((p) => ({ ...p, filter_enddate: e.target.value || null }))}
+                            />
+                        </FilterField>
+                        <div className="flex gap-2 pt-2">
+                            <Button className="flex-1" onClick={applyFilters}>
+                                {t('APPLY', { defaultValue: 'اعمال' })}
+                            </Button>
+                            <Button className="flex-1" variant="secondary" onClick={clearFilters}>
+                                {t('RESET', { defaultValue: 'بازنشانی' })}
+                            </Button>
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
 
-                                    {/* Reseller */}
-                                    {/* <div className="field">
-                                        <label htmlFor="reseller">{t('BALANCE.FORM.INPUT.RESELLER')} *</label>
-                                       <Dropdown
-                                        id="reseller"
-                                        value={balance.reseller}
-                                        options={resellers}
-                                        onChange={(e) => {
-                                            setBalance((prev) => ({
-                                                ...prev,
-                                                reseller: e.value
-                                            }));
-                                        }}
-                                        optionLabel="reseller_name"
-                                        filter
-                                        filterBy="reseller_name,contact_name,phone" // Add multiple fields for searching
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        showFilterClear
-                                        placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
-                                        className="w-full"
-                                        panelClassName="min-w-[20rem]"
-                                        onFilter={(e) => {
-                                            setResellerSearchTerm(e.filter);
-                                        }}
-                                        filterIcon
-                                        // Add custom item template to show contact name and phone
-                                        itemTemplate={(option) => {
-                                            if (!option) return null;
-                                            return (
-                                                <div className="flex flex-column p-2 gap-1">
-                                                    <div className="font-semibold">{option.contact_name} || {option.reseller_name}</div>
-                                                    <div className="text-sm text-gray-600">
-                                                        {option.phone && (
-                                                            <span className="ml-2 text-gray-500">{option.phone}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        }}
-                                        // Custom value template to show selected value with contact info
-                                        valueTemplate={(option) => {
-                                            if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
-                                            return (
-                                                <div className="flex flex-column">
-                                                    <small className="text-gray-500 text-xs">
-                                                        {option.contact_name} {option.phone && `${option.phone}`}
-                                                    </small>
-                                                </div>
-                                            );
-                                        }}
-                                    />
-                                        {submitted && !balance.reseller && (
-                                            <small className="p-invalid" style={{ color: 'red' }}>
-                                                {t('REQUIRED')}
-                                            </small>
-                                        )}
-                                    </div> */}
-                                    <div className="field">
-                                    <label htmlFor="reseller" style={{ fontWeight: 'bold' }}>
-                                        {t('PAYMENT.FORM.INPUT.RESELLER')}
-                                    </label>
-                                    <CustomDropdownWithSearch
-                                        id="reseller"
-                                        value={balance.reseller}
-                                        options={resellers}
-                                        onChange={(selectedOption) => {
-                                            setBalance((prev) => ({
-                                                ...prev,
-                                                reseller: selectedOption // This will be the full object
-                                            }));
-                                        }}
-                                        optionLabel="reseller_name"
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
-                                        className="w-full"
-                                        panelClassName="min-w-[20rem]"
-                                        searchButtonText={t('ECOMMERCE.COMMON.SEARCH')}
-                                        error={submitted && !balance.reseller}
-                                        errorMessage={t('THIS_FIELD_IS_REQUIRED')}
-                                        showClear={true}
-                                        emptyMessage={t('NO_RESULTS_FOUND')}
-                                        noResultsMessage={t('TRY_DIFFERENT_SEARCH_TERM')}
-                                        returnFullObject={true} // This ensures we get the full object
-                                        itemTemplate={(option) => {
-                                            if (!option) return null;
-                                            return (
-                                                <div className="flex flex-column p-2 gap-1">
-                                                    <div className="font-semibold">
-                                                        {option.contact_name} || {option.reseller_name}
-                                                    </div>
-                                                    <div className="text-sm text-gray-600">
-                                                        {option.phone && (
-                                                            <span className="ml-2 text-gray-500">{option.phone}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        }}
-                                        valueTemplate={(option) => {
-                                            if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
-                                            return (
-                                                <div className="flex flex-column">
-                                                    <span style={{ fontWeight: 'bold' }}>
-                                                        {option.reseller_name}
-                                                    </span>
-                                                    <small className="text-gray-500 text-xs">
-                                                        {option.contact_name} {option.phone && `${option.phone}`}
-                                                    </small>
-                                                </div>
-                                            );
-                                        }}
-                                        onSearch={(searchTerm) => {
-                                            setResellerSearchTerm(searchTerm);
-                                        }}
-                                    />
-                                </div>
-
-
-
-                                    {/* Transaction Type */}
-                                    <div className="field">
-                                        <label htmlFor="transaction_type">{t('BALANCE.FORM.INPUT.TRANSACTIONTYPE')} *</label>
-                                        <Dropdown
-                                            id="transaction_type"
-                                            value={balance.transaction_type}
-                                            options={[
-                                                { label: 'Credit', value: 'credit' },
-                                                { label: 'Debit', value: 'debit' }
-                                            ]}
-                                            onChange={(e) =>
-                                                setBalance((prev) => ({
-                                                    ...prev,
-                                                    transaction_type: e.value
-                                                }))
-                                            }
-                                            placeholder={t('BALANCE.FORM.TRANSACTIONTYPE.PLACEHOLDER')}
-                                            className="w-full"
-                                        />
-                                        {submitted && !balance.transaction_type && (
-                                            <small className="p-invalid" style={{ color: 'red' }}>
-                                                {t('REQUIRED')}
-                                            </small>
-                                        )}
-                                    </div>
-
-                                    <div className="field">
-                                        <label htmlFor="amount">{t('BALANCE.FORM.INPUT.BALANCEAMOUNT')} *</label>
-                                        <InputText
-                                            id="amount"
-                                            value={balance.amount}
-                                            onChange={(e) =>
-                                                setBalance((prev) => ({
-                                                    ...prev,
-                                                    amount: e.target.value
-                                                }))
-                                            }
-                                            placeholder="0"
-                                            type="number"
-                                            className="w-full"
-                                        />
-                                        {submitted && !balance.amount && (
-                                            <small className="p-invalid" style={{ color: 'red' }}>
-                                                {t('REQUIRED')}
-                                            </small>
-                                        )}
-                                    </div>
-
-                                    {/* Currency */}
-                                    <div className="field">
-                                        <label htmlFor="currency_id">{t('BALANCE.FORM.INPUT.CURRENCY')} *</label>
-                                        <Dropdown
-                                            disabled
-                                            id="currency_id"
-                                            value={balance.currency_id}
-                                            options={currencies}
-                                            onChange={(e) =>
-                                                setBalance((prev) => ({
-                                                    ...prev,
-                                                    currency_id: e.value
-                                                }))
-                                            }
-                                            optionLabel="name"
-                                            optionValue="id"
-                                            placeholder={t('BALANCE.FORM.CURRENCY.PLACEHOLDER')}
-                                            className="w-full"
-                                        />
-                                        {submitted && !balance.currency_id && (
-                                            <small className="p-invalid" style={{ color: 'red' }}>
-                                                {t('REQUIRED')}
-                                            </small>
-                                        )}
-                                    </div>
-
-                                    {/* Description */}
-                                    <div className="field">
-                                        <label htmlFor="description">{t('BALANCE.FORM.INPUT.DESCRIPTION')} *</label>
-                                        <InputText
-                                            id="description"
-                                            value={balance.description}
-                                            onChange={(e) =>
-                                                setBalance((prev) => ({
-                                                    ...prev,
-                                                    description: e.target.value
-                                                }))
-                                            }
-                                            placeholder={t('BALANCE.FORM.DESCRIPTION.PLACEHOLDER')}
-                                            className="w-full"
-                                        />
-                                        {submitted && !balance.description && (
-                                            <small className="p-invalid" style={{ color: 'red' }}>
-                                                {t('REQUIRED')}
-                                            </small>
-                                        )}
-                                    </div>
-                                </div>
+            <FormSheet
+                open={balanceDialog}
+                onOpenChange={(open) => {
+                    if (!open) hideDialog();
+                }}
+                size="xl"
+                side="left"
+                title={t('BALANCE.DETAILS.TITLE')}
+                description={
+                    balance.id && balance.id !== 0
+                        ? t('BALANCE.FORM.EDIT_DESCRIPTION', { defaultValue: 'ویرایش تراکنش موجودی فروشنده' })
+                        : t('RESELLER.BALANCETRANSACTION.YOUCANCREDIT', { defaultValue: 'ثبت تراکنش جدید موجودی' })
+                }
+                footer={
+                    <FormActions
+                        onCancel={hideDialog}
+                        onSubmit={saveBalance}
+                        cancelLabel={t('APP.GENERAL.CANCEL')}
+                        submitLabel={t('FORM.GENERAL.SUBMIT')}
+                    />
+                }
+            >
+                {balance.reseller && resellerBalance !== null && resellerPayment !== null && (
+                    <section className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm">
+                        <div className="mb-4 border-b border-emerald-50 pb-3 text-start">
+                            <h3 className="text-sm font-semibold text-emerald-950">
+                                {t('BALANCE.FORM.RESELLER.SUMMARY', { defaultValue: 'خلاصه وضعیت فروشنده' })}
+                            </h3>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                {balance.reseller.reseller_name}
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 text-center">
+                                <p className="text-sm font-medium text-muted-foreground">{t('BALANCE.FORM.RESELLER.BALANCE')}</p>
+                                <p className="mt-2 text-xl font-bold tabular-nums text-emerald-700">{resellerBalance}</p>
                             </div>
-
-                            {/* Payment Details */}
-                            <div className="flex-1 col-12 lg:col-6">
-                                <div className="">
-                                    <h5 className="mb-4">{t('PAYMENT.DETAILS.TITLE')}</h5>
-
-                                    {/* Payment Method */}
-                                    <div className="field">
-                                        <label htmlFor="payment_method_id">{t('BALANCE.FORM.INPUT.PAYMENTMETHOD')}</label>
-                                        <Dropdown
-                                            id="payment_method_id"
-                                            value={balance.payment_method_id}
-                                            options={paymentMethods}
-                                            onChange={(e) =>
-                                                setBalance((prev) => ({
-                                                    ...prev,
-                                                    payment_method_id: e.value
-                                                }))
-                                            }
-                                            optionLabel="method_name"
-                                            optionValue="id"
-                                            placeholder={t('PAYMENT.FORM.METHOD.PLACEHOLDER')}
-                                            className="w-full"
-                                        />
-                                    </div>
-
-                                    {/* Payment Amount */}
-                                    <div className="field">
-                                        <label htmlFor="payment_amount">{t('BALANCE.FORM.INPUT.PAYMENTAMOUNT')}</label>
-                                        <InputText
-                                            id="payment_amount"
-                                            value={balance.payment_amount}
-                                            onChange={(e) =>
-                                                setBalance((prev) => ({
-                                                    ...prev,
-                                                    payment_amount: e.target.value
-                                                }))
-                                            }
-                                            placeholder="0"
-                                            type="number"
-                                            className="w-full"
-                                        />
-                                    </div>
-
-                                    {/* Payment Currency */}
-                                    <div className="field">
-                                        <label htmlFor="payment_currency_id">{t('BALANCE.FORM.INPUT.PAYMENTCURRENCY')}</label>
-                                        <Dropdown
-                                            disabled
-                                            id="payment_currency_id"
-                                            value={balance.payment_currency_id}
-                                            options={currencies}
-                                            onChange={(e) =>
-                                                setBalance((prev) => ({
-                                                    ...prev,
-                                                    payment_currency_id: e.value
-                                                }))
-                                            }
-                                            optionLabel="name"
-                                            optionValue="id"
-                                            placeholder={t('PAYMENT.FORM.CURRENCY.PLACEHOLDER')}
-                                            className="w-full"
-                                        />
-                                    </div>
-
-                                    {/* Payment Notes */}
-                                    <div className="field">
-                                        <label htmlFor="payment_notes">{t('BALANCE.FORM.INPUT.PAYMENTNOTES')}</label>
-                                        <InputText
-                                            id="payment_notes"
-                                            value={balance.payment_notes}
-                                            onChange={(e) =>
-                                                setBalance((prev) => ({
-                                                    ...prev,
-                                                    payment_notes: e.target.value
-                                                }))
-                                            }
-                                            placeholder={t('PAYMENT.FORM.NOTES.PLACEHOLDER')}
-                                            className="w-full"
-                                        />
-                                    </div>
-
-                                    {/* Payment Date */}
-                                    <div className="field">
-                                        <label htmlFor="payment_date">{t('BALANCE.FORM.INPUT.PAYMENTDATE')}</label>
-                                        <InputText
-                                            id="payment_date"
-                                            value={balance.payment_date}
-                                            onChange={(e) =>
-                                                setBalance((prev) => ({
-                                                    ...prev,
-                                                    payment_date: e.target.value
-                                                }))
-                                            }
-                                            type="date"
-                                            required
-                                            autoFocus
-                                            placeholder={t('PAYMENT.FORM.INPUT.PAYMENTDATE')}
-                                            className={classNames({
-                                                'p-invalid': submitted && !balance.payment_date
-                                            })}
-                                        />
-                                    </div>
-                                </div>
+                            <div className="rounded-xl border border-rose-100 bg-rose-50/60 p-4 text-center">
+                                <p className="text-sm font-medium text-muted-foreground">{t('RESELLER.TABLE.COLUMN.AVAILABLEPAYMENT')}</p>
+                                <p className="mt-2 text-xl font-bold tabular-nums text-rose-700">{resellerPayment}</p>
+                            </div>
+                            <div className="rounded-xl border border-violet-100 bg-violet-50/60 p-4 text-center">
+                                <p className="text-sm font-medium text-muted-foreground">{t('BALANCE.FORM.RESELLER.LOAN')}</p>
+                                <p className="mt-2 text-xl font-bold tabular-nums text-violet-700">{resellerLoan}</p>
                             </div>
                         </div>
-                    </Dialog>
+                    </section>
+                )}
+
+                <FormSection title={t('BALANCE.DETAILS.TITLE')} description={t('PAYMENT.DETAILS.TITLE')}>
+                    <FormField
+                        label={t('PAYMENT.FORM.INPUT.RESELLER')}
+                        required
+                        fullWidth
+                        error={submitted && !balance.reseller ? t('THIS_FIELD_IS_REQUIRED') : false}
+                    >
+                        <CustomDropdownWithSearch
+                            id="reseller"
+                            value={balance.reseller}
+                            options={resellers}
+                            onChange={(selectedOption) => {
+                                setBalance((prev) => ({
+                                    ...prev,
+                                    reseller: selectedOption
+                                }));
+                            }}
+                            optionLabel="reseller_name"
+                            filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                            placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
+                            className="w-full"
+                            panelClassName="min-w-[20rem]"
+                            searchButtonText={t('ECOMMERCE.COMMON.SEARCH')}
+                            error={submitted && !balance.reseller}
+                            errorMessage={t('THIS_FIELD_IS_REQUIRED')}
+                            showClear={true}
+                            emptyMessage={t('NO_RESULTS_FOUND')}
+                            noResultsMessage={t('TRY_DIFFERENT_SEARCH_TERM')}
+                            returnFullObject={true}
+                            itemTemplate={(option) => {
+                                if (!option) return null;
+                                return (
+                                    <div className="flex flex-column p-2 gap-1">
+                                        <div className="font-semibold">
+                                            {option.contact_name} || {option.reseller_name}
+                                        </div>
+                                        <div className="text-sm text-gray-600">
+                                            {option.phone && <span className="ms-2 text-gray-500">{option.phone}</span>}
+                                        </div>
+                                    </div>
+                                );
+                            }}
+                            valueTemplate={(option) => {
+                                if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
+                                return (
+                                    <div className="flex flex-column">
+                                        <span className="font-bold">{option.reseller_name}</span>
+                                        <small className="text-gray-500 text-xs">
+                                            {option.contact_name} {option.phone && `${option.phone}`}
+                                        </small>
+                                    </div>
+                                );
+                            }}
+                            onSearch={(searchTerm) => {
+                                setResellerSearchTerm(searchTerm);
+                            }}
+                        />
+                    </FormField>
+
+                    <FormField
+                        label={t('BALANCE.FORM.INPUT.TRANSACTIONTYPE')}
+                        required
+                        error={submitted && !balance.transaction_type ? t('REQUIRED') : false}
+                    >
+                        <Select
+                            value={balance.transaction_type || undefined}
+                            onValueChange={(v) =>
+                                setBalance((prev) => ({
+                                    ...prev,
+                                    transaction_type: v
+                                }))
+                            }
+                        >
+                            <SelectTrigger className={cn(submitted && !balance.transaction_type && 'border-rose-300')}>
+                                <SelectValue placeholder={t('BALANCE.FORM.TRANSACTIONTYPE.PLACEHOLDER')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="credit">{t('CREDIT', { defaultValue: 'واریز' })}</SelectItem>
+                                <SelectItem value="debit">{t('DEBIT', { defaultValue: 'برداشت' })}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+
+                    <FormField
+                        label={t('BALANCE.FORM.INPUT.BALANCEAMOUNT')}
+                        required
+                        error={submitted && !balance.amount ? t('REQUIRED') : false}
+                    >
+                        <Input
+                            id="amount"
+                            value={balance.amount || ''}
+                            onChange={(e) =>
+                                setBalance((prev) => ({
+                                    ...prev,
+                                    amount: e.target.value
+                                }))
+                            }
+                            placeholder="0"
+                            type="number"
+                            className={cn('w-full', submitted && !balance.amount && 'border-rose-300')}
+                        />
+                    </FormField>
+
+                    <FormField
+                        label={t('BALANCE.FORM.INPUT.CURRENCY')}
+                        required
+                        error={submitted && !balance.currency_id ? t('REQUIRED') : false}
+                    >
+                        <Select
+                            disabled
+                            value={balance.currency_id != null ? String(balance.currency_id) : undefined}
+                            onValueChange={(v) =>
+                                setBalance((prev) => ({
+                                    ...prev,
+                                    currency_id: Number(v)
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('BALANCE.FORM.CURRENCY.PLACEHOLDER')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(currencies as Currency[]).map((c) => (
+                                    <SelectItem key={c.id} value={String(c.id)}>
+                                        {c.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+
+                    <FormField label={t('BALANCE.FORM.INPUT.PAYMENTMETHOD')}>
+                        <Select
+                            value={balance.payment_method_id != null ? String(balance.payment_method_id) : undefined}
+                            onValueChange={(v) =>
+                                setBalance((prev) => ({
+                                    ...prev,
+                                    payment_method_id: Number(v)
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('PAYMENT.FORM.METHOD.PLACEHOLDER')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {paymentMethods.map((m: { id: number; method_name: string }) => (
+                                    <SelectItem key={m.id} value={String(m.id)}>
+                                        {m.method_name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+
+                    <FormField label={t('BALANCE.FORM.INPUT.PAYMENTAMOUNT')}>
+                        <Input
+                            id="payment_amount"
+                            value={balance.payment_amount || ''}
+                            onChange={(e) =>
+                                setBalance((prev) => ({
+                                    ...prev,
+                                    payment_amount: e.target.value
+                                }))
+                            }
+                            placeholder="0"
+                            type="number"
+                            className="w-full"
+                        />
+                    </FormField>
+
+                    <FormField label={t('BALANCE.FORM.INPUT.PAYMENTCURRENCY')}>
+                        <Select
+                            disabled
+                            value={balance.payment_currency_id != null ? String(balance.payment_currency_id) : undefined}
+                            onValueChange={(v) =>
+                                setBalance((prev) => ({
+                                    ...prev,
+                                    payment_currency_id: Number(v)
+                                }))
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('PAYMENT.FORM.CURRENCY.PLACEHOLDER')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(currencies as Currency[]).map((c) => (
+                                    <SelectItem key={c.id} value={String(c.id)}>
+                                        {c.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormField>
+
+                    <FormField
+                        label={t('BALANCE.FORM.INPUT.PAYMENTDATE')}
+                        error={submitted && !balance.payment_date ? t('REQUIRED') : false}
+                    >
+                        <DateField
+                            id="payment_date"
+                            value={balance.payment_date || ''}
+                            onValueChange={(v) =>
+                                setBalance((prev) => ({
+                                    ...prev,
+                                    payment_date: v
+                                }))
+                            }
+                            className={cn(submitted && !balance.payment_date && 'border-rose-300')}
+                        />
+                    </FormField>
+                </FormSection>
+
+                <FormSection title={t('NOTES', { defaultValue: 'یادداشت‌ها' })} description={t('BALANCE.FORM.NOTES.HINT', { defaultValue: 'توضیحات تراکنش و یادداشت پرداخت' })}>
+                    <FormField
+                        label={t('BALANCE.FORM.INPUT.DESCRIPTION')}
+                        required
+                        fullWidth
+                        error={submitted && !balance.description ? t('REQUIRED') : false}
+                    >
+                        <Textarea
+                            id="description"
+                            value={balance.description || ''}
+                            onChange={(e) =>
+                                setBalance((prev) => ({
+                                    ...prev,
+                                    description: e.target.value
+                                }))
+                            }
+                            placeholder={t('BALANCE.FORM.DESCRIPTION.PLACEHOLDER')}
+                            className={cn('w-full', submitted && !balance.description && 'border-rose-300')}
+                            rows={3}
+                        />
+                    </FormField>
+
+                    <FormField label={t('BALANCE.FORM.INPUT.PAYMENTNOTES')} fullWidth>
+                        <Textarea
+                            id="payment_notes"
+                            value={balance.payment_notes || ''}
+                            onChange={(e) =>
+                                setBalance((prev) => ({
+                                    ...prev,
+                                    payment_notes: e.target.value
+                                }))
+                            }
+                            placeholder={t('PAYMENT.FORM.NOTES.PLACEHOLDER')}
+                            className="w-full"
+                            rows={3}
+                        />
+                    </FormField>
+                </FormSection>
+            </FormSheet>
 
                     <Dialog visible={deleteBalanceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteBalanceDialogFooter} onHide={hideDeleteBalanceDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -1263,10 +966,54 @@ const leftToolbarTemplate = () => {
                             {balance && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_REJECT_THIS_BALANCE')}?</span>}
                         </div>
                     </Dialog>
-                </div>
-            </div>
-        </div>
+        </>
     );
 };
+
+
+function compactFilters(filters: BalanceFilters) {
+    const out: Record<string, string> = {};
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') out[key] = value;
+    });
+    return out;
+}
+
+function statusBadgeVariant(status?: string): 'warning' | 'success' | 'danger' | 'muted' {
+    const s = status?.toLowerCase();
+    if (s === 'rollbacked') return 'warning';
+    if (s === 'completed') return 'success';
+    if (s === 'rejected') return 'danger';
+    return 'muted';
+}
+
+function formatStatusLabel(status?: string) {
+    const s = status?.toLowerCase() || 'unknown';
+    if (s === 'unknown') return '—';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function typeBadgeVariant(type?: string): 'danger' | 'success' | 'muted' {
+    const t = type?.toLowerCase();
+    if (t === 'debit') return 'danger';
+    if (t === 'credit') return 'success';
+    return 'muted';
+}
+
+function formatTypeLabel(type: string | undefined, t: (key: string, opts?: object) => string) {
+    const v = type?.toLowerCase();
+    if (v === 'credit') return t('CREDIT', { defaultValue: 'واریز' });
+    if (v === 'debit') return t('DEBIT', { defaultValue: 'برداشت' });
+    return '—';
+}
+
+function formatBalanceDate(value?: string) {
+    if (!value) return '—';
+    try {
+        return new Date(value).toLocaleString('fa-IR');
+    } catch {
+        return value;
+    }
+}
 
 export default withAuth(BalancePage);

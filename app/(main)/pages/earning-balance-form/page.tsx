@@ -1,10 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
-import { Button } from 'primereact/button';
-import { Dropdown } from 'primereact/dropdown';
-import { InputNumber } from 'primereact/inputnumber';
 import { Toast } from 'primereact/toast';
-import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
@@ -13,10 +9,11 @@ import { Reseller } from '@/types/interface';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
 import { _fetchResellers } from '@/app/redux/actions/resellerActions';
-import { Toolbar } from 'primereact/toolbar';
 import { _addEarningBalanceRequest } from '@/app/redux/actions/earningBalanceActions';
-import { isRTL } from '../../utilities/rtlUtil';
 import CustomDropdownWithSearch from '@/app/(main)/components/customDropDownWithSearch';
+import { FormActions, FormField, FormSection } from '@/components/admin/form-sheet';
+import { NumberInput } from '@/components/ui/number-input';
+import { cn } from '@/lib/utils';
 
 const AddEarningBalanceRequestPage = () => {
     const { t } = useTranslation();
@@ -26,7 +23,6 @@ const AddEarningBalanceRequestPage = () => {
     const { resellers, loading: resellersLoading } = useSelector((state: any) => state.resellerReducer);
     const [resellerSearchTerm, setResellerSearchTerm] = useState('');
 
-    // Form state
     const [formData, setFormData] = useState({
         reseller_id: '',
         amount: 0
@@ -34,10 +30,6 @@ const AddEarningBalanceRequestPage = () => {
     const [totalEarningBalance, setTotalEarningBalance] = useState<number>(0);
     const [submitted, setSubmitted] = useState(false);
 
-    // Fetch resellers on component mount
-    // useEffect(() => {
-    //     dispatch(_fetchResellers());
-    // }, [dispatch]);
     useEffect(() => {
         const timer = setTimeout(() => {
             if (resellerSearchTerm) {
@@ -45,181 +37,126 @@ const AddEarningBalanceRequestPage = () => {
             } else {
                 dispatch(_fetchResellers(1, ''));
             }
-        }, 300); // Debounce for 300ms
+        }, 300);
 
         return () => clearTimeout(timer);
     }, [resellerSearchTerm, dispatch]);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const selectedReseller =
+        (resellers || []).find((r: Reseller) => String(r.id) === String(formData.reseller_id)) || null;
+
+    const submitRequest = () => {
         setSubmitted(true);
 
         if (!formData.reseller_id || formData.amount <= 0) return;
 
         dispatch(_addEarningBalanceRequest(formData, toast, t));
         router.push('/pages/earning-balance-form');
-        setFormData({ ...formData, reseller_id: '', amount: 0 });
+        setFormData({ reseller_id: '', amount: 0 });
+        setTotalEarningBalance(0);
+        setSubmitted(false);
     };
-
-    // Templates for DataTable
-    const leftToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div>
-                    <span className="block mt-2 md:mt-0 p-input-icon-left font-bold text-[16px]">{t('EARNING_BALANCE_REQUEST.ADD_DIALOG.TITLE')}</span>
-                </div>
-            </React.Fragment>
-        );
-    };
-
-    useEffect(() => {
-        console.log(formData.amount);
-    }, [formData]);
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card">
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} />
+        <div className="mx-auto max-w-3xl space-y-4 p-4">
+            <Toast ref={toast} />
+            <header className="text-start">
+                <h1 className="text-lg font-semibold text-emerald-950">{t('EARNING_BALANCE_REQUEST.ADD_DIALOG.TITLE')}</h1>
+                <p className="mt-1 text-sm text-muted-foreground">ثبت درخواست انتقال موجودی درآمدی نماینده</p>
+            </header>
 
-                    <form onSubmit={handleSubmit}>
-                        <div className="field mb-4">
-                            <label htmlFor="reseller" className="block mb-2">
-                                {t('EARNING_BALANCE_REQUEST.ADD_DIALOG.RESELLER')}
-                                <span className="text-red-500">*</span>
-                            </label>
-                            {/* <Dropdown
-                                id="reseller"
-                                value={formData.reseller_id}
-                                options={
-                                    resellers?.map((reseller: Reseller) => ({
-                                        label: reseller.reseller_name,
-                                        value: reseller.id
-                                    })) || []
+            <div className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm">
+                <FormSection title="جزئیات درخواست" description="نماینده و مبلغ انتقال">
+                    <FormField
+                        label={t('EARNING_BALANCE_REQUEST.ADD_DIALOG.RESELLER')}
+                        required
+                        fullWidth
+                        error={submitted && !formData.reseller_id ? t('FORM.VALIDATION.REQUIRED') : null}
+                    >
+                        <CustomDropdownWithSearch
+                            id="reseller"
+                            value={selectedReseller}
+                            options={resellers}
+                            onChange={(selectedOption) => {
+                                setFormData((prev) => ({
+                                    ...prev,
+                                    reseller_id: selectedOption?.id != null ? String(selectedOption.id) : ''
+                                }));
+                                if (selectedOption) {
+                                    setTotalEarningBalance(Number(selectedOption.total_earning_balance) || 0);
+                                } else {
+                                    setTotalEarningBalance(0);
                                 }
-                                onChange={(e: { value: string }) => {
-                                    const selectedReseller = resellers.find((r: any) => r.id === e.value);
-                                    setFormData({ ...formData, reseller_id: e.value });
-                                    if (selectedReseller) {
-                                        setTotalEarningBalance(selectedReseller?.total_earning_balance);
-                                    }
-                                }}
-                                placeholder={t('FORM.GENERAL.SELECT')}
-                                required
-                                className={classNames('w-full', {
-                                    'p-invalid': submitted && !formData.reseller_id
-                                })}
-                            />
-                             */}
-
-                            {/* <Dropdown
-                                id="reseller"
-                                value={formData.reseller_id}
-                                options={resellers.map((reseller: Reseller) => ({
-                                    label: reseller.reseller_name,
-                                    value: reseller.id
-                                }))}
-                                onChange={(e) => {
-                                    setFormData((prev) => ({
-                                        ...prev,
-                                        reseller_id: e.value
-                                    }));
-                                }}
-                                filter
-                                filterPlaceholder={t('SEARCH')}
-                                showFilterClear
-                                placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
-                                className="w-full"
-                                panelClassName="min-w-[20rem]"
-                                onFilter={(e) => {
-                                    setResellerSearchTerm(e.filter);
-                                }}
-                                filterIcon
-                            /> */}
-
-                             <CustomDropdownWithSearch
-                                        id="reseller"
-                                        value={formData.reseller_id}
-                                        options={resellers}
-                                        onChange={(selectedOption) => {
-                                            setFormData((prev) => ({
-                                                ...prev,
-                                                reseller_id: selectedOption?.id // This will be the full object
-                                            }));
-                                        }}
-                                        optionLabel="reseller_name"
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
-                                        className="w-full"
-                                        panelClassName="min-w-[20rem]"
-                                        searchButtonText={t('ECOMMERCE.COMMON.SEARCH')}
-                                        error={submitted && !formData.reseller_id}
-                                        errorMessage={t('THIS_FIELD_IS_REQUIRED')}
-                                        showClear={true}
-                                        emptyMessage={t('NO_RESULTS_FOUND')}
-                                        noResultsMessage={t('TRY_DIFFERENT_SEARCH_TERM')}
-                                        returnFullObject={true} // This ensures we get the full object
-                                        itemTemplate={(option) => {
-                                            if (!option) return null;
-                                            return (
-                                                <div className="flex flex-column p-2 gap-1">
-                                                    <div className="font-semibold">
-                                                        {option.contact_name} || {option.reseller_name}
-                                                    </div>
-                                                    <div className="text-sm text-gray-600">
-                                                        {option.phone && (
-                                                            <span className="ml-2 text-gray-500">{option.phone}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        }}
-                                        valueTemplate={(option) => {
-                                            if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
-                                            return (
-                                                <div className="flex flex-column">
-                                                    <span style={{ fontWeight: 'bold' }}>
-                                                        {option.reseller_name}
-                                                    </span>
-                                                    <small className="text-gray-500 text-xs">
-                                                        {option.contact_name} {option.phone && `${option.phone}`}
-                                                    </small>
-                                                </div>
-                                            );
-                                        }}
-                                        onSearch={(searchTerm) => {
-                                            setResellerSearchTerm(searchTerm);
-                                        }}
-                                    />
-
-                            {submitted && !formData.reseller_id && <small className="p-invalid block mt-1">{t('FORM.VALIDATION.REQUIRED')}</small>}
-                        </div>
-
-                        <div className="field mb-4">
-                            <label htmlFor="amount" className="block mb-2">
-                                {t('EARNING_BALANCE_REQUEST.ADD_DIALOG.AMOUNT')}
-                            </label>
-                            <div className="text-sm mb-2 font-bold">
-                                {t('EARNING_BALANCE_REQUEST.ADD_DIALOG.AVAILABLE_BALANCE')}: {totalEarningBalance}
-                            </div>
-                            <InputNumber
-                                id="amount"
-                                value={formData.amount}
-                                onValueChange={(e) => setFormData({ ...formData, amount: e.value || 0 })}
-                                required
-                                className={classNames('w-full', {
-                                    'p-invalid': submitted && formData.amount <= 0
-                                })}
-                            />
-                            {submitted && formData.amount <= 0 && <small className="p-invalid block mt-1">{t('FORM.VALIDATION.AMOUNT_POSITIVE')}</small>}
-                        </div>
-
-                        <div className="flex justify-content-end gap-3 mt-5">
-                            <Button type="button" label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={() => router.back()} />
-                            <Button type="submit" label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} loading={resellersLoading} />
-                        </div>
-                    </form>
+                            }}
+                            optionLabel="reseller_name"
+                            filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
+                            placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
+                            className="w-full"
+                            panelClassName="min-w-[20rem]"
+                            searchButtonText={t('ECOMMERCE.COMMON.SEARCH')}
+                            error={submitted && !formData.reseller_id}
+                            errorMessage={t('THIS_FIELD_IS_REQUIRED')}
+                            showClear={true}
+                            emptyMessage={t('NO_RESULTS_FOUND')}
+                            noResultsMessage={t('TRY_DIFFERENT_SEARCH_TERM')}
+                            returnFullObject={true}
+                            itemTemplate={(option) => {
+                                if (!option) return null;
+                                return (
+                                    <div className="flex flex-col gap-1 p-2">
+                                        <div className="font-semibold">
+                                            {option.contact_name} · {option.reseller_name}
+                                        </div>
+                                        {option.phone ? (
+                                            <div className="text-sm text-muted-foreground">
+                                                <span className="ms-2">{option.phone}</span>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                );
+                            }}
+                            valueTemplate={(option) => {
+                                if (!option) return t('PAYMENT.FORM.INPUT.RESELLER');
+                                return (
+                                    <div className="flex flex-col text-start">
+                                        <span className="font-bold">{option.reseller_name}</span>
+                                        <small className="text-xs text-muted-foreground">
+                                            {[option.contact_name, option.phone].filter(Boolean).join(' · ')}
+                                        </small>
+                                    </div>
+                                );
+                            }}
+                            onSearch={(searchTerm) => {
+                                setResellerSearchTerm(searchTerm);
+                            }}
+                        />
+                    </FormField>
+                    <FormField
+                        label={t('EARNING_BALANCE_REQUEST.ADD_DIALOG.AMOUNT')}
+                        required
+                        fullWidth
+                        hint={`${t('EARNING_BALANCE_REQUEST.ADD_DIALOG.AVAILABLE_BALANCE')}: ${totalEarningBalance}`}
+                        error={submitted && formData.amount <= 0 ? t('FORM.VALIDATION.AMOUNT_POSITIVE') : null}
+                    >
+                        <NumberInput
+                            id="amount"
+                            value={formData.amount || null}
+                            onValueChange={(v) => setFormData({ ...formData, amount: v ?? 0 })}
+                            min={0}
+                            step={0.01}
+                            allowNull={false}
+                            className={cn('w-full', submitted && formData.amount <= 0 && 'border-rose-300')}
+                        />
+                    </FormField>
+                </FormSection>
+                <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-emerald-100 pt-4">
+                    <FormActions
+                        onCancel={() => router.back()}
+                        onSubmit={submitRequest}
+                        loading={resellersLoading}
+                        cancelLabel={t('APP.GENERAL.CANCEL', { defaultValue: 'انصراف' })}
+                        submitLabel={t('FORM.GENERAL.SUBMIT', { defaultValue: 'ذخیره' })}
+                    />
                 </div>
             </div>
         </div>

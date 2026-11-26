@@ -2,26 +2,28 @@
 'use client';
 import { _addAdvertisement, _deleteAdvertisement, _editAdvertisement, _fetchAdvertisements } from '@/app/redux/actions/advertisementActions';
 import { AppDispatch } from '@/app/redux/store';
-import i18n from '@/i18n';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { ListPage } from '@/components/admin/list-page';
+import { RowActions } from '@/components/admin/row-actions';
+import { Badge } from '@/components/ui/badge';
+import { Button as UiButton } from '@/components/ui/button';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { Advertisement } from '@/types/interface';
+import { cn } from '@/lib/utils';
+import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { FileDrop } from '@/components/ui/file-drop';
 import { Button } from 'primereact/button';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { FileUpload } from 'primereact/fileupload';
-import { InputText } from 'primereact/inputtext';
-import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
-import { customCellStyleImage } from '../../utilities/customRow';
 import { isRTL } from '../../utilities/rtlUtil';
-import { ManageTranslationsButton } from '@/app/(main)/components/ManageTranslationsButton';
 
 const AdvertisementPage = () => {
 
@@ -41,15 +43,14 @@ const AdvertisementPage = () => {
     const [deleteAdvertisementDialog, setDeleteAdvertisementDialog] = useState(false);
     const [deleteAdvertisementsDialog, setDeleteAdvertisementsDialog] = useState(false);
     const [advertisement, setAdvertisement] = useState<Advertisement>(emptyAdvertisement)
-    const [selectedCompanies, setSelectedAdvertisement] = useState(null);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
-    const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>()
     const { advertisements, loading } = useSelector((state: any) => state.advertisementsReducer)
     const { t } = useTranslation()
-    const [searchTag, setSearchTag] = useState("")
+    const [searchInput, setSearchInput] = useState('');
+    const searchTag = useDebouncedValue(searchInput, 350);
+    const [refreshing, setRefreshing] = useState(false);
 
 
 
@@ -124,163 +125,23 @@ const AdvertisementPage = () => {
     };
 
 
-    const confirmDeleteSelected = () => {
-        setDeleteAdvertisementsDialog(true);
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await dispatch(_fetchAdvertisements(searchTag) as any);
+        setRefreshing(false);
     };
 
+    const getRowActions = (row: Advertisement) => [
+        { label: t('TABLE.GENERAL.EDIT'), icon: <Pencil className="h-4 w-4" />, onClick: () => editAdvertisement(row) },
+        {
+            label: t('TABLE.GENERAL.DELETE'),
+            icon: <Trash2 className="h-4 w-4" />,
+            danger: true,
+            separatorBefore: true,
+            onClick: () => confirmDeleteAdvertisement(row)
+        }
+    ];
 
-
-    const rightToolbarTemplate = () => {
-        return (
-            <React.Fragment>
-                <div className="flex justify-end items-center space-x-2">
-                    <Button style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }} label={t('ADVERTISEMENT.TABLE.CREATEADVERTISEMENT')} icon="pi pi-plus" severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"} onClick={openNew} />
-                    {/* <Button style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }} label={t("APP.GENERAL.DELETE")} icon="pi pi-trash" severity="danger" onClick={confirmDeleteSelected} disabled={!selectedCompanies || !(selectedCompanies as any).length} /> */}
-                    {/* <ManageTranslationsButton type="advertisement" /> */}
-                </div>
-            </React.Fragment>
-        );
-    };
-
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <div className="flex items-center">
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-    //                 <i className="pi pi-search" />
-    //                 <InputText
-    //                     type="search"
-    //                     onInput={(e) => setSearchTag(e.currentTarget.value)}
-    //                     placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-    //                     className="w-full md:w-auto"
-    //                 />
-    //             </span>
-    //         </div>
-    //     );
-    // };
-    const [localSearchTerm, setLocalSearchTerm] = useState('');
-
-    const leftToolbarTemplate = () => {
-
-        const handleSearch = () => {
-            setSearchTag(localSearchTerm);
-        };
-
-        const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        };
-
-        return (
-            <React.Fragment>
-                <div className="flex align-items-center gap-2">
-                    <span className="p-input-icon-left">
-                        <i className="pi pi-search" />
-                        <InputText
-                            type="search"
-                            value={localSearchTerm}
-                            onChange={(e) => setLocalSearchTerm(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-                        />
-                    </span>
-                    <Button
-                        label={t('SEARCH')}
-                        onClick={handleSearch}
-                        className="p-button-sm"
-                    />
-                    {localSearchTerm && (
-                        <Button
-                            icon="pi pi-times"
-                            onClick={() => {
-                                setLocalSearchTerm('');
-                                setSearchTag('');
-                            }}
-                            className="p-button-sm p-button-secondary p-button-text"
-
-                        />
-                    )}
-                </div>
-            </React.Fragment>
-        );
-    };
-
-    const imageBodyTemplate = (rowData: Advertisement) => {
-        return (
-            <>
-                <span className="p-column-title">Image</span>
-                <img src={`${rowData.ad_slider_image_url}`} alt={rowData.ad_slider_image_url?.toString()} className="shadow-2" width="60" />
-            </>
-        );
-    };
-
-
-    const advertisementTitleBodyTemplate = (rowData: Advertisement) => {
-        return (
-            <>
-                <span className="p-column-title">Advertisement Title</span>
-                {rowData.advertisement_title}
-            </>
-        );
-    };
-
-    const statusBodyTemplate = (rowData: Advertisement) => {
-        // Define the text and background color based on the status value
-        const getStatusText = (status: string) => {
-            return status == '1' ? 'Active' : 'Deactivated';
-        };
-
-        const getStatusClasses = (status: number) => {
-            return status == 1
-                ? 'bg-green-500 text-white'
-                : 'bg-red-500 text-white';
-        };
-
-        return (
-            <>
-                <span className="p-column-title">Status</span>
-                <span style={{ borderRadius: "5px" }}
-                    className={`inline-block px-2 py-1 rounded text-sm font-semibold ${getStatusClasses(
-                        rowData.status
-                    )}`}
-                >
-                    {getStatusText(rowData?.status?.toString())}
-                </span>
-            </>
-        );
-    };
-
-
-
-
-
-
-
-    const actionBodyTemplate = (rowData: Advertisement) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"} onClick={() => editAdvertisement(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteAdvertisement(rowData)} />
-            </>
-        );
-    };
-
-    // const header = (
-    //     <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-    //         <h5 className="m-0">Manage Products</h5>
-    //         <span className="block mt-2 md:mt-0 p-input-icon-left">
-    //             <i className="pi pi-search" />
-    //             <InputText type="search" onInput={(e) => setGlobalFilter(e.currentTarget.value)} placeholder="Search..." />
-    //         </span>
-    //     </div>
-    // );
-
-    const advertisementDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveAdvertisement} />
-        </>
-    );
     const deleteAdvertisementDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteAdvertisementDialog} />
@@ -298,117 +159,162 @@ const AdvertisementPage = () => {
 
 
     return (
-        <div className="grid crud-demo -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
-                    <DataTable
-                        ref={dt}
-                        value={advertisements}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedAdvertisement(e.value as any)}
-                        dataKey="id"
-                        paginator
-                        rows={10}
-                        rowsPerPageOptions={[5, 10, 25]}
-                        className={`datatable-responsive`}
-                        paginatorTemplate={
-                            isRTL()
-                                ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink'
-                                : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
-                        }
-                        currentPageReportTemplate={
-                            isRTL()
-                                ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`  // localized RTL string
-                                : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`
-                        }
-                        globalFilter={globalFilter}
-                        emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
-                        // header={header}
-                        responsiveLayout="scroll"
-                        dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                    >
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
-                        <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTIMAGE')} sortable body={imageBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="name" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTTITLE')} sortable body={advertisementTitleBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} field="status" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTSTATUS')} body={statusBodyTemplate} sortable></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? "right" : "left" }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
-                    </DataTable>
-
-                    <Dialog visible={advertisementDialog} style={{ width: '700px', padding: '5px' }} header={t('ADVERTISEMENT.DETAILS')} modal className="p-fluid" footer={advertisementDialogFooter} onHide={hideDialog}>
-                        <div className='card' style={{ padding: '40px' }}></div>
-                        {advertisement.ad_slider_image_url && (
-                            <img
-                                src={
-                                    advertisement.ad_slider_image_url instanceof File
-                                        ? URL.createObjectURL(advertisement.ad_slider_image_url) // Temporary preview for file
-                                        : advertisement.ad_slider_image_url // Direct URL for existing logo
-                                }
-                                alt="Uploaded Preview"
-                                width="150"
-                                className="mt-0 mx-auto mb-5 block shadow-2"
-                            />
+        <div className="space-y-4">
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.ADVERTISEMENT', { defaultValue: 'تبلیغات' })}
+                description={t('ADVERTISEMENT.PAGE.DESCRIPTION', { defaultValue: 'مدیریت اسلایدر و بنرهای تبلیغاتی' })}
+                loading={loading}
+                actions={
+                    <>
+                        <UiButton variant="default" size="sm" onClick={openNew}>
+                            <Plus className="h-4 w-4" />
+                            {t('ADVERTISEMENT.TABLE.CREATEADVERTISEMENT')}
+                        </UiButton>
+                        <UiButton variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-4 w-4', (refreshing || loading) && 'animate-spin')} />
+                            {t('REFRESH', { defaultValue: 'بروزرسانی' })}
+                        </UiButton>
+                    </>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('ECOMMERCE.COMMON.SEARCH', { defaultValue: 'جستجو...' })}
+                    />
+                }
+                footer={
+                    <div className="border-t border-emerald-100 px-3 py-2 text-xs text-muted-foreground">
+                        {t('TOTAL', { defaultValue: 'مجموع' })}: {(advertisements || []).length}
+                    </div>
+                }
+            >
+                <table className="w-full min-w-[640px] border-collapse text-xs">
+                    <thead>
+                        <tr className="border-b border-emerald-100 bg-emerald-50/70 text-start">
+                            <th className="px-2 py-2 font-semibold text-emerald-950 whitespace-nowrap">{t('TABLE.GENERAL.ACTIONS', { defaultValue: 'عملیات' })}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTIMAGE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTTITLE')}</th>
+                            <th className="px-2 py-2 font-semibold text-emerald-950">{t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTSTATUS')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {(advertisements || []).length === 0 ? (
+                            <tr>
+                                <td colSpan={4} className="px-2 py-12 text-center text-muted-foreground">
+                                    {t('DATA_TABLE.TABLE.NO_DATA', { defaultValue: 'داده‌ای یافت نشد' })}
+                                </td>
+                            </tr>
+                        ) : (
+                            (advertisements || []).map((row: Advertisement) => (
+                                <tr key={row.id} className="border-b border-emerald-50 transition hover:bg-emerald-50/50">
+                                    <td className="px-2 py-1.5 align-middle">
+                                        <RowActions items={getRowActions(row)} />
+                                    </td>
+                                    <td className="px-2 py-1.5">
+                                        {row.ad_slider_image_url ? (
+                                            <img src={`${row.ad_slider_image_url}`} alt="" className="h-10 w-16 rounded object-cover shadow-sm" />
+                                        ) : (
+                                            '—'
+                                        )}
+                                    </td>
+                                    <td className="px-2 py-1.5 font-medium text-start">{row.advertisement_title || '—'}</td>
+                                    <td className="px-2 py-1.5">
+                                        <Badge variant={row.status == 1 ? 'success' : 'danger'} className="text-[10px]">
+                                            {row.status == 1 ? t('APP.GENERAL.ACTIVE', { defaultValue: 'فعال' }) : t('APP.GENERAL.INACTIVE', { defaultValue: 'غیرفعال' })}
+                                        </Badge>
+                                    </td>
+                                </tr>
+                            ))
                         )}
-                        <FileUpload
-                            mode='basic'
-                            name="company_logo"
-                            accept="image/*"
-                            customUpload
-                            onSelect={(e) => setAdvertisement((prev) => ({
-                                ...prev,
-                                ad_slider_image_url: e.files[0],
-                            }))}
-                            style={{ textAlign: 'center', marginBottom: '10px' }}
-                        />
-                        <div className="field">
-                            <label htmlFor="advertisement_title" style={{ fontWeight: 'bold' }}>{t('ADVERTISEMENT.FORM.INPUT.ADVERTISEMENTTITLE')}</label>
-                            <InputText
-                                id="advertisement_title"
-                                value={advertisement.advertisement_title}
-                                onChange={(e) =>
-                                    setAdvertisement((prevAdvertisement) => ({
-                                        ...prevAdvertisement,
-                                        advertisement_title: e.target.value,
-                                    }))
-                                }
+                    </tbody>
+                </table>
+            </ListPage>
+
+                    <FormSheet
+                        open={advertisementDialog}
+                        onOpenChange={(open) => {
+                            if (!open) hideDialog();
+                        }}
+                        title={t('ADVERTISEMENT.DETAILS')}
+                        description={advertisement.id ? 'ویرایش تبلیغ' : 'ثبت تبلیغ جدید'}
+                        size="xl"
+                        side="left"
+                        footer={
+                            <FormActions
+                                onCancel={hideDialog}
+                                onSubmit={saveAdvertisement}
+                                cancelLabel={t('APP.GENERAL.CANCEL')}
+                                submitLabel={t('FORM.GENERAL.SUBMIT')}
+                            />
+                        }
+                    >
+                        <FormSection title="جزئیات تبلیغ" description="تصویر، عنوان و وضعیت">
+                            <FormField label={t('ADVERTISEMENT.FORM.INPUT.ADVERTISEMENTIMAGE')} fullWidth>
+                                <FileDrop
+                                    accept="image/*"
+                                    value={
+                                        advertisement.ad_slider_image_url instanceof File
+                                            ? advertisement.ad_slider_image_url
+                                            : null
+                                    }
+                                    previewUrl={
+                                        typeof advertisement.ad_slider_image_url === 'string' && advertisement.ad_slider_image_url
+                                            ? advertisement.ad_slider_image_url
+                                            : null
+                                    }
+                                    onChange={(file) =>
+                                        setAdvertisement((prev) => ({
+                                            ...prev,
+                                            ad_slider_image_url: file ?? (typeof prev.ad_slider_image_url === 'string' ? prev.ad_slider_image_url : '')
+                                        }))
+                                    }
+                                />
+                            </FormField>
+                            <FormField
+                                label={t('ADVERTISEMENT.FORM.INPUT.ADVERTISEMENTTITLE')}
                                 required
-                                autoFocus
-                                placeholder={t('ADVERTISEMENT.FORM.PLACEHOLDER.ADVERTISEMENTTITLE')}
-                                className={classNames({
-                                    'p-invalid': submitted && !advertisement.advertisement_title
-                                })}
-                            />
-                            {submitted && !advertisement.advertisement_title && <small className="p-invalid" style={{ color: 'red' }}>{t('REQUIRED')}</small>}
-                        </div>
-
-                        <div className="field">
-                            <label htmlFor="status" style={{ fontWeight: 'bold' }}>{t('ADVERTISEMENT.FORM.INPUT.ADVERTISEMENTSTATUS')}</label>
-                            <Dropdown
-                                id="status"
-                                value={advertisement.status}
-                                options={[
-                                    { label: 'Active', value: 1 },
-                                    { label: 'Inactive', value: 0 },
-                                ]}
-                                onChange={(e) =>
-                                    setAdvertisement((prev) => ({
-                                        ...prev,
-                                        status: e.value,
-                                    }))
-                                }
-                                optionLabel="label"
-                                optionValue="value"
-                                placeholder={t('ADVERTISEMENT.FORM.PLACEHOLDER.ADVERTISEMENTSTATUS')}
-                                className="w-full"
-                            />
-                        </div>
-
-
-                    </Dialog>
+                                error={submitted && !advertisement.advertisement_title ? t('REQUIRED') : null}
+                            >
+                                <Input
+                                    id="advertisement_title"
+                                    value={advertisement.advertisement_title}
+                                    onChange={(e) =>
+                                        setAdvertisement((prevAdvertisement) => ({
+                                            ...prevAdvertisement,
+                                            advertisement_title: e.target.value
+                                        }))
+                                    }
+                                    required
+                                    autoFocus
+                                    placeholder={t('ADVERTISEMENT.FORM.PLACEHOLDER.ADVERTISEMENTTITLE')}
+                                    className={classNames('w-full', {
+                                        'p-invalid': submitted && !advertisement.advertisement_title
+                                    })}
+                                />
+                            </FormField>
+                            <FormField label={t('ADVERTISEMENT.FORM.INPUT.ADVERTISEMENTSTATUS')}>
+                                <Select
+                                    value={advertisement.status != null ? String(advertisement.status) : undefined}
+                                    onValueChange={(v) =>
+                                        setAdvertisement((prev) => ({
+                                            ...prev,
+                                            status: Number(v)
+                                        }))
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={t('ADVERTISEMENT.FORM.PLACEHOLDER.ADVERTISEMENTSTATUS')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="1">Active</SelectItem>
+                                        <SelectItem value="0">Inactive</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </FormField>
+                        </FormSection>
+                    </FormSheet>
 
                     <Dialog visible={deleteAdvertisementDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteAdvertisementDialogFooter} onHide={hideDeleteAdvertisementDialog}>
                         <div className="flex align-items-center justify-content-center">
@@ -427,8 +333,6 @@ const AdvertisementPage = () => {
                             {advertisement && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>
-                </div>
-            </div>
         </div>
     );
 };

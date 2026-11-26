@@ -13,17 +13,22 @@ import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { FileUpload } from 'primereact/fileupload';
-import { InputText } from 'primereact/inputtext';
-import { InputNumber } from 'primereact/inputnumber';
-import { InputSwitch } from 'primereact/inputswitch';
-import { Password } from 'primereact/password';
-import { ProgressBar } from 'primereact/progressbar';
 import { Toast } from 'primereact/toast';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { RowActions } from '@/components/admin/row-actions';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { SearchSelect } from '@/components/admin/search-select';
+import { Button as UiButton } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { FileDrop } from '@/components/ui/file-drop';
+import { NumberInput } from '@/components/ui/number-input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import withAuth from '../../authGuard';
@@ -56,7 +61,8 @@ const CompanyPage = () => {
     const [company, setCompany] = useState<Company>(emptyCompany);
     const [selectedCompanies, setSelectedCompanies] = useState(null);
     const [submitted, setSubmitted] = useState(false);
-    const [globalFilter, setGlobalFilter] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const localSearchTerm = useDebouncedValue(searchInput, 350);
     const toast = useRef<Toast>(null);
     const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
@@ -195,24 +201,6 @@ const CompanyPage = () => {
         setSelectedCompanies(null);
         setDeleteCompaniesDialog(false);
     };
-    const rightToolbarTemplate = () => {
-        return (
-            <div className="flex justify-end items-center space-x-2">
-                <Button label={t('COMPANY.TABLE.CREATECOMPANY')} icon="pi pi-plus" severity="success" className={isRTL() ? 'ml-2' : 'mr-2'} onClick={openNew} style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }} />
-            </div>
-        );
-    };
-    // const leftToolbarTemplate = () => {
-    //     return (
-    //         <div className="flex items-center">
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-    //                 <i className="pi pi-search" />
-    //                 <InputText type="search" onInput={(e) => setSearchTag(e.currentTarget.value)} placeholder={t('ECOMMERCE.COMMON.SEARCH')} className="w-full md:w-auto" />
-    //             </span>
-    //         </div>
-    //     );
-    // };
-    const [localSearchTerm, setLocalSearchTerm] = useState('');
     // Client-side filtering of records already fetched, no request per keystroke.
     const filteredCompanies = useMemo(() => {
         const search = localSearchTerm.trim().toLocaleLowerCase();
@@ -266,13 +254,13 @@ const CompanyPage = () => {
         const edited = companyPriorityDrafts[row.id] ?? original;
         const saving = Boolean(companySavingRows[row.id]);
         return <div className="flex align-items-center gap-2" style={{ minWidth: 130 }}>
-            <InputNumber
+            <NumberInput
                 value={edited}
                 min={0}
-                useGrouping={false}
+                allowNull={false}
                 disabled={saving}
-                inputStyle={{ width: '65px', textAlign: 'center' }}
-                onValueChange={event => setCompanyPriorityDrafts(prev => ({ ...prev, [row.id]: event.value ?? 0 }))}
+                className="w-[4.5rem] text-center"
+                onValueChange={(v) => setCompanyPriorityDrafts((prev) => ({ ...prev, [row.id]: v ?? 0 }))}
             />
             <Button
                 type="button"
@@ -294,47 +282,26 @@ const CompanyPage = () => {
         </div>;
     };
 
-    const companyRobotBody = (row: Company) => <InputSwitch
-        checked={Boolean(row.is_robot_enabled)}
-        disabled={Boolean(companySavingRows[row.id])}
-        onChange={event => void updateInlineCompany(row.id, { is_robot_enabled: Boolean(event.value) })}
-    />;
+    const companyRobotBody = (row: Company) => (
+        <Switch
+            checked={Boolean(row.is_robot_enabled)}
+            disabled={Boolean(companySavingRows[row.id])}
+            onCheckedChange={(v) => void updateInlineCompany(row.id, { is_robot_enabled: v })}
+        />
+    );
 
-    const companyApiBody = (row: Company) => <InputSwitch
-        checked={Boolean(row.is_api_enabled)}
-        disabled={Boolean(companySavingRows[row.id])}
-        onChange={event => void updateInlineCompany(row.id, { is_api_enabled: Boolean(event.value) })}
-    />;
+    const companyApiBody = (row: Company) => (
+        <Switch
+            checked={Boolean(row.is_api_enabled)}
+            disabled={Boolean(companySavingRows[row.id])}
+            onCheckedChange={(v) => void updateInlineCompany(row.id, { is_api_enabled: v })}
+        />
+    );
 
     const companyProviderBody = (row: Company) => {
         const provider = (providers || []).find((p: Provider) => p.id === Number(row.api_provider_id));
         return provider?.name || (row.api_provider_id ? `Provider #${row.api_provider_id}` : '—');
     };
-
-    const leftToolbarTemplate = () => (
-        <div className="flex align-items-center gap-2 w-full md:w-auto">
-            <span className="p-input-icon-left w-full">
-                <i className="pi pi-search" />
-                <InputText
-                    type="search"
-                    value={localSearchTerm}
-                    onChange={(event) => setLocalSearchTerm(event.target.value)}
-                    placeholder="Search companies locally..."
-                    className="w-full"
-                />
-            </span>
-            {localSearchTerm && (
-                <Button
-                    type="button"
-                    icon="pi pi-times"
-                    text
-                    rounded
-                    aria-label="Clear search"
-                    onClick={() => setLocalSearchTerm('')}
-                />
-            )}
-        </div>
-    );
 
     const nameBodyTemplate = (rowData: Company) => {
         return (
@@ -396,19 +363,23 @@ const CompanyPage = () => {
             </>
         );
     };
-    const actionBodyTemplate = (rowData: Company) => {
-        return (
-            <>
-                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editCompany(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteCompany(rowData)} />
-            </>
-        );
-    };
-    const companyDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveCompany} />
-        </>
+    const actionBodyTemplate = (rowData: Company) => (
+        <RowActions
+            items={[
+                {
+                    label: t('TABLE.GENERAL.EDIT'),
+                    icon: <Pencil className="h-4 w-4" />,
+                    onClick: () => editCompany(rowData)
+                },
+                {
+                    label: t('APP.GENERAL.DELETE'),
+                    icon: <Trash2 className="h-4 w-4" />,
+                    onClick: () => confirmDeleteCompany(rowData),
+                    danger: true,
+                    separatorBefore: true
+                }
+            ]}
+        />
     );
     const deleteCompanyDialogFooter = (
         <>
@@ -434,12 +405,26 @@ const CompanyPage = () => {
         }
     }, [company.country_id, countries]);
     return (
-        <div className="grid -m-5">
-            <div className="col-12">
-                <div className="card p-2">
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-                    <Toast ref={toast} />
-                    <Toolbar className="mb-4 flex flex-col md:flex-row justify-between items-center" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
+        <>
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.COMPANY')}
+                description="مدیریت شرکت‌ها، لوگو، کشور و تنظیمات API"
+                loading={loading}
+                actions={
+                    <UiButton type="button" size="sm" onClick={openNew}>
+                        <Plus className="h-4 w-4" />
+                        {t('COMPANY.TABLE.CREATECOMPANY')}
+                    </UiButton>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('COMPANY.TABLE.SEARCHCOMPANY')}
+                    />
+                }
+            >
                     <DataTable
                         ref={dt}
                         value={filteredCompanies}
@@ -449,15 +434,15 @@ const CompanyPage = () => {
                         paginator
                         rows={10}
                         rowsPerPageOptions={[5, 10, 25]}
-                        className={`datatable-responsive`}
+                        size="small"
+                        className="datatable-responsive"
                         paginatorTemplate={
                             isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
                         }
-                        currentPageReportTemplate={isRTL() ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` : `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}`}
+                        currentPageReportTemplate={t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
                         style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
-                        globalFilter={globalFilter}
                         responsiveLayout="scroll"
                     >
                         <Column
@@ -486,34 +471,61 @@ const CompanyPage = () => {
                             body={telegramGroupNameBodyTemplate}
                         ></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TOTAL_CUSTOM_FIELD')} body={customFieldsBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
+                        <Column
+                            style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
+                            header={t('TABLE.GENERAL.ACTION')}
+                            body={actionBodyTemplate}
+                            headerStyle={{ minWidth: '5rem' }}
+                            bodyStyle={{ width: '5rem' }}
+                        ></Column>
                                             <Column header="Priority" body={companyPriorityBody} style={{ minWidth: '135px' }} />
                         <Column header="Robot" body={companyRobotBody} style={{ minWidth: '80px' }} />
                         <Column header="API" body={companyApiBody} style={{ minWidth: '80px' }} />
                         <Column header="API Provider" body={companyProviderBody} style={{ minWidth: '130px' }} />
                         <Column header="API Key" body={(row: Company) => row.has_api_key ? 'Configured' : '—'} />
 </DataTable>
-                    <Dialog visible={companyDialog} style={{ width: '90%', maxWidth: '800px' }} header={t('COMPANY.DETAILS')} modal className="p-fluid" footer={companyDialogFooter} onHide={hideDialog}>
-                        <div className="card" style={{ padding: '20px' }}>
-                            {company.company_logo && (
-                                <img src={company.company_logo instanceof File ? URL.createObjectURL(company.company_logo) : company.company_logo} alt="Uploaded Preview" width="150" className="mt-0 mx-auto mb-5 block shadow-2" />
-                            )}
-                            <FileUpload
-                                mode="basic"
-                                accept="image/*"
-                                onSelect={(e) =>
-                                    setCompany((prevCompany) => ({
-                                        ...prevCompany,
-                                        company_logo: e.files[0]
-                                    }))
-                                }
-                                style={{ textAlign: 'center', marginBottom: '10px' }}
+            </ListPage>
+                    <FormSheet
+                        open={companyDialog}
+                        onOpenChange={(open) => {
+                            if (!open) hideDialog();
+                        }}
+                        title={t('COMPANY.DETAILS')}
+                        description={company.id ? 'ویرایش اطلاعات شرکت' : 'ثبت شرکت جدید'}
+                        size="xl"
+                        side="left"
+                        footer={
+                            <FormActions
+                                onCancel={hideDialog}
+                                onSubmit={saveCompany}
+                                cancelLabel={t('APP.GENERAL.CANCEL')}
+                                submitLabel={t('FORM.GENERAL.SUBMIT')}
                             />
-                            <div className="field">
-                                <label htmlFor="name" style={{ fontWeight: 'bold' }}>
-                                    {t('COMPANY.FORM.INPUT.COMPANYNAME')}
-                                </label>
-                                <InputText
+                        }
+                    >
+                        <FormSection title="اطلاعات پایه" description="نام، کد و لوگوی شرکت">
+                            <FormField label={t('COMPANY.TABLE.COLUMN.LOGO')} fullWidth>
+                                <FileDrop
+                                    value={company.company_logo instanceof File ? company.company_logo : null}
+                                    previewUrl={
+                                        typeof company.company_logo === 'string' && company.company_logo
+                                            ? company.company_logo
+                                            : null
+                                    }
+                                    onChange={(file) =>
+                                        setCompany((prevCompany) => ({
+                                            ...prevCompany,
+                                            company_logo: file ?? (prevCompany.company_logo instanceof File ? '' : prevCompany.company_logo)
+                                        }))
+                                    }
+                                />
+                            </FormField>
+                            <FormField
+                                label={t('COMPANY.FORM.INPUT.COMPANYNAME')}
+                                required
+                                error={submitted && !company.company_name ? t('THIS_FIELD_IS_REQUIRED') : null}
+                            >
+                                <Input
                                     id="company_name"
                                     value={company?.company_name}
                                     onChange={(e) =>
@@ -525,21 +537,15 @@ const CompanyPage = () => {
                                     required
                                     autoFocus
                                     placeholder={t('COMPANY.FORM.PLACEHOLDER.COMPANYNAME')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !company.company_name
-                                    })}
+                                    className={cn('w-full', submitted && !company.company_name && 'border-rose-300')}
                                 />
-                                {submitted && !company.company_name && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-                            <div className="field">
-                                <label htmlFor="name" style={{ fontWeight: 'bold' }}>
-                                    {t('COMPANY_CODE')}
-                                </label>
-                                <InputText
+                            </FormField>
+                            <FormField
+                                label={t('COMPANY_CODE')}
+                                required
+                                error={submitted && !company.company_code ? t('THIS_FIELD_IS_REQUIRED') : null}
+                            >
+                                <Input
                                     id="company_code"
                                     value={company?.company_code}
                                     onChange={(e) =>
@@ -549,109 +555,134 @@ const CompanyPage = () => {
                                         }))
                                     }
                                     required
-                                    autoFocus
                                     placeholder={t('COMPANY_CODE_PLACEHOLDER')}
-                                    className={classNames({
-                                        'p-invalid': submitted && !company.company_code
-                                    })}
+                                    className={cn('w-full', submitted && !company.company_code && 'border-rose-300')}
                                 />
-                                {submitted && !company.company_code && (
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-                                    </small>
-                                )}
-                            </div>
-                            <div className="formgrid grid">
-                                <div className="field col">
-                                    <label htmlFor="country" style={{ fontWeight: 'bold' }}>
-                                        {t('COMPANY.FORM.INPUT.COUNTRYNAME')}
-                                    </label>
-                                    <Dropdown
-                                        id="country"
-                                        value={company.country}
-                                        options={countries}
-                                        onChange={(e) =>
-                                            setCompany((prevCompany) => ({
-                                                ...prevCompany,
-                                                country: e.value
-                                            }))
-                                        }
-                                        optionLabel="country_name"
-                                        placeholder={t('COMPANY.FORM.PLACEHOLDER.COUNTRY')}
-                                        className="w-full"
-                                    />
-                                    {submitted && !company.country && (
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-                                        </small>
+                            </FormField>
+                        </FormSection>
+
+                        <FormSection title="کشور و تلگرام" description="کشور و گروه اطلاع‌رسانی">
+                            <FormField
+                                label={t('COMPANY.FORM.INPUT.COUNTRYNAME')}
+                                required
+                                error={submitted && !company.country ? t('THIS_FIELD_IS_REQUIRED') : null}
+                            >
+                                <SearchSelect
+                                    value={company.country}
+                                    options={countries || []}
+                                    onChange={(selected) =>
+                                        setCompany((prevCompany) => ({
+                                            ...prevCompany,
+                                            country: selected
+                                        }))
+                                    }
+                                    optionLabel="country_name"
+                                    placeholder={t('COMPANY.FORM.PLACEHOLDER.COUNTRY')}
+                                    error={submitted && !company.country}
+                                    returnFullObject
+                                />
+                            </FormField>
+                            <FormField label={t('COMPANY.FORM.INPUT.TELEGRAMID')}>
+                                <SearchSelect
+                                    value={company.telegram_chat_id}
+                                    options={telegramChatIds || []}
+                                    onChange={(selected) =>
+                                        setCompany((prevCompany) => ({
+                                            ...prevCompany,
+                                            telegram_chat_id: selected
+                                        }))
+                                    }
+                                    optionLabel="group_name"
+                                    placeholder={t('COMPANY.FORM.PLACEHOLDER.TELEGRAM_GROUP')}
+                                    returnFullObject
+                                    showClear
+                                />
+                            </FormField>
+                        </FormSection>
+
+                        <FormSection title="تنظیمات API" description="ربات، API و ارائه‌دهنده">
+                            <FormField label="ربات فعال">
+                                <Switch
+                                    id="company_robot_enabled"
+                                    checked={Boolean(company.is_robot_enabled)}
+                                    onCheckedChange={(v) => setCompany((prev) => ({ ...prev, is_robot_enabled: v }))}
+                                />
+                            </FormField>
+                            <FormField label="API فعال">
+                                <Switch
+                                    id="company_api_enabled"
+                                    checked={Boolean(company.is_api_enabled)}
+                                    onCheckedChange={(v) => setCompany((prev) => ({ ...prev, is_api_enabled: v }))}
+                                />
+                            </FormField>
+                            <FormField label="ارائه‌دهنده API (اختیاری)">
+                                <SearchSelect
+                                    value={
+                                        (providers || []).find(
+                                            (provider: Provider) => provider.id === company.api_provider_id
+                                        ) || null
+                                    }
+                                    options={providers || []}
+                                    onChange={(selected) =>
+                                        setCompany((prev) => ({ ...prev, api_provider_id: selected?.id ?? null }))
+                                    }
+                                    optionLabel="name"
+                                    placeholder="انتخاب ارائه‌دهنده"
+                                    showClear
+                                    returnFullObject
+                                    itemTemplate={(provider: Provider) => (
+                                        <div>
+                                            <div className="text-sm font-semibold">{provider.name}</div>
+                                            <div className="text-xs text-muted-foreground">{provider.code}</div>
+                                        </div>
                                     )}
-                                </div>
-                                <div className="field col">
-                                    <label htmlFor="telegram_chat_id" style={{ fontWeight: 'bold' }}>
-                                        {t('COMPANY.FORM.INPUT.TELEGRAMID')}
-                                    </label>
-                                    <Dropdown
-                                        id="telegram_chat_id"
-                                        value={company.telegram_chat_id}
-                                        options={telegramChatIds}
-                                        onChange={(e) =>
-                                            setCompany((prevCompany) => ({
-                                                ...prevCompany,
-                                                telegram_chat_id: e.value
-                                            }))
+                                />
+                            </FormField>
+                            <FormField
+                                label="کلید API (اختیاری)"
+                                hint={company.id !== 0 ? 'برای حفظ کلید فعلی خالی بگذارید.' : undefined}
+                            >
+                                <PasswordInput
+                                    id="company_api_key"
+                                    value={company.api_key ?? ''}
+                                    onChange={(e) => setCompany((prev) => ({ ...prev, api_key: e.target.value }))}
+                                    placeholder={company.id ? 'خالی = بدون تغییر' : 'کلید API را وارد کنید'}
+                                    className="w-full"
+                                    autoComplete="new-password"
+                                />
+                            </FormField>
+                        </FormSection>
+
+                        {parseInputFormSchema(company.input_form_schema).length > 0 ? (
+                            <FormSection title="فیلدهای سفارشی" description="فیلدهای فرم ورودی شرکت">
+                                <div className="sm:col-span-2">
+                                    <CustomFields
+                                        fields={parseInputFormSchema(company.input_form_schema)}
+                                        onFieldsChange={(updatedFields) =>
+                                            setCompany({
+                                                ...company,
+                                                input_form_schema: updatedFields
+                                            })
                                         }
-                                        optionLabel="group_name"
-                                        placeholder={t('COMPANY.FORM.PLACEHOLDER.TELEGRAM_GROUP')}
-                                        className="w-full"
+                                        submitted={submitted}
                                     />
                                 </div>
+                            </FormSection>
+                        ) : (
+                            <div className="sm:col-span-2">
+                                <CustomFields
+                                    fields={parseInputFormSchema(company.input_form_schema)}
+                                    onFieldsChange={(updatedFields) =>
+                                        setCompany({
+                                            ...company,
+                                            input_form_schema: updatedFields
+                                        })
+                                    }
+                                    submitted={submitted}
+                                />
                             </div>
-                        </div>
-                        <div className="card mt-3" style={{ padding: '20px' }}>
-                            <h5 className="mb-3">Automation & API Settings</h5>
-                            <div className="formgrid grid">
-                                <div className="field col-12 md:col-6">
-                                    <label htmlFor="company_robot_enabled" className="block font-bold mb-2">Robot Enabled</label>
-                                    <InputSwitch inputId="company_robot_enabled"
-                                        checked={Boolean(company.is_robot_enabled)}
-                                        onChange={(e) => setCompany(prev => ({ ...prev, is_robot_enabled: Boolean(e.value) }))} />
-                                </div>
-                                <div className="field col-12 md:col-6">
-                                    <label htmlFor="company_api_enabled" className="block font-bold mb-2">API Enabled</label>
-                                    <InputSwitch inputId="company_api_enabled"
-                                        checked={Boolean(company.is_api_enabled)}
-                                        onChange={(e) => setCompany(prev => ({ ...prev, is_api_enabled: Boolean(e.value) }))} />
-                                </div>
-                                <div className="field col-12 md:col-6">
-                                    <label htmlFor="company_api_provider" className="block font-bold mb-2">API Provider (Optional)</label>
-                                    <Dropdown inputId="company_api_provider"
-                                        value={company.api_provider_id ?? null}
-                                        options={(providers || []).map((provider: Provider) => ({ label: `${provider.name} (${provider.code})`, value: provider.id }))}
-                                        onChange={(e) => setCompany(prev => ({ ...prev, api_provider_id: e.value ?? null }))}
-                                        placeholder="Select API Provider" filter showClear className="w-full" />
-                                </div>
-                                <div className="field col-12 md:col-6">
-                                    <label htmlFor="company_api_key" className="block font-bold mb-2">API Key (Optional)</label>
-                                    <Password inputId="company_api_key" value={company.api_key ?? ''}
-                                        onChange={(e) => setCompany(prev => ({ ...prev, api_key: e.target.value }))}
-                                        feedback={false} toggleMask
-                                        placeholder={company.id ? 'Leave blank to keep existing key' : 'Enter API Key'}
-                                        className="w-full" inputClassName="w-full" />
-                                    {company.id !== 0 && <small className="text-color-secondary">Leave blank to keep the saved key.</small>}
-                                </div>
-                            </div>
-                        </div>
-                        <CustomFields
-                            fields={parseInputFormSchema(company.input_form_schema)}
-                            onFieldsChange={(updatedFields) =>
-                                setCompany({
-                                    ...company,
-                                    input_form_schema: updatedFields // Keep as array for local state
-                                })
-                            }
-                            submitted={submitted}
-                        />{' '}
-                    </Dialog>
+                        )}
+                    </FormSheet>
                     <Dialog visible={deleteCompanyDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteCompanyDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mx-3" style={{ fontSize: '2rem', color: 'red' }} />
@@ -668,9 +699,7 @@ const CompanyPage = () => {
                             {companies && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
-                </div>
-            </div>
-        </div>
+        </>
     );
 };
 export default withAuth(CompanyPage);

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Button } from 'primereact/button';
+import { Button as PrimeButton } from 'primereact/button';
 
 import { Column } from 'primereact/column';
 
@@ -10,19 +10,23 @@ import { DataTable } from 'primereact/datatable';
 
 import { Dialog } from 'primereact/dialog';
 
-import { InputText } from 'primereact/inputtext';
-
-import { InputNumber } from 'primereact/inputnumber';
-
-import { InputSwitch } from 'primereact/inputswitch';
-
 import axios from 'axios';
 
 import { Toast } from 'primereact/toast';
 
-import { Toolbar } from 'primereact/toolbar';
-
-import { classNames } from 'primereact/utils';
+import { ListPage } from '@/components/admin/list-page';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { RowActions } from '@/components/admin/row-actions';
+import { Button } from '@/components/ui/button';
+import { FormActions, FormField, FormSection, FormSheet } from '@/components/admin/form-sheet';
+import { Input } from '@/components/ui/input';
+import { FileDrop } from '@/components/ui/file-drop';
+import { NumberInput } from '@/components/ui/number-input';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { cn } from '@/lib/utils';
+import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -30,7 +34,6 @@ import { useDispatch } from 'react-redux';
 
 import { useSelector } from 'react-redux';
 
-import { Dropdown } from 'primereact/dropdown';
 
 import { _fetchCountries } from '@/app/redux/actions/countriesActions';
 
@@ -44,7 +47,6 @@ import { ServiceCategory as BaseServiceCategory } from '@/types/interface';
 
 type ServiceCategory = BaseServiceCategory & { requires_country_selection?: boolean | number | null; display_order?: number };
 
-import { ProgressBar } from 'primereact/progressbar';
 
 import withAuth from '../../authGuard';
 
@@ -56,7 +58,6 @@ import i18n from '@/i18n';
 
 import { isRTL } from '../../utilities/rtlUtil';
 
-import { FileUpload } from 'primereact/fileupload';
 
 import { parseInputFormSchema, stringifyInputFormSchema } from '../../utilities/parseInputFormSchema';
 
@@ -104,7 +105,9 @@ const Category = () => {
 
     const [submitted, setSubmitted] = useState(false);
 
-    const [localSearch, setLocalSearch] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const localSearch = useDebouncedValue(searchInput, 350);
+    const [refreshing, setRefreshing] = useState(false);
 
     const [priorityDrafts, setPriorityDrafts] = useState<Record<number, number>>({});
 
@@ -127,6 +130,12 @@ const Category = () => {
         dispatch(_fetchServiceCategories());
 
     }, [dispatch]);
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await dispatch(_fetchServiceCategories() as any);
+        setRefreshing(false);
+    };
 
     // Search only loaded Redux records. Lower priority values appear first.
 
@@ -252,13 +261,13 @@ const Category = () => {
 
         <div className="flex align-items-center gap-2">
 
-            <InputSwitch
+            <Switch
 
                 checked={item.requires_country_selection !== false && item.requires_country_selection !== 0}
 
                 disabled={Boolean(savingCountrySelection[item.id])}
 
-                onChange={(event) => void updateCountrySelection(item, Boolean(event.value))}
+                onCheckedChange={(v) => void updateCountrySelection(item, v)}
 
             />
 
@@ -272,23 +281,23 @@ const Category = () => {
 
         <div className="flex align-items-center gap-2" style={{minWidth: 135}}>
 
-            <InputNumber
+            <NumberInput
 
                 value={priorityDrafts[item.id] ?? Number(item.display_order ?? 0)}
 
                 min={0}
 
-                useGrouping={false}
+                allowNull={false}
 
                 disabled={Boolean(savingPriority[item.id])}
 
-                inputStyle={{width: '65px', textAlign: 'center'}}
+                className="w-[4.5rem] text-center"
 
-                onValueChange={event => setPriorityDrafts(previous => ({...previous, [item.id]: event.value ?? 0}))}
+                onValueChange={(v) => setPriorityDrafts((previous) => ({ ...previous, [item.id]: v ?? 0 }))}
 
             />
 
-            <Button
+            <PrimeButton
 
                 type="button"
 
@@ -312,37 +321,20 @@ const Category = () => {
 
     );
 
-    const leftToolbarTemplate = () => (
-
-        <div className="flex align-items-center gap-2 w-full md:w-auto">
-
-            <span className="p-input-icon-left w-full">
-
-                <i className="pi pi-search" />
-
-                <InputText
-
-                    type="search"
-
-                    value={localSearch}
-
-                    onChange={event => setLocalSearch(event.target.value)}
-
-                    placeholder="Search categories locally..."
-
-                    className="w-full"
-
-                />
-
-            </span>
-
-            {localSearch && <Button type="button" icon="pi pi-times" text rounded
-
-                aria-label="Clear search" onClick={() => setLocalSearch('')} />}
-
-        </div>
-
-    );
+    const categoryRowActions = (rowData: ServiceCategory) => [
+        {
+            label: t('TABLE.GENERAL.EDIT'),
+            icon: <Pencil className="h-4 w-4" />,
+            onClick: () => editServiceCategory(rowData)
+        },
+        {
+            label: t('TABLE.GENERAL.DELETE'),
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => confirmDeleteServiceCategory(rowData),
+            danger: true,
+            separatorBefore: true
+        }
+    ];
 
     const openNew = () => {
 
@@ -558,86 +550,6 @@ const Category = () => {
 
     };
 
-    const rightToolbarTemplate = () => {
-
-        const hasSelectedServiceCategories = selectedServiceCategories && (selectedServiceCategories as any).length > 0;
-
-        return (
-
-            <React.Fragment>
-
-                <div className="flex justify-end items-center space-x-2  ">
-
-                    <Button
-
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-
-                        label={t('SERVICECATEGORY.TABLE.CREATESERVICECATEGORY')}
-
-                        icon="pi pi-plus"
-
-                        severity="success"
-
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-
-                        onClick={openNew}
-
-                    />
-
-                    {/* <Button
-
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-
-                        label={t('APP.GENERAL.DELETE')}
-
-                        icon="pi pi-trash"
-
-                        severity="danger"
-
-                        onClick={confirmDeleteSelected}
-
-                        disabled={!selectedServiceCategories || !(selectedServiceCategories as any).length}
-
-                    /> */}
-
-                </div>
-
-            </React.Fragment>
-
-        );
-
-    };
-
-    // const leftToolbarTemplate = () => {
-
-    //     return (
-
-    //         <div className="flex items-center">
-
-    //             <span className="block mt-2 md:mt-0 p-input-icon-left w-full md:w-auto">
-
-    //                 <i className="pi pi-search" />
-
-    //                 <InputText
-
-    //                     type="search"
-
-    //                     onInput={(e) => setGlobalFilter(e.currentTarget.value)}
-
-    //                     placeholder={t('ECOMMERCE.COMMON.SEARCH')}
-
-    //                     className="w-full md:w-auto"
-
-    //                 />
-
-    //             </span>
-
-    //         </div>
-
-    //     );
-
-    // };
-
     const serviceCategoryNameBodyTemplate = (rowData: ServiceCategory) => {
 
         return (
@@ -726,21 +638,7 @@ const Category = () => {
 
     };
 
-    const actionBodyTemplate = (rowData: ServiceCategory) => {
-
-        return (
-
-            <>
-
-                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editServiceCategory(rowData)} />
-
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteServiceCategory(rowData)} />
-
-            </>
-
-        );
-
-    };
+    const actionBodyTemplate = (rowData: ServiceCategory) => <RowActions items={categoryRowActions(rowData)} />;
 
     // const header = (
 
@@ -760,56 +658,47 @@ const Category = () => {
 
     // );
 
-    const serviceCategoryDialogFooter = (
-
-        <>
-
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDialog} />
-
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={saveServiceCategory} />
-
-        </>
-
-    );
-
     const deleteServiceCategoryDialogFooter = (
-
         <>
-
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteServiceCategoryDialog} />
-
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteServiceCategory} />
-
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteServiceCategoryDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteServiceCategory} />
         </>
-
     );
 
     const deleteServiceCategoriesDialogFooter = (
-
         <>
-
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteServiceCategoriesDialog} />
-
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedServiceCategories} />
-
+            <PrimeButton label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteServiceCategoriesDialog} />
+            <PrimeButton label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedServiceCategories} />
         </>
-
     );
 
     return (
-
-        <div className="grid -m-5">
-
-            <div className="col-12">
-
-                <div className="card p-2">
-
-                    {loading && <ProgressBar mode="indeterminate" style={{ height: '6px' }} />}
-
-                    <Toast ref={toast} />
-
-                    <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
+        <>
+            <Toast ref={toast} />
+            <ListPage
+                title={t('MENU.SERVICECATEGORY', { defaultValue: 'دسته‌بندی خدمات' })}
+                description="مدیریت دسته‌بندی‌ها، اولویت نمایش و فیلدهای سفارشی"
+                loading={loading}
+                actions={
+                    <>
+                        <Button type="button" size="sm" onClick={openNew}>
+                            <Plus className="h-4 w-4" />
+                            {t('SERVICECATEGORY.TABLE.CREATESERVICECATEGORY')}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-4 w-4', (refreshing || loading) && 'animate-spin')} />
+                            {t('REFRESH', { defaultValue: 'بروزرسانی' })}
+                        </Button>
+                    </>
+                }
+                toolbar={
+                    <FilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder={t('SERVICECATEGORY.TABLE.SEARCHSERVICECATEGORY', { defaultValue: 'جستجو...' })}
+                    />
+                }
+            >
                     <DataTable
 
                         ref={dt}
@@ -895,234 +784,161 @@ const Category = () => {
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
 
                     </DataTable>
+            </ListPage>
 
-                    <Dialog visible={serviceCategoryDialog} style={{ width: '700px', padding: '5px' }} header={t('SERVICE.CATEGORY.DETAILS')} modal className="p-fluid" footer={serviceCategoryDialogFooter} onHide={hideDialog}>
-
-                        <div className="card" style={{ padding: '40px' }}>
-
-                            {serviceCategory.category_image_url && (
-
-                                <img
-
-                                    src={
-
-                                        serviceCategory.category_image_url instanceof File
-
-                                            ? URL.createObjectURL(serviceCategory.category_image_url) // Temporary preview for file
-
-                                            : serviceCategory.category_image_url // Direct URL for existing logo
-
-                                    }
-
-                                    alt="Uploaded Preview"
-
-                                    width="150"
-
-                                    className="mt-0 mx-auto mb-5 block shadow-2"
-
-                                />
-
-                            )}
-
-                            <FileUpload
-
-                                mode="basic"
-
-                                accept="image/*"
-
-                                onSelect={(e) =>
-
-                                    setServiceCategory((prev) => ({
-
-                                        ...prev,
-
-                                        category_image_url: e.files[0]
-
-                                    }))
-
-                                }
-
-                                style={{ textAlign: 'center', marginBottom: '10px' }}
-
+            <FormSheet
+                        open={serviceCategoryDialog}
+                        onOpenChange={(open) => {
+                            if (!open) hideDialog();
+                        }}
+                        title={t('SERVICE.CATEGORY.DETAILS')}
+                        description={
+                            serviceCategory.id ? 'ویرایش دسته‌بندی خدمت' : 'ثبت دسته‌بندی خدمت جدید'
+                        }
+                        size="xl"
+                        side="left"
+                        footer={
+                            <FormActions
+                                onCancel={hideDialog}
+                                onSubmit={saveServiceCategory}
+                                cancelLabel={t('APP.GENERAL.CANCEL')}
+                                submitLabel={t('FORM.GENERAL.SUBMIT')}
                             />
-
-                            <div className="field">
-
-                                <label htmlFor="name" style={{ fontWeight: 'bold' }}>
-
-                                    {t('SERVICECATEGORY.FORM.INPUT.SERVICECATEGORYNAME')}
-
-                                </label>
-
-                                <InputText
-
-                                    id="category_name"
-
-                                    value={serviceCategory.category_name}
-
-                                    onChange={(e) =>
-
-                                        setServiceCategory((prev) => ({
-
-                                            ...prev,
-
-                                            category_name: e.target.value
-
-                                        }))
-
+                        }
+                    >
+                        <FormSection title="اطلاعات پایه" description="نام، نوع و تصویر دسته‌بندی">
+                            <FormField label={t('SERVICECATEGORY.TABLE.COLUMN.IMAGE')} fullWidth>
+                                <FileDrop
+                                    value={
+                                        serviceCategory.category_image_url instanceof File
+                                            ? serviceCategory.category_image_url
+                                            : null
                                     }
-
+                                    previewUrl={
+                                        typeof serviceCategory.category_image_url === 'string' &&
+                                        serviceCategory.category_image_url
+                                            ? serviceCategory.category_image_url
+                                            : null
+                                    }
+                                    onChange={(file) =>
+                                        setServiceCategory((prev) => ({
+                                            ...prev,
+                                            category_image_url: file ?? ''
+                                        }))
+                                    }
+                                />
+                            </FormField>
+                            <FormField
+                                label={t('SERVICECATEGORY.FORM.INPUT.SERVICECATEGORYNAME')}
+                                required
+                                fullWidth
+                                error={submitted && !serviceCategory.category_name ? t('THIS_FIELD_IS_REQUIRED') : null}
+                            >
+                                <Input
+                                    id="category_name"
+                                    value={serviceCategory.category_name}
+                                    onChange={(e) =>
+                                        setServiceCategory((prev) => ({
+                                            ...prev,
+                                            category_name: e.target.value
+                                        }))
+                                    }
                                     required
-
                                     autoFocus
-
                                     placeholder={t('SERVICE.FORM.PLACEHOLDER.CATEGORY_NAME')}
-
-                                    className={classNames({
-
-                                        'p-invalid': submitted && !serviceCategory.category_name
-
-                                    })}
-
-                                />
-
-                                {submitted && !serviceCategory.category_name && (
-
-                                    <small className="p-invalid" style={{ color: 'red' }}>
-
-                                        {t('THIS_FIELD_IS_REQUIRED')}
-
-                                    </small>
-
-                                )}
-
-                            </div>
-
-                            <div className="formgrid grid">
-
-                                <div className="field col">
-
-                                    <label htmlFor="type" style={{ fontWeight: 'bold' }}>
-
-                                        {t('SERVICECATEGORY.FORM.INPUT.SERVICECATEGORYTYPE')}
-
-                                    </label>
-
-                                    <Dropdown
-
-                                        id="type"
-
-                                        value={serviceCategory.type}
-
-                                        options={[
-
-                                            { label: 'Social', value: 'social' },
-
-                                            { label: 'Non-Social', value: 'nonsocial' }
-
-                                        ]}
-
-                                        onChange={(e) =>
-
-                                            setServiceCategory((prev) => ({
-
-                                                ...prev,
-
-                                                type: e.value
-
-                                            }))
-
-                                        }
-
-                                        placeholder={t('SERVICE.FORM.PLACEHOLDER.CHOOSE_A_TYPE')}
-
-                                        className="w-full"
-
-                                    />
-
-                                    {submitted && !serviceCategory.type && (
-
-                                        <small className="p-invalid" style={{ color: 'red' }}>
-
-                                            {t('THIS_FIELD_IS_REQUIRED')}
-
-                                        </small>
-
+                                    className={cn(
+                                        'w-full',
+                                        submitted && !serviceCategory.category_name && 'border-rose-300'
                                     )}
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <div className="field px-3 pt-3">
-
-                            <label htmlFor="service_category_display_order" className="block font-bold mb-2">Display Order Priority</label>
-
-                            <InputNumber inputId="service_category_display_order"
-
-                                value={Number(serviceCategory.display_order ?? 0)}
-
-                                min={0} useGrouping={false} showButtons className="w-full"
-
-                                onValueChange={event => setServiceCategory(previous => ({...previous, display_order: event.value ?? 0}))} />
-
-                            <small>Lower numbers appear first; equal priorities use category ID order.</small>
-
-                        </div>
-
-                        <div className="field px-3 pt-3">
-
-                            <label htmlFor="category_requires_country" className="block font-bold mb-2">Requires Country Selection</label>
-
-                            <div className="flex align-items-center gap-2">
-
-                                <InputSwitch
-
-                                    inputId="category_requires_country"
-
-                                    checked={serviceCategory.requires_country_selection !== false && serviceCategory.requires_country_selection !== 0}
-
-                                    onChange={(event) => setServiceCategory(previous => ({
-
-                                        ...previous,
-
-                                        requires_country_selection: Boolean(event.value)
-
-                                    }))}
-
                                 />
+                            </FormField>
+                            <FormField
+                                label={t('SERVICECATEGORY.FORM.INPUT.SERVICECATEGORYTYPE')}
+                                required
+                                error={submitted && !serviceCategory.type ? t('THIS_FIELD_IS_REQUIRED') : null}
+                            >
+                                <Select
+                                    value={serviceCategory.type || undefined}
+                                    onValueChange={(v) =>
+                                        setServiceCategory((prev) => ({
+                                            ...prev,
+                                            type: v
+                                        }))
+                                    }
+                                >
+                                    <SelectTrigger id="type">
+                                        <SelectValue placeholder={t('SERVICE.FORM.PLACEHOLDER.CHOOSE_A_TYPE')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="social">Social</SelectItem>
+                                        <SelectItem value="nonsocial">Non-Social</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </FormField>
+                        </FormSection>
 
-                                <span>{serviceCategory.requires_country_selection !== false && serviceCategory.requires_country_selection !== 0 ? 'Required' : 'Skip country selection'}</span>
+                        <FormSection title="تنظیمات نمایش" description="اولویت و انتخاب کشور">
+                            <FormField
+                                label="Display Order Priority"
+                                hint="Lower numbers appear first; equal priorities use category ID order."
+                                fullWidth
+                            >
+                                <NumberInput
+                                    id="service_category_display_order"
+                                    value={Number(serviceCategory.display_order ?? 0)}
+                                    min={0}
+                                    allowNull={false}
+                                    className="w-full"
+                                    onValueChange={(v) =>
+                                        setServiceCategory((previous) => ({
+                                            ...previous,
+                                            display_order: v ?? 0
+                                        }))
+                                    }
+                                />
+                            </FormField>
+                            <FormField
+                                label="Requires Country Selection"
+                                hint="Disable for categories that should open services without choosing a country."
+                                fullWidth
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        id="category_requires_country"
+                                        checked={
+                                            serviceCategory.requires_country_selection !== false &&
+                                            serviceCategory.requires_country_selection !== 0
+                                        }
+                                        onCheckedChange={(v) =>
+                                            setServiceCategory((previous) => ({
+                                                ...previous,
+                                                requires_country_selection: v
+                                            }))
+                                        }
+                                    />
+                                    <span className="text-sm text-muted-foreground">
+                                        {serviceCategory.requires_country_selection !== false &&
+                                        serviceCategory.requires_country_selection !== 0
+                                            ? 'Required'
+                                            : 'Skip country selection'}
+                                    </span>
+                                </div>
+                            </FormField>
+                        </FormSection>
 
-                            </div>
-
-                            <small>Disable for categories that should open services without choosing a country.</small>
-
+                        <div className="sm:col-span-2">
+                            <CustomFields
+                                fields={parseInputFormSchema(serviceCategory.input_form_schema)}
+                                onFieldsChange={(updatedFields) =>
+                                    setServiceCategory({
+                                        ...serviceCategory,
+                                        input_form_schema: updatedFields
+                                    })
+                                }
+                                submitted={submitted}
+                            />
                         </div>
-
-                        <CustomFields
-
-                            fields={parseInputFormSchema(serviceCategory.input_form_schema)}
-
-                            onFieldsChange={(updatedFields) =>
-
-                                setServiceCategory({
-
-                                    ...serviceCategory,
-
-                                    input_form_schema: updatedFields // Keep as array for local state
-
-                                })
-
-                            }
-
-                            submitted={submitted}
-
-                        />{' '}
-
-                    </Dialog>
+                    </FormSheet>
 
                     <Dialog visible={deleteServiceCategoryDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteServiceCategoryDialogFooter} onHide={hideDeleteServiceCategoryDialog}>
 
@@ -1155,13 +971,7 @@ const Category = () => {
                         </div>
 
                     </Dialog>
-
-                </div>
-
-            </div>
-
-        </div>
-
+        </>
     );
 
 };

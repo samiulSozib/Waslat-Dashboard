@@ -8,17 +8,25 @@ i18n
     .use(LanguageDetector) // Detect user language
     .use(initReactI18next) // Pass the instance to react-i18next
     .init({
-        lng:'fa',
-        fallbackLng: 'fa', // Default language
-        debug: process.env.NODE_ENV === 'development', // Debug in development mode
+        // Persian-first admin panel
+        lng: 'fa',
+        fallbackLng: 'fa',
+        supportedLngs: ['fa', 'en', 'ar', 'ps', 'bn', 'tr', 'de', 'es', 'fr', 'ja', 'zh'],
+        nonExplicitSupportedLngs: true,
+        load: 'languageOnly',
+        debug: process.env.NODE_ENV === 'development',
         interpolation: {
-            escapeValue: false, // React already escapes values
+            escapeValue: false
+        },
+        detection: {
+            // Prefer saved choice, otherwise stay on Persian (do not force browser EN)
+            order: ['localStorage', 'cookie'],
+            caches: ['localStorage', 'cookie'],
+            lookupLocalStorage: 'i18nextLng'
         },
         backend: {
-            loadPath: '/locales/{{lng}}.json', // Path to your JSON translation files
-            //loadPath:`./public/locales/{{lng}}.json`
-        },
-
+            loadPath: '/locales/{{lng}}.json'
+        }
     });
 
 export default i18n;
