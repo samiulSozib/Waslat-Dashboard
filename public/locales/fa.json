@@ -2080,7 +2080,22 @@
     "TELEGRAM_VOUCHER_CHAT_IDS": "شناسه چت ووچر",
     "SELECT_CHAT_IDS": "انتخاب چت تلگرام",
     "TELEGRAM_SELECT_CHAT_HELP": "یک شناسه گروه تلگرام را از لیست انتخاب کنید",
-    "AVAILABLE_TELEGRAM_CHAT_IDS": "شناسه‌های موجود چت تلگرام"
+    "AVAILABLE_TELEGRAM_CHAT_IDS": "شناسه‌های موجود چت تلگرام",
+    "FIREBASE": "فایربیس / FCM",
+    "FIREBASE_SETTINGS": "اعلان‌های فایربیس (FCM)",
+    "FIREBASE_HINT": "فایل JSON حساب سرویس فایربیس را آپلود کنید. نیازی به ویرایش .env نیست.",
+    "FIREBASE_ENABLED": "فعال‌سازی FCM",
+    "FIREBASE_PROJECT_ID": "شناسه پروژه فایربیس",
+    "FIREBASE_CREDENTIALS_FILE": "فایل JSON حساب سرویس",
+    "FIREBASE_STATUS": "وضعیت",
+    "FIREBASE_CONFIGURED": "پیکربندی شده",
+    "FIREBASE_NOT_CONFIGURED": "هنوز پیکربندی نشده",
+    "FIREBASE_CLIENT_EMAIL": "ایمیل سرویس",
+    "FIREBASE_SAVE": "ذخیره فایربیس",
+    "FIREBASE_SAVED": "تنظیمات فایربیس ذخیره شد.",
+    "FIREBASE_SAVE_FAILED": "ذخیره تنظیمات فایربیس ناموفق بود.",
+    "FIREBASE_FILE_REQUIRED": "قبل از فعال‌سازی، فایل JSON حساب سرویس را آپلود کنید.",
+    "FIREBASE_ENV_FALLBACK": "در حال استفاده از تنظیمات فعلی .env (سازگاری با نصب‌های قبلی). می‌توانید فایل را از پنل آپلود کنید تا جایگزین شود."
   },
 
   "VOUCHER": {

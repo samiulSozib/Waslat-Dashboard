@@ -682,6 +682,8 @@ export interface AppSettings {
     maintenance_mode: boolean;
     allow_new_registrations: boolean;
     dashboard_stats_mode?: 'daily_stats' | 'live_orders';
+    firebase_enabled?: boolean;
+    firebase_project_id?: string | null;
     default_currency: string;
     exchange_rate_usd_afn: number;
     support_phone: string;

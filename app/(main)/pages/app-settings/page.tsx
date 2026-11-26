@@ -41,6 +41,7 @@ import {
 } from '@/app/redux/actions/supportContactActions';
 import { _fetchProviders } from '@/app/redux/actions/providerActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
+import { fetchFirebaseSettings, saveFirebaseSettings, FirebasePublicStatus } from '@/app/redux/actions/firebaseActions';
 
 type AppSettingsWithInquiry = AppSettings & {
     default_package_inquiry_provider_id?: number | null;
@@ -160,6 +161,12 @@ const AppSettingsPage = () => {
     const [activeTab, setActiveTab] = useState('general');
     const [mobileNavVisible, setMobileNavVisible] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [firebaseStatus, setFirebaseStatus] = useState<FirebasePublicStatus | null>(null);
+    const [firebaseEnabled, setFirebaseEnabled] = useState(false);
+    const [firebaseProjectId, setFirebaseProjectId] = useState('');
+    const [firebaseCredentialsFile, setFirebaseCredentialsFile] = useState<File | null>(null);
+    const [firebaseSaving, setFirebaseSaving] = useState(false);
+    const [firebaseLoading, setFirebaseLoading] = useState(false);
 
     // Support Contacts States
     const [supportContacts, setSupportContacts] = useState<SupportContacts[]>([]);
@@ -190,6 +197,23 @@ const AppSettingsPage = () => {
         dispatch(_fetchProviders(1, '', { per_page: 100 }));
         dispatch(_fetchTelegramList());
 
+        let cancelled = false;
+        const loadFirebase = async () => {
+            setFirebaseLoading(true);
+            try {
+                const status = await fetchFirebaseSettings();
+                if (cancelled || !status) return;
+                setFirebaseStatus(status);
+                setFirebaseEnabled(!!status.enabled);
+                setFirebaseProjectId(status.project_id || '');
+            } catch {
+                // keep defaults until SuperAdmin configures
+            } finally {
+                if (!cancelled) setFirebaseLoading(false);
+            }
+        };
+        loadFirebase();
+
         // Check if device is mobile
         const checkIsMobile = () => {
             setIsMobile(window.innerWidth <= 768);
@@ -199,6 +223,7 @@ const AppSettingsPage = () => {
         window.addEventListener('resize', checkIsMobile);
 
         return () => {
+            cancelled = true;
             window.removeEventListener('resize', checkIsMobile);
         };
     }, [dispatch]);
@@ -325,7 +350,53 @@ const AppSettingsPage = () => {
         setSelectedSupportContact(emptySupportContact);
     };
 
-    const settingsTabKeys = ['general', 'contact', 'branding', 'limits', 'integration', 'recharge', 'package-inquiry', 'telegram', 'support-contacts'] as const;
+    const settingsTabKeys = ['general', 'contact', 'branding', 'limits', 'integration', 'recharge', 'package-inquiry', 'telegram', 'firebase', 'support-contacts'] as const;
+
+    const saveFirebase = async () => {
+        // Allow enable without new upload when .env / existing credentials already work.
+        if (firebaseEnabled && !firebaseStatus?.configured && !firebaseCredentialsFile) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: t('ERROR', { defaultValue: 'خطا' }),
+                detail: t('APP_SETTINGS.FIREBASE_FILE_REQUIRED', {
+                    defaultValue: 'قبل از فعال‌سازی، فایل JSON حساب سرویس را آپلود کنید.'
+                }),
+                life: 5000
+            });
+            return;
+        }
+        setFirebaseSaving(true);
+        try {
+            const status = await saveFirebaseSettings({
+                is_enabled: firebaseEnabled,
+                project_id: firebaseProjectId,
+                credentials_file: firebaseCredentialsFile
+            });
+            if (status) {
+                setFirebaseStatus(status);
+                setFirebaseEnabled(!!status.enabled);
+                setFirebaseProjectId(status.project_id || '');
+            }
+            setFirebaseCredentialsFile(null);
+            toast.current?.show({
+                severity: 'success',
+                summary: t('SUCCESSFUL', { defaultValue: 'موفق' }),
+                detail: t('APP_SETTINGS.FIREBASE_SAVED', { defaultValue: 'تنظیمات فایربیس ذخیره شد.' }),
+                life: 4000
+            });
+        } catch (err: any) {
+            toast.current?.show({
+                severity: 'error',
+                summary: t('ERROR', { defaultValue: 'خطا' }),
+                detail:
+                    err?.response?.data?.message ||
+                    t('APP_SETTINGS.FIREBASE_SAVE_FAILED', { defaultValue: 'ذخیره تنظیمات فایربیس ناموفق بود.' }),
+                life: 5000
+            });
+        } finally {
+            setFirebaseSaving(false);
+        }
+    };
 
     const deleteSupportContactDialogFooter = (
         <>
@@ -1515,7 +1586,111 @@ case 'package-inquiry':
         </div>
     );
 
-    case 'support-contacts':
+            case 'firebase':
+                return (
+                    <div className="grid p-fluid">
+                        <div className="col-12">
+                            <div className="field">
+                                <label className="font-bold text-sm md:text-base">
+                                    {t('APP_SETTINGS.FIREBASE_SETTINGS', { defaultValue: 'اعلان‌های فایربیس (FCM)' })}
+                                </label>
+                                <p className="text-sm text-500 mt-1 mb-3">
+                                    {t('APP_SETTINGS.FIREBASE_HINT', {
+                                        defaultValue:
+                                            'فایل JSON حساب سرویس فایربیس را آپلود کنید. نیازی به ویرایش .env نیست.'
+                                    })}
+                                </p>
+                            </div>
+
+                            <div className="field p-3 border-1 surface-border border-round mb-3">
+                                <div className="flex align-items-center mb-3">
+                                    <Switch
+                                        checked={firebaseEnabled}
+                                        disabled={firebaseLoading || firebaseSaving}
+                                        onCheckedChange={setFirebaseEnabled}
+                                    />
+                                    <label className="ml-2 font-bold">
+                                        {t('APP_SETTINGS.FIREBASE_ENABLED', { defaultValue: 'فعال‌سازی FCM' })}
+                                    </label>
+                                </div>
+
+                                <div className="field mb-3">
+                                    <label htmlFor="firebase_project_id" className="text-sm font-bold">
+                                        {t('APP_SETTINGS.FIREBASE_PROJECT_ID', { defaultValue: 'شناسه پروژه فایربیس' })}
+                                    </label>
+                                    <Input
+                                        id="firebase_project_id"
+                                        value={firebaseProjectId}
+                                        disabled={firebaseLoading || firebaseSaving}
+                                        onChange={(e) => setFirebaseProjectId(e.target.value)}
+                                        placeholder="my-firebase-project"
+                                    />
+                                </div>
+
+                                <div className="field mb-3">
+                                    <label className="text-sm font-bold">
+                                        {t('APP_SETTINGS.FIREBASE_CREDENTIALS_FILE', {
+                                            defaultValue: 'فایل JSON حساب سرویس'
+                                        })}
+                                    </label>
+                                    <Input
+                                        type="file"
+                                        accept="application/json,.json"
+                                        disabled={firebaseLoading || firebaseSaving}
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0] || null;
+                                            setFirebaseCredentialsFile(file);
+                                        }}
+                                    />
+                                    {firebaseCredentialsFile ? (
+                                        <small className="text-500 block mt-1">{firebaseCredentialsFile.name}</small>
+                                    ) : null}
+                                </div>
+
+                                <div className="p-3 border-1 surface-border border-round bg-gray-50 mb-3">
+                                    <p className="m-0 text-sm">
+                                        <strong>{t('APP_SETTINGS.FIREBASE_STATUS', { defaultValue: 'وضعیت' })}:</strong>{' '}
+                                        {firebaseLoading
+                                            ? t('PLEASE_WAIT', { defaultValue: 'لطفاً صبر کنید…' })
+                                            : firebaseStatus?.configured
+                                              ? t('APP_SETTINGS.FIREBASE_CONFIGURED', { defaultValue: 'پیکربندی شده' })
+                                              : t('APP_SETTINGS.FIREBASE_NOT_CONFIGURED', {
+                                                    defaultValue: 'هنوز پیکربندی نشده'
+                                                })}
+                                    </p>
+                                    {firebaseStatus?.using_env_fallback ? (
+                                        <p className="m-0 mt-2 text-sm text-orange-600">
+                                            {t('APP_SETTINGS.FIREBASE_ENV_FALLBACK', {
+                                                defaultValue:
+                                                    'در حال استفاده از تنظیمات فعلی .env (سازگاری با نصب‌های قبلی). می‌توانید فایل را از پنل آپلود کنید تا جایگزین شود.'
+                                            })}
+                                        </p>
+                                    ) : null}
+                                    {firebaseStatus?.client_email ? (
+                                        <p className="m-0 mt-2 text-sm text-500">
+                                            {t('APP_SETTINGS.FIREBASE_CLIENT_EMAIL', { defaultValue: 'ایمیل سرویس' })}:{' '}
+                                            {firebaseStatus.client_email}
+                                        </p>
+                                    ) : null}
+                                </div>
+
+                                <Button
+                                    type="button"
+                                    label={
+                                        firebaseSaving
+                                            ? t('PLEASE_WAIT', { defaultValue: 'لطفاً صبر کنید…' })
+                                            : t('APP_SETTINGS.FIREBASE_SAVE', { defaultValue: 'ذخیره فایربیس' })
+                                    }
+                                    icon="pi pi-save"
+                                    disabled={firebaseLoading || firebaseSaving}
+                                    onClick={saveFirebase}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                );
+
+            case 'support-contacts':
                 return renderSupportContactsTab();
 
             default:
@@ -1532,6 +1707,7 @@ case 'package-inquiry':
         { id: 'recharge', label: t('APP_SETTINGS.RECHARGE') },
         { id: 'package-inquiry', label: t('APP_SETTINGS.PACKAGE_INQUIRY', { defaultValue: 'استعلام بسته' }) },
         { id: 'telegram', label: t('APP_SETTINGS.TELEGRAM') },
+        { id: 'firebase', label: t('APP_SETTINGS.FIREBASE', { defaultValue: 'فایربیس / FCM' }) },
         { id: 'support-contacts', label: t('SUPPORT_CONTACT.TITLE') }
     ];
 
