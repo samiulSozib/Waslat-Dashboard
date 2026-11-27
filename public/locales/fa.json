@@ -1900,7 +1900,29 @@
         "ID": "شناسه",
         "CODE": "کد",
         "HAS_CREDENTIALS": "دارای اعتبارنامه",
-        "ACCOUNT_INFO": "اطلاعات حساب"
+        "ACCOUNT_INFO": "اطلاعات حساب",
+        "VIEW_DESC": "موجودی، وضعیت اتصال و جزئیات حساب ارائه‌دهنده",
+        "CONNECTION": "وضعیت اتصال",
+        "CONNECTED": "متصل",
+        "DISCONNECTED": "قطع / نامشخص",
+        "BALANCE_UNAVAILABLE": "موجودی در دسترس نیست",
+        "CREDENTIALS_OK": "اعتبارنامه پیکربندی شده",
+        "CREDENTIALS_MISSING": "اعتبارنامه ناقص",
+        "USER_CODE": "کد کاربر",
+        "BALANCE_API": "API موجودی",
+        "ZOODPAY_REPORT": "گزارش فروش شارژ",
+        "CHECK_ZOODPAY": "بررسی وضعیت ZoodPay",
+        "ZOODPAY_CHECK_HINT": "فقط وضعیت را از API بررسی می‌کند؛ شارژ مجدد ارسال نمی‌شود.",
+        "SEARCH_PHONE_REF": "جستجوی تلفن یا مرجع…",
+        "WASLAT_REF": "مرجع وصلات",
+        "WASLAT_STATUS": "وضعیت وصلات",
+        "NOT_VERIFIED": "تأیید نشده",
+        "LIVE_ZOODPAY": "زنده از ZoodPay",
+        "SAVED_STATUS": "وضعیت ذخیره‌شده",
+        "PAGE_OF": "صفحه {{page}} از {{total}}",
+        "SUPPORTED_OPERATORS": "اپراتورهای پشتیبانی‌شده",
+        "MIN_RECHARGE": "حداقل شارژ",
+        "MAX_RECHARGE": "حداکثر شارژ"
     },
     "ACCOUNT_INFO": {
         "BALANCE": "موجودی حساب",
@@ -1922,7 +1944,8 @@
         "TYPE": "نوع",
         "AMOUNT": "مبلغ",
         "DATE": "تاریخ",
-        "TYPE": {
+        "STATUS": "وضعیت",
+        "TYPES": {
             "RECHARGE": "شارژ",
             "BALANCE": "موجودی"
         }
@@ -2083,7 +2106,7 @@
     "AVAILABLE_TELEGRAM_CHAT_IDS": "شناسه‌های موجود چت تلگرام",
     "FIREBASE": "فایربیس / FCM",
     "FIREBASE_SETTINGS": "اعلان‌های فایربیس (FCM)",
-    "FIREBASE_HINT": "فایل JSON حساب سرویس فایربیس را آپلود کنید. نیازی به ویرایش .env نیست.",
+    "FIREBASE_HINT": "منبع تنظیمات فایربیس را انتخاب کنید: فایل .env یا تنظیمات دستی پنل.",
     "FIREBASE_ENABLED": "فعال‌سازی FCM",
     "FIREBASE_PROJECT_ID": "شناسه پروژه فایربیس",
     "FIREBASE_CREDENTIALS_FILE": "فایل JSON حساب سرویس",
@@ -2095,7 +2118,21 @@
     "FIREBASE_SAVED": "تنظیمات فایربیس ذخیره شد.",
     "FIREBASE_SAVE_FAILED": "ذخیره تنظیمات فایربیس ناموفق بود.",
     "FIREBASE_FILE_REQUIRED": "قبل از فعال‌سازی، فایل JSON حساب سرویس را آپلود کنید.",
-    "FIREBASE_ENV_FALLBACK": "در حال استفاده از تنظیمات فعلی .env (سازگاری با نصب‌های قبلی). می‌توانید فایل را از پنل آپلود کنید تا جایگزین شود."
+    "FIREBASE_ENV_FALLBACK": "در حال استفاده از تنظیمات فعلی .env (سازگاری با نصب‌های قبلی). می‌توانید فایل را از پنل آپلود کنید تا جایگزین شود.",
+    "FIREBASE_FILE_VIA_ENV": "فایل روی سرور از مسیر .env خوانده می‌شود؛ در firebase-secrets دیده نمی‌شود تا از پنل آپلود کنید.",
+    "FIREBASE_FILE_IN_PANEL_STORAGE": "فایل حساب سرویس در مسیر پنل ذخیره شده است (storage/app/firebase-secrets).",
+    "FIREBASE_CONFIG_SOURCE": "منبع خواندن تنظیمات فایربیس",
+    "FIREBASE_SOURCE_ENV": "از فایل .env",
+    "FIREBASE_SOURCE_SETTINGS": "از تنظیمات دستی پنل",
+    "FIREBASE_SOURCE_ENV_HELP": "فعال‌سازی، شناسه پروژه و فایل JSON از متغیرهای .env خوانده می‌شود.",
+    "FIREBASE_SOURCE_SETTINGS_HELP": "فعال‌سازی و شناسه پروژه از پنل ذخیره می‌شود و فایل در storage/app/firebase-secrets قرار می‌گیرد.",
+    "FIREBASE_ENV_TOGGLE_LOCKED": "در حالت .env، مقدار FIREBASE_ENABLED روی سرور اعمال می‌شود.",
+    "FIREBASE_ENV_FILE_CARD": "فایل .env روی سرور",
+    "FIREBASE_SETTINGS_FILE_CARD": "فایل تنظیمات پنل",
+    "FIREBASE_FILE_FOUND": "فایل موجود است",
+    "FIREBASE_FILE_MISSING": "فایل پیدا نشد",
+    "FIREBASE_KEEP_EXISTING_FILE": "فایل فعلی روی سرور حفظ می‌شود مگر اینکه فایل جدیدی انتخاب کنید.",
+    "FIREBASE_WILL_ADOPT_ENV": "با ذخیره، فایل فعلی .env به‌صورت خودکار به مسیر پنل کپی می‌شود."
   },
 
   "VOUCHER": {
@@ -2304,6 +2341,15 @@
 
 
   "CHECK_PAYSTORE_STATUS": "بررسی وضعیت PayStore",
+  "CHECK_MANSHORPAY_STATUS": "بررسی وضعیت ManshorPay",
+  "CHECK_MANSHORPAY_STATUS_FAILED": "بررسی وضعیت ManshorPay ناموفق بود",
+  "MANSHORPAY_PROVIDER_NOT_FOUND": "تأمین‌کننده ManshorPay یافت نشد",
+  "MANSHORPAY_ORDER_ID_MISSING": "شناسه سفارش ManshorPay روی این سفارش نیست",
+  "MANSHORPAY_STATUS_COMPLETED": "سفارش در ManshorPay تکمیل شد",
+  "MANSHORPAY_STATUS_FAILED": "سفارش در ManshorPay رد/ناموفق شد",
+  "MANSHORPAY_STATUS_PENDING": "سفارش هنوز در حال پردازش است",
+  "MANSHORPAY_STATUS_UNKNOWN": "وضعیت ناشناخته",
+  "MANSHORPAY_NEEDS_REVIEW": "نیاز به بررسی دستی",
   "PAYSTORE_STATUS_CHECK": "بررسی وضعیت PayStore",
   "PAYSTORE_STATUS_CHECK_FAILED": "بررسی وضعیت PayStore ناموفق بود",
   "PAYSTORE_PROVIDER_NOT_FOUND": "ارائه دهنده PayStore یافت نشد یا غیرفعال است",
@@ -2315,6 +2361,20 @@
   "PAYSTORE_TRANSACTION_ID": "شناسه تراکنش",
   "PAYSTORE_PROVIDER_MESSAGE": "پیام ارائه دهنده",
   "PAYSTORE_ORDER_STATUS": "وضعیت سفارش",
+
+  "ORDER.PROVIDER_STATUS_SECTION": "وضعیت ارائه‌دهنده",
+  "ORDER.PROVIDER_CODE": "ارائه‌دهنده",
+  "ORDER.PROVIDER_REFERENCE": "مرجع",
+  "ORDER.PROVIDER_STATE.UNCERTAIN": "نتیجه نامشخص",
+  "ORDER.PROVIDER_STATE.MONITORING": "پایش خودکار",
+  "ORDER.PROVIDER_STATE.NEEDS_MANUAL_CHECK": "نیاز به بررسی",
+  "ORDER.PROVIDER_STATE.SUBMITTING": "در حال ارسال",
+  "ORDER.PROVIDER_STATE.FAILED": "ناموفق",
+  "ORDER.HINT.PAYSTORE_TIMEOUT_MONITORING": "سفارش ثبت شده و وضعیت PayStore در حال پایش خودکار است — در صورت نیاز «بررسی وضعیت» را بزنید",
+  "ORDER.HINT.MANSHOR_SUBMISSION_UNCERTAIN": "نتیجه ارسال به ManshorPay نامشخص است — سفارش در سیستم ثبت شده؛ وضعیت را با مرجع بررسی کنید",
+  "ORDER.HINT.MANSHOR_MONITORING": "سفارش ManshorPay در حال پایش خودکار وضعیت است",
+  "ORDER.HINT.REQUIRES_RECONCILIATION": "نیاز به تطبیق دستی با ارائه‌دهنده — سفارش در سیستم موجود است",
+  "ORDER.HINT.PROVIDER_TIMEOUT_UNKNOWN": "سفارش در سیستم ثبت شده؛ نتیجه ارائه‌دهنده نامشخص است — وضعیت را بررسی کنید",
 
 
   "TRANSLATION_WORKSPACE": "فضای کاری ترجمه",

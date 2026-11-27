@@ -114,6 +114,9 @@ import {
     CHECK_PAYSTORE_STATUS_REQUEST,
     CHECK_PAYSTORE_STATUS_SUCCESS,
     CHECK_PAYSTORE_STATUS_FAIL,
+    CHECK_MANSHORPAY_STATUS_REQUEST,
+    CHECK_MANSHORPAY_STATUS_SUCCESS,
+    CHECK_MANSHORPAY_STATUS_FAIL,
     CLEAR_PAYSTORE_STATUS
 } from '../constants/orderConstants';
 
@@ -229,6 +232,7 @@ export const orderReducer = (state = initialOrderState, action: any): OrderState
 export const paystoreStatusReducer = (state = initialPaystoreStatusState, action: any): PaystoreStatusState => {
     switch (action.type) {
         case CHECK_PAYSTORE_STATUS_REQUEST:
+        case CHECK_MANSHORPAY_STATUS_REQUEST:
             return {
                 ...state,
                 loading: true,
@@ -236,6 +240,7 @@ export const paystoreStatusReducer = (state = initialPaystoreStatusState, action
             };
 
         case CHECK_PAYSTORE_STATUS_SUCCESS:
+        case CHECK_MANSHORPAY_STATUS_SUCCESS:
             return {
                 ...state,
                 loading: false,
@@ -244,6 +249,7 @@ export const paystoreStatusReducer = (state = initialPaystoreStatusState, action
             };
 
         case CHECK_PAYSTORE_STATUS_FAIL:
+        case CHECK_MANSHORPAY_STATUS_FAIL:
             return {
                 ...state,
                 loading: false,

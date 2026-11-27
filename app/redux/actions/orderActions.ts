@@ -22,7 +22,10 @@ import {
     CHECK_PAYSTORE_STATUS_REQUEST,
     CHECK_PAYSTORE_STATUS_SUCCESS,
     CHECK_PAYSTORE_STATUS_FAIL,
-    CLEAR_PAYSTORE_STATUS
+    CLEAR_PAYSTORE_STATUS,
+    CHECK_MANSHORPAY_STATUS_REQUEST,
+    CHECK_MANSHORPAY_STATUS_SUCCESS,
+    CHECK_MANSHORPAY_STATUS_FAIL,
 } from '../constants/orderConstants';
 
 const getAuthToken = () => {
@@ -391,3 +394,112 @@ export const _checkPaystoreStatus = (
 export const clearPaystoreStatus = () => ({
     type: CLEAR_PAYSTORE_STATUS,
 });
+
+// ============ Check ManshorPay Status ============
+
+export const _checkManshorPayStatus = (
+    orderId: number,
+    toast: React.RefObject<Toast>,
+    t: (key: string, options?: object) => string
+) => async (dispatch: Dispatch) => {
+    dispatch({ type: CHECK_MANSHORPAY_STATUS_REQUEST });
+
+    try {
+        const token = getAuthToken();
+        const url = `${process.env.NEXT_PUBLIC_BASE_URL}/orders/${orderId}/manshorpay/check-status`;
+
+        const response = await axios.post(
+            url,
+            {},
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+
+        if (response.data.success === false) {
+            const errCode = response.data.errors;
+            toast.current?.show({
+                severity: 'error',
+                summary: t('CHECK_MANSHORPAY_STATUS_FAILED', { defaultValue: 'بررسی وضعیت ManshorPay ناموفق بود' }),
+                detail:
+                    errCode === 'ProviderNotFound'
+                        ? t('MANSHORPAY_PROVIDER_NOT_FOUND', { defaultValue: 'تأمین‌کننده ManshorPay یافت نشد' })
+                        : errCode === 'ManshorOrderIdMissing'
+                          ? t('MANSHORPAY_ORDER_ID_MISSING', {
+                                defaultValue: 'شناسه سفارش ManshorPay روی این سفارش نیست',
+                            })
+                          : response.data.message || t('CHECK_MANSHORPAY_STATUS_FAILED', { defaultValue: 'بررسی وضعیت ManshorPay ناموفق بود' }),
+                life: 5000,
+            });
+            dispatch({
+                type: CHECK_MANSHORPAY_STATUS_FAIL,
+                payload: response.data.message || 'ManshorPay status check failed',
+            });
+            return;
+        }
+
+        const statusData = response.data.data || {};
+        dispatch({
+            type: CHECK_MANSHORPAY_STATUS_SUCCESS,
+            payload: statusData,
+        });
+
+        const providerStatus = String(statusData.provider_status || statusData.result?.status || '').toLowerCase();
+        const providerMessage = statusData.provider_message || '';
+        const lines: string[] = [];
+
+        let severity: 'success' | 'info' | 'warn' | 'error' = 'info';
+        if (['completed', 'success', 'successful'].includes(providerStatus)) {
+            severity = 'success';
+            lines.push(`✅ ${t('MANSHORPAY_STATUS_COMPLETED', { defaultValue: 'سفارش در ManshorPay تکمیل شد' })}`);
+        } else if (['failed', 'rejected', 'cancelled', 'canceled'].includes(providerStatus)) {
+            severity = 'warn';
+            lines.push(`⚠️ ${t('MANSHORPAY_STATUS_FAILED', { defaultValue: 'سفارش در ManshorPay رد/ناموفق شد' })}`);
+        } else if (['processing', 'pending', 'checking'].includes(providerStatus)) {
+            severity = 'info';
+            lines.push(`⏳ ${t('MANSHORPAY_STATUS_PENDING', { defaultValue: 'سفارش هنوز در حال پردازش است' })}`);
+        } else {
+            severity = 'error';
+            lines.push(`❌ ${t('MANSHORPAY_STATUS_UNKNOWN', { defaultValue: 'وضعیت ناشناخته' })}: ${providerStatus || '—'}`);
+        }
+
+        if (providerMessage) {
+            lines.push(`📝 ${providerMessage}`);
+        }
+        if (statusData.provider_order_id) {
+            lines.push(`🆔 Manshor order: ${statusData.provider_order_id}`);
+        }
+        lines.push(`📊 Waslat status: ${statusData.order_status ?? '—'}`);
+        if (statusData.requires_reconciliation) {
+            lines.push(`🚨 ${t('MANSHORPAY_NEEDS_REVIEW', { defaultValue: 'نیاز به بررسی دستی' })}`);
+        }
+
+        toast.current?.show({
+            severity,
+            summary: t('CHECK_MANSHORPAY_STATUS', { defaultValue: 'بررسی وضعیت ManshorPay' }),
+            detail: lines.join('\n'),
+            life: 8000,
+        });
+
+        return response.data;
+    } catch (error: any) {
+        const errorMessage =
+            error.response?.data?.message || error.message || 'Failed to check ManshorPay status';
+
+        dispatch({
+            type: CHECK_MANSHORPAY_STATUS_FAIL,
+            payload: errorMessage,
+        });
+
+        toast.current?.show({
+            severity: 'error',
+            summary: t('CHECK_MANSHORPAY_STATUS_FAILED', { defaultValue: 'بررسی وضعیت ManshorPay ناموفق بود' }),
+            detail: errorMessage,
+            life: 5000,
+        });
+
+        throw error;
+    }
+};

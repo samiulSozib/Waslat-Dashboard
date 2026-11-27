@@ -2288,6 +2288,20 @@
   "PAYSTORE_PROVIDER_MESSAGE": "د چمتو کونکي پیغام",
   "PAYSTORE_ORDER_STATUS": "د امر حالت",
 
+  "ORDER.PROVIDER_STATUS_SECTION": "د ورکوونکي حالت",
+  "ORDER.PROVIDER_CODE": "ورکوونکی",
+  "ORDER.PROVIDER_REFERENCE": "مرجع",
+  "ORDER.PROVIDER_STATE.UNCERTAIN": "ناڅرګند پایله",
+  "ORDER.PROVIDER_STATE.MONITORING": "اتوماتیک څارنه",
+  "ORDER.PROVIDER_STATE.NEEDS_MANUAL_CHECK": "لاسي کتنې ته اړتیا",
+  "ORDER.PROVIDER_STATE.SUBMITTING": "په لیږلو کې",
+  "ORDER.PROVIDER_STATE.FAILED": "ناکام",
+  "ORDER.HINT.PAYSTORE_TIMEOUT_MONITORING": "امر ثبت شوی؛ د PayStore حالت په اتوماتیک څارنه کې دی",
+  "ORDER.HINT.MANSHOR_SUBMISSION_UNCERTAIN": "د ManshorPay لیږد پایله ناڅرګنده ده — امر ثبت شوی؛ له مرجع سره وګورئ",
+  "ORDER.HINT.MANSHOR_MONITORING": "د ManshorPay امر په اتوماتیک څارنه کې دی",
+  "ORDER.HINT.REQUIRES_RECONCILIATION": "له ورکوونکي سره لاسي تطبیق ته اړتیا ده — امر په سیستم کې شته",
+  "ORDER.HINT.PROVIDER_TIMEOUT_UNKNOWN": "امر ثبت شوی؛ د ورکوونکي پایله ناڅرګنده ده — حالت وګورئ",
+
 
   "TRANSLATION_WORKSPACE": "د ژباړې کاري ځای",
   "MANAGING": "د مدیریت لاندې",

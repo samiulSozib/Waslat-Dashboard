@@ -41,7 +41,12 @@ import {
 } from '@/app/redux/actions/supportContactActions';
 import { _fetchProviders } from '@/app/redux/actions/providerActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
-import { fetchFirebaseSettings, saveFirebaseSettings, FirebasePublicStatus } from '@/app/redux/actions/firebaseActions';
+import {
+    fetchFirebaseSettings,
+    saveFirebaseSettings,
+    FirebasePublicStatus,
+    FirebaseConfigSource
+} from '@/app/redux/actions/firebaseActions';
 
 type AppSettingsWithInquiry = AppSettings & {
     default_package_inquiry_provider_id?: number | null;
@@ -164,6 +169,7 @@ const AppSettingsPage = () => {
     const [firebaseStatus, setFirebaseStatus] = useState<FirebasePublicStatus | null>(null);
     const [firebaseEnabled, setFirebaseEnabled] = useState(false);
     const [firebaseProjectId, setFirebaseProjectId] = useState('');
+    const [firebaseConfigSource, setFirebaseConfigSource] = useState<FirebaseConfigSource>('settings');
     const [firebaseCredentialsFile, setFirebaseCredentialsFile] = useState<File | null>(null);
     const [firebaseSaving, setFirebaseSaving] = useState(false);
     const [firebaseLoading, setFirebaseLoading] = useState(false);
@@ -202,12 +208,20 @@ const AppSettingsPage = () => {
             setFirebaseLoading(true);
             try {
                 const status = await fetchFirebaseSettings();
-                if (cancelled || !status) return;
+                if (cancelled) return;
+                if (!status) return;
                 setFirebaseStatus(status);
                 setFirebaseEnabled(!!status.enabled);
                 setFirebaseProjectId(status.project_id || '');
-            } catch {
-                // keep defaults until SuperAdmin configures
+                setFirebaseConfigSource(
+                    status.config_source === 'env' || status.config_source === 'settings'
+                        ? status.config_source
+                        : status.using_env_fallback
+                          ? 'env'
+                          : 'settings'
+                );
+            } catch (err) {
+                console.error('Failed to load Firebase settings', err);
             } finally {
                 if (!cancelled) setFirebaseLoading(false);
             }
@@ -352,9 +366,31 @@ const AppSettingsPage = () => {
 
     const settingsTabKeys = ['general', 'contact', 'branding', 'limits', 'integration', 'recharge', 'package-inquiry', 'telegram', 'firebase', 'support-contacts'] as const;
 
+    const applyFirebaseStatus = (status: FirebasePublicStatus) => {
+        setFirebaseStatus(status);
+        setFirebaseEnabled(!!status.enabled);
+        setFirebaseProjectId(status.project_id || '');
+        setFirebaseConfigSource(
+            status.config_source === 'env' || status.config_source === 'settings'
+                ? status.config_source
+                : status.using_env_fallback
+                  ? 'env'
+                  : 'settings'
+        );
+    };
+
     const saveFirebase = async () => {
-        // Allow enable without new upload when .env / existing credentials already work.
-        if (firebaseEnabled && !firebaseStatus?.configured && !firebaseCredentialsFile) {
+        const hasSettingsFile =
+            !!firebaseCredentialsFile || !!firebaseStatus?.settings_credentials?.exists;
+        const canAdoptEnv =
+            firebaseConfigSource === 'settings' && !!firebaseStatus?.env_credentials?.exists;
+
+        if (
+            firebaseConfigSource === 'settings' &&
+            firebaseEnabled &&
+            !hasSettingsFile &&
+            !canAdoptEnv
+        ) {
             toast.current?.show({
                 severity: 'warn',
                 summary: t('ERROR', { defaultValue: 'خطا' }),
@@ -370,12 +406,16 @@ const AppSettingsPage = () => {
             const status = await saveFirebaseSettings({
                 is_enabled: firebaseEnabled,
                 project_id: firebaseProjectId,
-                credentials_file: firebaseCredentialsFile
+                config_source: firebaseConfigSource,
+                credentials_file: firebaseCredentialsFile,
+                adopt_env_credentials:
+                    firebaseConfigSource === 'settings' &&
+                    !firebaseCredentialsFile &&
+                    !firebaseStatus?.settings_credentials?.exists &&
+                    !!firebaseStatus?.env_credentials?.exists
             });
             if (status) {
-                setFirebaseStatus(status);
-                setFirebaseEnabled(!!status.enabled);
-                setFirebaseProjectId(status.project_id || '');
+                applyFirebaseStatus(status);
             }
             setFirebaseCredentialsFile(null);
             toast.current?.show({
@@ -1586,7 +1626,11 @@ case 'package-inquiry':
         </div>
     );
 
-            case 'firebase':
+            case 'firebase': {
+                const envFile = firebaseStatus?.env_credentials;
+                const settingsFile = firebaseStatus?.settings_credentials;
+                const sourceIsEnv = firebaseConfigSource === 'env';
+
                 return (
                     <div className="grid p-fluid">
                         <div className="col-12">
@@ -1597,79 +1641,241 @@ case 'package-inquiry':
                                 <p className="text-sm text-500 mt-1 mb-3">
                                     {t('APP_SETTINGS.FIREBASE_HINT', {
                                         defaultValue:
-                                            'فایل JSON حساب سرویس فایربیس را آپلود کنید. نیازی به ویرایش .env نیست.'
+                                            'منبع تنظیمات فایربیس را انتخاب کنید: فایل .env یا تنظیمات دستی پنل.'
                                     })}
                                 </p>
                             </div>
 
                             <div className="field p-3 border-1 surface-border border-round mb-3">
+                                <div className="field mb-3">
+                                    <label className="text-sm font-bold mb-2 block">
+                                        {t('APP_SETTINGS.FIREBASE_CONFIG_SOURCE', {
+                                            defaultValue: 'منبع خواندن تنظیمات فایربیس'
+                                        })}
+                                    </label>
+                                    <Select
+                                        value={firebaseConfigSource}
+                                        disabled={firebaseLoading || firebaseSaving}
+                                        onValueChange={(value) =>
+                                            setFirebaseConfigSource(value === 'env' ? 'env' : 'settings')
+                                        }
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="env">
+                                                {t('APP_SETTINGS.FIREBASE_SOURCE_ENV', {
+                                                    defaultValue: 'از فایل .env'
+                                                })}
+                                            </SelectItem>
+                                            <SelectItem value="settings">
+                                                {t('APP_SETTINGS.FIREBASE_SOURCE_SETTINGS', {
+                                                    defaultValue: 'از تنظیمات دستی پنل'
+                                                })}
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <small className="text-500 block mt-2">
+                                        {sourceIsEnv
+                                            ? t('APP_SETTINGS.FIREBASE_SOURCE_ENV_HELP', {
+                                                  defaultValue:
+                                                      'فعال‌سازی، شناسه پروژه و فایل JSON از متغیرهای .env خوانده می‌شود.'
+                                              })
+                                            : t('APP_SETTINGS.FIREBASE_SOURCE_SETTINGS_HELP', {
+                                                  defaultValue:
+                                                      'فعال‌سازی و شناسه پروژه از پنل ذخیره می‌شود و فایل در storage/app/firebase-secrets قرار می‌گیرد.'
+                                              })}
+                                    </small>
+                                </div>
+
                                 <div className="flex align-items-center mb-3">
                                     <Switch
                                         checked={firebaseEnabled}
-                                        disabled={firebaseLoading || firebaseSaving}
+                                        disabled={firebaseLoading || firebaseSaving || sourceIsEnv}
                                         onCheckedChange={setFirebaseEnabled}
                                     />
-                                    <label className="ml-2 font-bold">
+                                    <label className="ms-2 font-bold">
                                         {t('APP_SETTINGS.FIREBASE_ENABLED', { defaultValue: 'فعال‌سازی FCM' })}
                                     </label>
                                 </div>
+                                {sourceIsEnv ? (
+                                    <small className="text-500 block mb-3 -mt-2">
+                                        {t('APP_SETTINGS.FIREBASE_ENV_TOGGLE_LOCKED', {
+                                            defaultValue:
+                                                'در حالت .env، مقدار FIREBASE_ENABLED روی سرور اعمال می‌شود.'
+                                        })}{' '}
+                                        ({firebaseStatus?.env_enabled ? 'true' : 'false'})
+                                    </small>
+                                ) : null}
 
                                 <div className="field mb-3">
                                     <label htmlFor="firebase_project_id" className="text-sm font-bold">
-                                        {t('APP_SETTINGS.FIREBASE_PROJECT_ID', { defaultValue: 'شناسه پروژه فایربیس' })}
+                                        {t('APP_SETTINGS.FIREBASE_PROJECT_ID', {
+                                            defaultValue: 'شناسه پروژه فایربیس'
+                                        })}
                                     </label>
                                     <Input
                                         id="firebase_project_id"
-                                        value={firebaseProjectId}
-                                        disabled={firebaseLoading || firebaseSaving}
+                                        value={
+                                            sourceIsEnv
+                                                ? firebaseStatus?.env_project_id ||
+                                                  envFile?.project_id ||
+                                                  firebaseProjectId
+                                                : firebaseProjectId
+                                        }
+                                        disabled={firebaseLoading || firebaseSaving || sourceIsEnv}
                                         onChange={(e) => setFirebaseProjectId(e.target.value)}
                                         placeholder="my-firebase-project"
                                     />
                                 </div>
 
-                                <div className="field mb-3">
-                                    <label className="text-sm font-bold">
-                                        {t('APP_SETTINGS.FIREBASE_CREDENTIALS_FILE', {
-                                            defaultValue: 'فایل JSON حساب سرویس'
-                                        })}
-                                    </label>
-                                    <Input
-                                        type="file"
-                                        accept="application/json,.json"
-                                        disabled={firebaseLoading || firebaseSaving}
-                                        onChange={(e) => {
-                                            const file = e.target.files?.[0] || null;
-                                            setFirebaseCredentialsFile(file);
-                                        }}
-                                    />
-                                    {firebaseCredentialsFile ? (
-                                        <small className="text-500 block mt-1">{firebaseCredentialsFile.name}</small>
-                                    ) : null}
+                                <div className="grid mb-3">
+                                    <div className="col-12 md:col-6">
+                                        <div className="p-3 border-1 surface-border border-round h-full bg-gray-50">
+                                            <p className="m-0 font-bold text-sm mb-2">
+                                                {t('APP_SETTINGS.FIREBASE_ENV_FILE_CARD', {
+                                                    defaultValue: 'فایل .env روی سرور'
+                                                })}
+                                            </p>
+                                            {envFile?.exists ? (
+                                                <>
+                                                    <p className="m-0 text-sm text-green-700">
+                                                        {t('APP_SETTINGS.FIREBASE_FILE_FOUND', {
+                                                            defaultValue: 'فایل موجود است'
+                                                        })}
+                                                    </p>
+                                                    <p className="m-0 mt-2 text-sm text-500 dir-ltr text-start">
+                                                        {envFile.relative_path || envFile.file_name}
+                                                    </p>
+                                                    {envFile.client_email ? (
+                                                        <p className="m-0 mt-2 text-sm text-500 dir-ltr text-start">
+                                                            {envFile.client_email}
+                                                        </p>
+                                                    ) : null}
+                                                    {envFile.project_id ? (
+                                                        <p className="m-0 mt-1 text-sm text-500">
+                                                            {envFile.project_id}
+                                                        </p>
+                                                    ) : null}
+                                                </>
+                                            ) : (
+                                                <p className="m-0 text-sm text-orange-600">
+                                                    {t('APP_SETTINGS.FIREBASE_FILE_MISSING', {
+                                                        defaultValue: 'فایلی در مسیر .env پیدا نشد'
+                                                    })}
+                                                    {envFile?.relative_path
+                                                        ? ` (${envFile.relative_path})`
+                                                        : ''}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="col-12 md:col-6">
+                                        <div className="p-3 border-1 surface-border border-round h-full bg-gray-50">
+                                            <p className="m-0 font-bold text-sm mb-2">
+                                                {t('APP_SETTINGS.FIREBASE_SETTINGS_FILE_CARD', {
+                                                    defaultValue: 'فایل تنظیمات پنل'
+                                                })}
+                                            </p>
+                                            {settingsFile?.exists ? (
+                                                <>
+                                                    <p className="m-0 text-sm text-green-700">
+                                                        {t('APP_SETTINGS.FIREBASE_FILE_FOUND', {
+                                                            defaultValue: 'فایل موجود است'
+                                                        })}
+                                                    </p>
+                                                    <p className="m-0 mt-2 text-sm text-500 dir-ltr text-start">
+                                                        {settingsFile.relative_path || settingsFile.file_name}
+                                                    </p>
+                                                    {settingsFile.client_email ? (
+                                                        <p className="m-0 mt-2 text-sm text-500 dir-ltr text-start">
+                                                            {settingsFile.client_email}
+                                                        </p>
+                                                    ) : null}
+                                                    {settingsFile.project_id ? (
+                                                        <p className="m-0 mt-1 text-sm text-500">
+                                                            {settingsFile.project_id}
+                                                        </p>
+                                                    ) : null}
+                                                </>
+                                            ) : (
+                                                <p className="m-0 text-sm text-orange-600">
+                                                    {t('APP_SETTINGS.FIREBASE_FILE_MISSING', {
+                                                        defaultValue: 'فایلی در مسیر پنل پیدا نشد'
+                                                    })}
+                                                    {' '}
+                                                    (storage/app/firebase-secrets/service-account.json)
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
+
+                                {!sourceIsEnv ? (
+                                    <div className="field mb-3">
+                                        <label className="text-sm font-bold">
+                                            {t('APP_SETTINGS.FIREBASE_CREDENTIALS_FILE', {
+                                                defaultValue: 'فایل JSON حساب سرویس'
+                                            })}
+                                        </label>
+                                        <Input
+                                            type="file"
+                                            accept="application/json,.json"
+                                            disabled={firebaseLoading || firebaseSaving}
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0] || null;
+                                                setFirebaseCredentialsFile(file);
+                                            }}
+                                        />
+                                        {firebaseCredentialsFile ? (
+                                            <small className="text-500 block mt-1">
+                                                {firebaseCredentialsFile.name}
+                                            </small>
+                                        ) : settingsFile?.exists ? (
+                                            <small className="text-500 block mt-1">
+                                                {t('APP_SETTINGS.FIREBASE_KEEP_EXISTING_FILE', {
+                                                    defaultValue:
+                                                        'فایل فعلی روی سرور حفظ می‌شود مگر اینکه فایل جدیدی انتخاب کنید.'
+                                                })}
+                                            </small>
+                                        ) : envFile?.exists ? (
+                                            <small className="text-orange-600 block mt-1">
+                                                {t('APP_SETTINGS.FIREBASE_WILL_ADOPT_ENV', {
+                                                    defaultValue:
+                                                        'با ذخیره، فایل فعلی .env به‌صورت خودکار به مسیر پنل کپی می‌شود.'
+                                                })}
+                                            </small>
+                                        ) : null}
+                                    </div>
+                                ) : null}
 
                                 <div className="p-3 border-1 surface-border border-round bg-gray-50 mb-3">
                                     <p className="m-0 text-sm">
-                                        <strong>{t('APP_SETTINGS.FIREBASE_STATUS', { defaultValue: 'وضعیت' })}:</strong>{' '}
+                                        <strong>
+                                            {t('APP_SETTINGS.FIREBASE_STATUS', { defaultValue: 'وضعیت' })}:
+                                        </strong>{' '}
                                         {firebaseLoading
                                             ? t('PLEASE_WAIT', { defaultValue: 'لطفاً صبر کنید…' })
                                             : firebaseStatus?.configured
-                                              ? t('APP_SETTINGS.FIREBASE_CONFIGURED', { defaultValue: 'پیکربندی شده' })
+                                              ? t('APP_SETTINGS.FIREBASE_CONFIGURED', {
+                                                    defaultValue: 'پیکربندی شده'
+                                                })
                                               : t('APP_SETTINGS.FIREBASE_NOT_CONFIGURED', {
                                                     defaultValue: 'هنوز پیکربندی نشده'
                                                 })}
                                     </p>
-                                    {firebaseStatus?.using_env_fallback ? (
-                                        <p className="m-0 mt-2 text-sm text-orange-600">
-                                            {t('APP_SETTINGS.FIREBASE_ENV_FALLBACK', {
-                                                defaultValue:
-                                                    'در حال استفاده از تنظیمات فعلی .env (سازگاری با نصب‌های قبلی). می‌توانید فایل را از پنل آپلود کنید تا جایگزین شود.'
+                                    {firebaseStatus?.client_email ? (
+                                        <p className="m-0 mt-2 text-sm text-500 dir-ltr text-start">
+                                            {t('APP_SETTINGS.FIREBASE_CLIENT_EMAIL', {
+                                                defaultValue: 'ایمیل سرویس'
                                             })}
+                                            : {firebaseStatus.client_email}
                                         </p>
                                     ) : null}
-                                    {firebaseStatus?.client_email ? (
-                                        <p className="m-0 mt-2 text-sm text-500">
-                                            {t('APP_SETTINGS.FIREBASE_CLIENT_EMAIL', { defaultValue: 'ایمیل سرویس' })}:{' '}
-                                            {firebaseStatus.client_email}
+                                    {firebaseStatus?.credentials_relative_path ? (
+                                        <p className="m-0 mt-2 text-sm text-500 dir-ltr text-start">
+                                            {firebaseStatus.credentials_relative_path}
                                         </p>
                                     ) : null}
                                 </div>
@@ -1679,7 +1885,9 @@ case 'package-inquiry':
                                     label={
                                         firebaseSaving
                                             ? t('PLEASE_WAIT', { defaultValue: 'لطفاً صبر کنید…' })
-                                            : t('APP_SETTINGS.FIREBASE_SAVE', { defaultValue: 'ذخیره فایربیس' })
+                                            : t('APP_SETTINGS.FIREBASE_SAVE', {
+                                                  defaultValue: 'ذخیره فایربیس'
+                                              })
                                     }
                                     icon="pi pi-save"
                                     disabled={firebaseLoading || firebaseSaving}
@@ -1689,6 +1897,7 @@ case 'package-inquiry':
                         </div>
                     </div>
                 );
+            }
 
             case 'support-contacts':
                 return renderSupportContactsTab();

@@ -8,6 +8,37 @@ import {
 
 const getAuthToken = () => localStorage.getItem('api_token') || '';
 
+/** Providers that use Afghanistan JWT /v1/api/account-info */
+const AFGHANISTAN_JWT_CODES = new Set(['iimobile']);
+
+/** Providers served by unified GET /admin/api-providers/{id}/account-info */
+const UNIFIED_ACCOUNT_INFO_CODES = new Set([
+  'paystore',
+  'manshorpay',
+  'setaragan',
+  'sml_new_api',
+  'sml_new',
+  'setaragan_new',
+  'sml',
+  'inax',
+  'inax1',
+]);
+
+const resolveAccountInfoPath = (code: string, providerId: number): string => {
+  if (code === 'zoodpay') {
+    return `/zoodpay-providers/${providerId}/account-info`;
+  }
+  if (UNIFIED_ACCOUNT_INFO_CODES.has(code)) {
+    return `/api-providers/${providerId}/account-info`;
+  }
+  // Default: Afghanistan iimobile-style JWT account-info
+  if (AFGHANISTAN_JWT_CODES.has(code) || !code) {
+    return `/afghanistan-providers/${providerId}/account-info`;
+  }
+  // Unknown codes still try Afghanistan for backward compatibility with older JWT providers
+  return `/afghanistan-providers/${providerId}/account-info`;
+};
+
 // Provider codes are resolved using the existing authenticated provider detail endpoint.
 // This avoids hard-coding ZoodPay's database ID, which can differ across deployments.
 export const fetchProviderInfo = (
@@ -30,13 +61,13 @@ export const fetchProviderInfo = (
     const provider = envelope?.provider ?? envelope;
     const code = String(provider?.code ?? '').toLowerCase();
 
-    const path = code === 'zoodpay'
-      ? `/zoodpay-providers/${providerId}/account-info`
-      : `/afghanistan-providers/${providerId}/account-info`;
+    const path = resolveAccountInfoPath(code, providerId);
 
     const response = await axios.get(`${base}${path}`, {
       ...config,
-      params: code === 'zoodpay' ? { page, per_page: perPage, ...(refreshSupplierStatus ? { refresh_supplier_status: 1 } : {}) } : undefined,
+      params: code === 'zoodpay'
+        ? { page, per_page: perPage, ...(refreshSupplierStatus ? { refresh_supplier_status: 1 } : {}) }
+        : undefined,
     });
 
     dispatch({

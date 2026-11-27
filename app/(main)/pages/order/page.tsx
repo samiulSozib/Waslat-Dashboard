@@ -10,7 +10,7 @@ import { Dialog } from 'primereact/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Button as PrimeButton } from 'primereact/button';
 import { AppDispatch } from '@/app/redux/store';
-import { _changeOrderStatus, _deleteOrder, _fetchOrders, _checkPaystoreStatus } from '@/app/redux/actions/orderActions';
+import { _changeOrderStatus, _deleteOrder, _fetchOrders, _checkPaystoreStatus, _checkManshorPayStatus } from '@/app/redux/actions/orderActions';
 import { _fetchCompanies } from '@/app/redux/actions/companyActions';
 import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { Order } from '@/types/interface';
@@ -75,6 +75,63 @@ const isCustomTopupRow = (row: any) => {
     const type = row?.order_type;
     if (type === 'custom_recharge' || type === 'mobile_topup') return true;
     return !!(row?.is_custom_recharge || row?.bundle?.is_custom_recharge);
+};
+
+/** Bound provider for Orders status-check actions. */
+const getOrderProviderKind = (row: any): 'paystore' | 'manshorpay' | null => {
+    const code = String(
+        row?.provider_code
+            || row?.api_provider?.code
+            || row?.apiProvider?.code
+            || row?.bundle?.api_provider_code
+            || ''
+    )
+        .trim()
+        .toLowerCase();
+    if (code === 'paystore' || code === 'manshorpay') return code;
+
+    if (row?.bundle?.manshorpay && typeof row.bundle.manshorpay === 'object') return 'manshorpay';
+    if (row?.bundle?.paystore && typeof row.bundle.paystore === 'object') return 'paystore';
+
+    return null;
+};
+
+type ProviderSubmissionState = 'ok' | 'submitting' | 'uncertain' | 'monitoring' | 'needs_manual_check' | 'failed';
+
+const getProviderSubmissionState = (row: any): ProviderSubmissionState => {
+    const state = String(row?.provider_submission_state || '').trim().toLowerCase();
+    if (
+        state === 'submitting' ||
+        state === 'uncertain' ||
+        state === 'monitoring' ||
+        state === 'needs_manual_check' ||
+        state === 'failed'
+    ) {
+        return state;
+    }
+    return 'ok';
+};
+
+const reconciliationHintKey = (row: any): string | null => {
+    const hint = String(row?.reconciliation_hint || '').trim();
+    if (!hint) return null;
+    const map: Record<string, string> = {
+        paystore_timeout_monitoring: 'ORDER.HINT.PAYSTORE_TIMEOUT_MONITORING',
+        manshor_submission_uncertain: 'ORDER.HINT.MANSHOR_SUBMISSION_UNCERTAIN',
+        manshor_monitoring: 'ORDER.HINT.MANSHOR_MONITORING',
+        requires_reconciliation: 'ORDER.HINT.REQUIRES_RECONCILIATION',
+        provider_timeout_unknown: 'ORDER.HINT.PROVIDER_TIMEOUT_UNKNOWN'
+    };
+    return map[hint] || 'ORDER.HINT.PROVIDER_TIMEOUT_UNKNOWN';
+};
+
+const submissionStateLabelKey = (state: ProviderSubmissionState): string | null => {
+    if (state === 'uncertain') return 'ORDER.PROVIDER_STATE.UNCERTAIN';
+    if (state === 'monitoring') return 'ORDER.PROVIDER_STATE.MONITORING';
+    if (state === 'needs_manual_check') return 'ORDER.PROVIDER_STATE.NEEDS_MANUAL_CHECK';
+    if (state === 'submitting') return 'ORDER.PROVIDER_STATE.SUBMITTING';
+    if (state === 'failed') return 'ORDER.PROVIDER_STATE.FAILED';
+    return null;
 };
 
 const orderPayableAmount = (row: any) => {
@@ -394,9 +451,12 @@ const OrderPage = () => {
                                 </tr>
                             ) : (
                                 (orders || []).map((row: any) => {
-                                    const isPaystore = !!row?.bundle?.service?.company?.uses_paystore || !!row?.uses_paystore;
+                                    const providerKind = getOrderProviderKind(row);
                                     const statusActions = getStatusActions(row as Order);
                                     const hasTxn = row.transaction_id !== null && row.transaction_id !== undefined;
+                                    const submissionState = getProviderSubmissionState(row);
+                                    const submissionLabelKey = submissionStateLabelKey(submissionState);
+                                    const hintKey = reconciliationHintKey(row);
                                     return (
                                         <tr
                                             key={row.id}
@@ -414,7 +474,7 @@ const OrderPage = () => {
                                                             size="icon"
                                                             variant="outline"
                                                             className="h-9 w-9 rounded-full border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
-                                                            disabled={statusActions.length === 0 && !isPaystore}
+                                                            disabled={statusActions.length === 0 && !providerKind}
                                                             title={t('ACTIONS', { defaultValue: 'عملیات' })}
                                                         >
                                                             <Settings2 className="waslat-nav-icon" />
@@ -446,10 +506,16 @@ const OrderPage = () => {
                                                             <Eye className="waslat-nav-icon" />
                                                             {t('ORDER_DETAILS', { defaultValue: 'مشاهده فیش' })}
                                                         </DropdownMenuItem>
-                                                        {isPaystore ? (
+                                                        {providerKind === 'paystore' ? (
                                                             <DropdownMenuItem onClick={() => dispatch(_checkPaystoreStatus(row.id, toast, t))}>
                                                                 <RefreshCw className="waslat-nav-icon" />
-                                                                {t('CHECK_PAYSTORE_STATUS')}
+                                                                {t('CHECK_PAYSTORE_STATUS', { defaultValue: 'بررسی وضعیت PayStore' })}
+                                                            </DropdownMenuItem>
+                                                        ) : null}
+                                                        {providerKind === 'manshorpay' ? (
+                                                            <DropdownMenuItem onClick={() => dispatch(_checkManshorPayStatus(row.id, toast, t))}>
+                                                                <RefreshCw className="waslat-nav-icon" />
+                                                                {t('CHECK_MANSHORPAY_STATUS', { defaultValue: 'بررسی وضعیت ManshorPay' })}
                                                             </DropdownMenuItem>
                                                         ) : null}
                                                     </DropdownMenuContent>
@@ -468,7 +534,32 @@ const OrderPage = () => {
                                                 </Button>
                                             </td>
                                             <td className="px-3 py-2">
-                                                <Badge variant={statusVariant(row.status)}>{statusLabel(t, row.status)}</Badge>
+                                                <div className="flex flex-col items-start gap-1">
+                                                    <Badge variant={statusVariant(row.status)}>{statusLabel(t, row.status)}</Badge>
+                                                    {submissionLabelKey ? (
+                                                        <Badge
+                                                            variant={
+                                                                submissionState === 'needs_manual_check' || submissionState === 'uncertain'
+                                                                    ? 'warning'
+                                                                    : 'secondary'
+                                                            }
+                                                            className="max-w-[11rem] whitespace-normal text-start text-[10px] leading-tight"
+                                                        >
+                                                            {t(submissionLabelKey, {
+                                                                defaultValue:
+                                                                    submissionState === 'uncertain'
+                                                                        ? 'نتیجه نامشخص'
+                                                                        : submissionState === 'monitoring'
+                                                                          ? 'پایش خودکار'
+                                                                          : submissionState === 'needs_manual_check'
+                                                                            ? 'نیاز به بررسی'
+                                                                            : submissionState === 'submitting'
+                                                                              ? 'در حال ارسال'
+                                                                              : 'خطا'
+                                                            })}
+                                                        </Badge>
+                                                    ) : null}
+                                                </div>
                                             </td>
                                             <td className="px-3 py-2">
                                                 <Badge variant={isCustomTopupRow(row) ? 'warning' : 'secondary'}>
@@ -507,8 +598,21 @@ const OrderPage = () => {
                                                 )}
                                             </td>
                                             <td className="px-3 py-2 text-start">{row.bundle?.bundle_title || row.bundle_title || '—'}</td>
-                                            <td className="max-w-[160px] truncate px-3 py-2 text-start text-xs text-red-600">
-                                                {row.reject_reason || row.rejected_reason || '—'}
+                                            <td className="max-w-[200px] px-3 py-2 text-start text-xs">
+                                                <div className="truncate text-red-600">{row.reject_reason || row.rejected_reason || '—'}</div>
+                                                {hintKey ? (
+                                                    <div className="mt-1 text-[11px] leading-snug text-amber-700">
+                                                        {t(hintKey, {
+                                                            defaultValue:
+                                                                'سفارش در سیستم ثبت شده؛ نتیجه ارائه‌دهنده نامشخص است — وضعیت را بررسی کنید'
+                                                        })}
+                                                    </div>
+                                                ) : null}
+                                                {row.provider_reference ? (
+                                                    <div className="mt-0.5 truncate text-[10px] text-muted-foreground" title={String(row.provider_reference)}>
+                                                        {t('ORDER.PROVIDER_REFERENCE', { defaultValue: 'مرجع' })}: {row.provider_reference}
+                                                    </div>
+                                                ) : null}
                                             </td>
                                             <td className="px-3 py-2 text-start">{row.bundle?.service?.company?.company_name || row.company_name || '—'}</td>
                                             <td className="px-3 py-2 tabular-nums text-muted-foreground">{formatDate(row.created_at)}</td>
@@ -784,6 +888,11 @@ function OrderSlip({
     const amount = orderPayableAmount(order);
     const requested = orderRequestedAmount(order);
     const rejectReason = (order as any).reject_reason || (order as any).rejected_reason;
+    const submissionState = getProviderSubmissionState(order);
+    const submissionLabelKey = submissionStateLabelKey(submissionState);
+    const hintKey = reconciliationHintKey(order);
+    const providerRef = (order as any).provider_reference || (order as any).bundle?.manshorpay?.reference_id || (order as any).bundle?.paystore?.transaction_id;
+    const providerCode = (order as any).provider_code || (order as any).api_provider?.code || (order as any).apiProvider?.code;
     const dateStr = created ? created.toLocaleDateString('fa-IR') : '—';
     const timeStr = created
         ? created.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -826,7 +935,38 @@ function OrderSlip({
                         <span className="text-[15px] font-bold tabular-nums text-emerald-700">{amount}</span>
                     </div>
 
-                    {status === 2 && rejectReason ? (
+                    {(submissionLabelKey || hintKey || providerRef || providerCode) ? (
+                        <div className="mt-2 rounded border border-amber-200 bg-amber-50/80 px-2 py-1.5 text-start">
+                            <div className="text-[10px] font-bold text-amber-900">
+                                {t('ORDER.PROVIDER_STATUS_SECTION', { defaultValue: 'وضعیت ارائه‌دهنده' })}
+                            </div>
+                            {providerCode ? (
+                                <div className="mt-0.5 text-[10px] text-neutral-700">
+                                    {t('ORDER.PROVIDER_CODE', { defaultValue: 'ارائه‌دهنده' })}: {String(providerCode)}
+                                </div>
+                            ) : null}
+                            {providerRef ? (
+                                <div className="mt-0.5 break-all text-[10px] text-neutral-700">
+                                    {t('ORDER.PROVIDER_REFERENCE', { defaultValue: 'مرجع' })}: {String(providerRef)}
+                                </div>
+                            ) : null}
+                            {submissionLabelKey ? (
+                                <div className="mt-0.5 text-[10px] font-semibold text-amber-800">
+                                    {t(submissionLabelKey, { defaultValue: 'نتیجه نامشخص' })}
+                                </div>
+                            ) : null}
+                            {hintKey ? (
+                                <div className="mt-1 text-[10px] leading-snug text-amber-800">
+                                    {t(hintKey, {
+                                        defaultValue:
+                                            'سفارش در سیستم ثبت شده؛ نتیجه ارائه‌دهنده نامشخص است — وضعیت را بررسی کنید'
+                                    })}
+                                </div>
+                            ) : null}
+                        </div>
+                    ) : null}
+
+                    {rejectReason ? (
                         <div className="mt-1.5 text-start text-[10px] leading-snug text-red-600">
                             <span className="font-semibold">{t('ORDER.TABLE.COLUMN.REJECTREASON')}: </span>
                             {rejectReason}
